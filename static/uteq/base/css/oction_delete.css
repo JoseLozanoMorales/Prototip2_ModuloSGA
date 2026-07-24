@@ -1,0 +1,131 @@
+.modal-oction-delete.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Estilos del modal */
+.modal-oction-delete.modal {
+    background-color: white;
+    border-radius: 10px;
+    /*box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);*/
+    width: 420px;
+    max-width: 95%;
+    overflow: hidden;
+    animation: modal-appear 0.3s ease-out;
+}
+
+/* Cabecera del modal */
+.modal-oction-delete .modal-header_action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 24px 0;
+}
+
+/* Icono de advertencia */
+.modal-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 70px;
+    height: 70px;
+    background-color: #ffebee;
+    border-radius: 50%;
+    margin-bottom: 16px;
+}
+
+.modal-icon span {
+    color: #f44336;
+    font-size: 32px;
+}
+
+/* Contenido del modal */
+.modal-oction-delete .modal-content {
+    padding: 16px 24px;
+    text-align: center;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    /*margin-bottom: 12px;*/
+}
+
+.modal-description {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+
+
+/* Botones del modal */
+.modal-oction-delete .modal-actions {
+    display: flex;
+    padding: 16px 24px;
+    background-color: #f8f9fa;
+    justify-content: space-between;
+    border-top: 1px solid #eee;
+}
+
+.modal-actions .btn i {
+    margin-right: 8px;
+}
+
+.btn-danger:hover {
+    background-color: #e53935;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Animación de aparición */
+@keyframes modal-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Estilos para dispositivos móviles */
+@media (max-width: 480px) {
+    .modal-oction-delete.modal {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 10px 10px 0 0;
+        position: absolute;
+        bottom: 0;
+        z-index: -1;
+        animation: modal-slide-up 0.3s ease-out;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+
+     .modal-oction-delete .modal-actions .btn {
+        width: 100%;
+    }
+
+    @keyframes modal-slide-up {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+}

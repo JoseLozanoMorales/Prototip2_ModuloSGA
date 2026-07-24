@@ -1,0 +1,64 @@
+{% extends "basebs.html" %}
+
+{% block canvas %}
+    <div class="row-fluid" style="margin-bottom: 10px;">
+        <div class="span12">
+            <h3 style="display: inline-block;">Personas</h3>
+            <a href="{% url 'persona' %}?action=add" class="btn btn-primary pull-right">
+                <i class="fa fa-plus"></i> Nueva persona
+            </a>
+        </div>
+    </div>
+    <div class="row-fluid" style="margin-bottom: 10px;">
+        <div class="span12">
+            <form method="get" action="{% url 'persona' %}" class="form-inline">
+                <input type="text" name="buscar" value="{{ buscar }}" class="form-control" placeholder="Buscar por nombre, apellido, c&eacute;dula o pasaporte" style="width: 350px;">
+                <button type="submit" class="btn btn-default"><i class="fa fa-search"></i> Buscar</button>
+                {% if buscar or id %}
+                    <a href="{% url 'persona' %}" class="btn btn-link">Limpiar</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span12">
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th>Nombres</th>
+                    <th>1er Apellido</th>
+                    <th>2do Apellido</th>
+                    <th>C&eacute;dula</th>
+                    <th>Pasaporte</th>
+                    <th>Fecha de nacimiento</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for persona in personas %}
+                    <tr>
+                        <td>{{ persona.nombres }}</td>
+                        <td>{{ persona.apellido1 }}</td>
+                        <td>{{ persona.apellido2 }}</td>
+                        <td>{{ persona.cedula }}</td>
+                        <td>{{ persona.pasaporte }}</td>
+                        <td>{{ persona.nacimiento }}</td>
+                        <td>
+                            <a href="{% url 'persona' %}?action=editar&id={{ persona.id }}" class="btn btn-mini btn-info">
+                                <i class="fa fa-pencil"></i> Editar
+                            </a>
+                            <a href="javascript:" nhref="{{ request.path }}?action=eliminar&id={{ persona.id }}" data-neme="{{ persona }}" class="btn btn-mini btn-danger action_delete">
+                                <i class="fa fa-trash"></i> Eliminar
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay personas registradas.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

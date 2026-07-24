@@ -1,0 +1,28 @@
+
+.bloqueo_calificacion .mod-header {
+    pointer-events: none;  /* Evita clics */
+    opacity: 0.6; /* Hace que parezca deshabilitado */
+    cursor: not-allowed;
+    position: relative;
+    transition: all 0.3s ease;
+    background-color: lightgrey!important;
+    color: #636363;
+}
+
+.bloqueo_calificacion.icono-bloqueo {
+    opacity: 0.3; /* Hace que parezca deshabilitado */
+    background-color: lightgrey!important;
+}
+
+.modulo.bloqueo_calificacion:hover::before {
+    content: '\f023'; /* Código del icono fa-lock */
+    font-family: 'FontAwesome';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff0007; /* Color del icono de bloqueo */
+    font-size: 80px;
+    opacity: 2!important;
+    z-index: 1000;
+}

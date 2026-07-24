@@ -1,0 +1,112 @@
+.card_content {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.card_header {
+    background: linear-gradient(135deg, #2c3e50, #3498db); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+}
+
+.card_header .btn {
+    background-color: #27ae60; color: white; border: none; padding: 8px 15px; border-radius: 4px; display: flex; align-items: center; font-weight: 500; text-decoration: none; transition: all 0.2s ease;
+}
+
+.card_header a i {
+    margin-right: 6px;
+}
+
+.card_title {
+    margin: 0; color: white; font-size: 18px; display: flex; align-items: center;
+}
+
+.card_title i {
+    margin-right: 10px;
+}
+
+.card_body {
+    margin-bottom: 0!important;
+}
+
+.card_body .accordion-heading {
+background-color: #f5f7fa!important; padding: 12px 20px!important; border-bottom: 1px solid #e0e0e0!important;
+}
+
+.accordion-heading .accordion-toggle {
+    color: #34495e!important; text-decoration: none!important; display: block!important; font-weight: 500!important; font-size: 16px!important;
+}
+
+.accordion-toggle .div-flex {
+    display: flex!important; justify-content: space-between!important; align-items: center!important;
+}
+
+.accordion-toggle .div-flex span {
+    display: flex; align-items: center;
+}
+
+.accordion-toggle .div-flex span i {
+    margin-right: 10px!important; color: #3498db!important;
+}
+
+.accordion-toggle .div-flex>i {
+    transition: transform 0.3s ease; color: #7f8c8d;
+}
+
+.accordion-body .accordion-inner {
+    padding: 0;
+}
+
+.accordion-body .accordion-inner div {
+    overflow-x: auto;
+}
+
+.accordion-body .accordion-inner div table {
+    width: 100%; border-collapse: collapse; margin-bottom: 0;
+}
+
+.accordion-body .accordion-inner div table thead tr {
+    background-color: #f8f9fa;
+}
+
+ .accordion-body .accordion-inner div table thead tr th {
+    padding: 15px; text-align: left; border-bottom: 2px solid #3498db; color: #2c3e50; font-weight: 600;
+}
+
+.col-width-10 {
+    width: 10%;
+}
+
+.col-width-45 {
+    width: 45%;
+}
+
+.col-width-40 {
+    width: 40%;
+}
+
+.border-bottom-1 {
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.transition-b-2 {
+    transition: background-color 0.2s ease;
+}
+
+.vertical-align-middle {
+    vertical-align: middle;
+}
+
+.display-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.gap-8 {
+    gap: 8px;
+}
+
+.div-item {
+    display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background-color: #f5f7fa; border-radius: 4px; border-left: 3px solid #3498db;
+}

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(\"./.venv/Scripts/python.exe\" manage.py check)",
+      "Bash(\"./.venv/Scripts/python.exe\" -m pip install django-widget-tweaks)",
+      "Bash(\"./.venv/Scripts/python.exe\" manage.py makemigrations sga)",
+      "Bash(\"./.venv/Scripts/python.exe\" -m pip install psycopg2-binary)",
+      "Read(//mnt/d/**)",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('static/images/aok/logosgageneral.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(python manage.py check)",
+      "Bash(command -v identify)",
+      "Bash(identify \"D:/DjangoProjectBase/static/images/aok/logosgageneral.png\")",
+      "Bash(convert -list delegate)",
+      "Bash(mkdir -p /tmp/logotest)",
+      "Bash(cat)",
+      "Bash(convert -background none /tmp/logotest/test.svg /tmp/logotest/test.png)",
+      "Read(//tmp/logotest/**)",
+      "Bash(convert)",
+      "Bash(pip install *)",
+      "Bash(python3 *)",
+      "Bash(xargs grep -l -i \"eliminar\\\\|delete\")"
+    ]
+  }
+}

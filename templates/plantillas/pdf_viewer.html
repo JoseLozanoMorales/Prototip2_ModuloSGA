@@ -1,0 +1,84 @@
+{% comment %}
+      Uso: {% include "plantillas/pdf_viewer.html" with pdf_url=mi_url viewer_id="pdfPropuesta" %}
+      Parametros:
+        - pdf_url      : URL del PDF a cargar (obligatorio)
+        - otro_url     : URL de un archivo no-PDF a cargar via Office Online (excel) o Google Docs Viewer (word/ppt/otros), alternativo a pdf_url
+        - viewer_id    : ID unicov si hay varios visores en la misma pagina (opcional, default: "pdfViewer")
+        - viewer_title : Titulo del iframe para accesibilidad (opcional, default: "Vista previa del documento")
+        - tipo         : "pdf" | "word" | "excel" | "imagen" | "ppt" (opcional, default: "pdf")
+                         Define el icono, color y texto del loader inicial segun el tipo de archivo.
+        - recurso_id / materiaasignada_id : (opcional) ids encriptados para que
+          RecursoSeguimiento.js registre la descarga cuando se use el botón
+          .gdocs-download-btn (Word/Excel/Ppt) que ya trae este visor.
+      Nota: si incluyes este partial mas de una vez en la misma pagina, mueve los assets
+            (pdf-viewer.css y pdf-viewer.js) al bloque de la plantilla base para evitar carga duplicada.
+    {% endcomment %}
+{% load static %}
+
+
+<link rel="stylesheet" href="{% static 'uteq/base/css/pdf-viewer.css' %}">
+<script>
+    window.VisorArchivo = window.VisorArchivo || {};
+    window.VisorArchivo.CONFIG = { baseUrl: 'https://sga.uteq.edu.ec' };
+</script>
+<script src="{% static 'uteq/base/js/visorArchivo/loader.js' %}"></script>
+<script src="{% static 'uteq/base/js/visorArchivo/visor_pdf.js' %}"></script>
+<script src="{% static 'uteq/base/js/visorArchivo/visor_word.js' %}"></script>
+<script src="{% static 'uteq/base/js/visorArchivo/visor_excel.js' %}"></script>
+<script src="{% static 'uteq/base/js/visorArchivo/visor_ppt.js' %}"></script>
+<script src="{% static 'uteq/base/js/visorArchivo/visor.js' %}"></script>
+
+<div class="pdf-viewer-wrapper" id="{{ viewer_id|default:'pdfViewer' }}"
+     {% if recurso_id %}data-recurso-id="{{ recurso_id }}" data-materiaasignada-id="{{ materiaasignada_id }}"{% endif %}>
+
+    {% with tipo=tipo|default:'pdf' %}
+    <div class="pdf-loader" data-loader>
+        <div class="pdf-loader-content">
+            <div class="pdf-icon-wrapper">
+                {% if tipo == 'word' %}
+                    <div class="pdf-spinner" style="border-color:rgba(37,99,235,0.12);border-top-color:#2563eb;border-right-color:#3b82f6"></div>
+                    <i class="fa fa-file-word-o pdf-icon" style="color:#2563eb;text-shadow:0 4px 12px rgba(37,99,235,0.12)"></i>
+                {% elif tipo == 'excel' %}
+                    <div class="pdf-spinner" style="border-color:rgba(22,163,74,0.12);border-top-color:#16a34a;border-right-color:#22c55e"></div>
+                    <i class="fa fa-file-excel-o pdf-icon" style="color:#16a34a;text-shadow:0 4px 12px rgba(22,163,74,0.12)"></i>
+                {% elif tipo == 'imagen' %}
+                    <div class="pdf-spinner" style="border-color:rgba(124,58,237,0.12);border-top-color:#7c3aed;border-right-color:#8b5cf6"></div>
+                    <i class="fa fa-file-image-o pdf-icon" style="color:#7c3aed;text-shadow:0 4px 12px rgba(124,58,237,0.12)"></i>
+                {% elif tipo == 'ppt' %}
+                    <div class="pdf-spinner" style="border-color:rgba(234,88,12,0.12);border-top-color:#ea580c;border-right-color:#f97316"></div>
+                    <i class="fa fa-file-powerpoint-o pdf-icon" style="color:#ea580c;text-shadow:0 4px 12px rgba(234,88,12,0.12)"></i>
+                {% else %}
+                    <div class="pdf-spinner"></div>
+                    <i class="fa fa-file-pdf-o pdf-icon"></i>
+                {% endif %}
+            </div>
+            <div class="pdf-loader-text"{% if tipo == 'word' %} style="color:#2563eb"{% elif tipo == 'excel' %} style="color:#16a34a"{% elif tipo == 'imagen' %} style="color:#7c3aed"{% elif tipo == 'ppt' %} style="color:#ea580c"{% endif %}>
+                {% if tipo == 'word' %}Cargando documento Word...
+                {% elif tipo == 'excel' %}Cargando hoja de cálculo...
+                {% elif tipo == 'imagen' %}Cargando imagen...
+                {% elif tipo == 'ppt' %}Cargando presentación...
+                {% else %}Generando documento PDF{% endif %}
+            </div>
+            <div class="pdf-loader-subtext">Esto puede tomar unos segundos...</div>
+            <div class="pdf-progress-bar"{% if tipo == 'word' %} style="background:rgba(37,99,235,0.10)"{% elif tipo == 'excel' %} style="background:rgba(22,163,74,0.10)"{% elif tipo == 'imagen' %} style="background:rgba(124,58,237,0.10)"{% elif tipo == 'ppt' %} style="background:rgba(234,88,12,0.10)"{% endif %}>
+                <div class="pdf-progress-fill"{% if tipo == 'word' %} style="background:linear-gradient(90deg,#2563eb,#3b82f6)"{% elif tipo == 'excel' %} style="background:linear-gradient(90deg,#16a34a,#22c55e)"{% elif tipo == 'imagen' %} style="background:linear-gradient(90deg,#7c3aed,#8b5cf6)"{% elif tipo == 'ppt' %} style="background:linear-gradient(90deg,#ea580c,#f97316)"{% endif %}></div>
+            </div>
+        </div>
+    </div>
+
+    {% if otro_url %}
+        <a class="gdocs-tool-btn gdocs-download-btn" style="right: 70px; border-radius: 0; background-color: #0a0808; top: 13px; height: 40px" href="{{ otro_url }}" download title="Descargar archivo" onclick="event.stopPropagation();">
+            <i style="font-size: initial; color: white" class="fa fa-download"></i>
+        </a>
+    {% endif %}
+
+    <iframe
+            class="pdf-frame"
+            {% if pdf_url %}src="{{ pdf_url }}"{% elif otro_url %}{% if tipo == 'excel' %}src="https://view.officeapps.live.com/op/embed.aspx?src={{ "https://sga.uteq.edu.ec"|add:otro_url }}"{% else %}src="https://docs.google.com/viewer?url=https://sga.uteq.edu.ec{{ otro_url }}&embedded=true"{% endif %}{% else %}src="about:blank"{% endif %}
+            title="{{ viewer_title|default:'Vista previa del documento' }}"
+            onload="PDFViewer.ocultarLoader(this)"
+            onerror="PDFViewer.mostrarError(this)"
+            style="width: 100%; min-height: {{ min_height_viewer|default:'500px' }}; height: {{ height_viewer|default_if_none:'100%' }}; max-height: {{ max_height_viewer|default:'100%' }}">
+    </iframe>
+</div>
+{% endwith %}

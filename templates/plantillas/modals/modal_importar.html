@@ -1,0 +1,114 @@
+{% extends "plantillas/formularios/formmodal.html" %}
+{% block extraheading %}
+    <link href="/static/css/mantenimientos.css?1.0.3" type="text/css" rel="stylesheet" />
+    {{ block.super }}
+    <script type="text/javascript">
+        {% block customFunctions %}
+            var customSuccessFunction = null;
+            var customErrorFunction = null;
+        {% endblock %}
+        $('.formbuttondynamics').hide();
+        $('#div_procesar').hide();
+        procesarDatos = function (successCustomFunction=null, errorCustomFunction=null, save_registers='false') {
+            showWaiting('⌛ Procesando datos...', 'Estamos procesando sus datos. Por favor no cierre esta ventana.');
+            var valid = $("#modalformulario").validationEngine('validate');
+            if (valid) {
+                var formdata = new FormData($("#modalformulario")[0]);
+                try {
+                    formdata.append("save_registers", save_registers);
+                } catch (err) {
+                }
+                try{
+                    $.ajax({
+                        type: "POST",
+                        url: '{{ request.path }}',
+                        data: formdata,
+                        dataType: "json",
+                        cache: false,
+                        contentType: false,
+                        processData: false,
+                        success: function(data) {
+                            if (data.result == 'ok') {
+                                const msg_alert = (typeof data.mensaje !== 'undefined' ? data.mensaje : 'Registros procesados con exito.');
+                                showAlert(type = 'success', '', message=msg_alert, duration = 3000, is_html=true);
+                                $("#contenido_procesamiento").empty();
+                                $("#contenido_procesamiento").html(data.data);
+                                hideWaiting();
+
+                                $('.formbuttondynamics').show();
+                                $('#div_procesar').hide();
+                                if (successCustomFunction) {
+                                    successCustomFunction(data);
+                                }
+                                $(window).trigger('resize');
+
+                            } else {
+                                hideWaiting();
+                                showAlert(type = data.type || 'error', '', message=data.mensaje, duration = 3000);
+                                $('.formbuttondynamics').hide();
+                                if (errorCustomFunction) {
+                                    errorCustomFunction(data);
+                                }
+                            }
+                        },
+                        error: function (jqXHR) {
+                            hideWaiting();
+                            let mensaje = 'Error de conexión.';
+                            if (jqXHR.responseText) {
+                                try {
+                                    const respuesta = JSON.parse(jqXHR.responseText);
+                                    if (respuesta.mensaje) {
+                                        mensaje = respuesta.mensaje;
+                                    }
+                                } catch (e) {
+                                    // Falló el parsing, usar mensaje por defecto
+                                }
+                            }
+                            showAlert(type = 'error', '', message=mensaje, duration = 3000);
+
+                        }
+                    });
+                } catch (e){
+                    console.log(e);
+                    hideWaiting();
+                }
+            } else {
+                hideWaiting();
+                showAlert(type = 'error', '', message = "Archivo faltante o no válido!", duration = 3000);
+            }
+        }
+        const fileInput = document.getElementById('id_archivo');
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0]; // Primer archivo
+            if (file === undefined) {
+                $('#div_procesar').hide();
+            }else{
+                $('#div_procesar').show();
+            }
+            try {
+                change_file_event(file);
+            } catch (error) {
+
+            }
+            $("#contenido_procesamiento").empty();
+            $('.formbuttondynamics').hide();
+        });
+        $('#btn_procesar').on('click', function(e) {
+            procesarDatos(successCustomFunction=customSuccessFunction, errorCustomFunction=customErrorFunction, save_registers='false');
+            $(window).trigger('resize');
+        });
+    </script>
+{% endblock %}
+{% block buttonname %}Importar Cambios{% endblock %}
+{% block antesguardar %}
+envioformulario();
+{% endblock %}
+{% block formadicional %}
+    <div class="mantenimiento_tabla" style="padding: 1.5%">
+        {% block preformadicional %}{% endblock %}
+        <div id="div_procesar" class="d-flex justify-content-center">
+            <div id="btn_procesar" class="btn btn-success btn-primary" style="max-width: fit-content;margin: 0 auto;"><i class="fa fa-gear" aria-hidden="true"></i>Procesar</div>
+        </div>
+        <div class="span12" id="contenido_procesamiento" style="overflow-y: auto; max-height: 350px;"> </div>
+    </div>
+{% endblock %}

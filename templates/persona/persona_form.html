@@ -1,0 +1,9 @@
+{% extends "ajaxformbase.html" %}
+
+{% block titulo %}{{ title }}{% endblock %}
+
+{% block atras %}{{ request.path }}?id={% endblock %}
+{% block formback %}{{ request.path }}{% endblock %}
+
+{% block formaction %}{{ request.path }}?id={% endblock %}
+{% block formdestination %}{{ request.path }}?id={% endblock %}

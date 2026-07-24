@@ -1,0 +1,179 @@
+.main_container_heder{
+    width: 100%;
+    height: 300px;
+    border: solid 1px black;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    border-color: #002E45 !important;
+    padding: 120px 0 0 50px
+}
+
+.main__container img {
+    position: absolute;
+    width: 100%;
+    height: 250px;
+}
+
+.sobreposition{
+    width: 100%;
+    height: 120px;
+    /*margin: 20px 0 30px 60px;*/
+    border-left: 8px solid rgba(254, 153, 0, 1);
+    color: #FFF;
+    padding: 10px;
+    position: static;
+}
+
+.sobreposition p{
+    text-align: center;
+}
+
+.registro-fila{
+    padding: 5px;
+    display: flex;
+    flex-direction: row;
+}
+
+.registro-fila .col div{
+    border: 0.5px solid #f5f5f5;
+    border-radius: 7px;
+    padding: 15px;
+    cursor: pointer;
+}
+
+.registro-fila .col div i{
+    font-size: 40px;
+    color: #4ea300;
+}
+
+.registro-fila .col{
+    padding: 10px 2px 10px 2px;
+    width: 20%;
+    text-align: center;
+}
+
+.registro-fila .col div:hover{
+    box-shadow: 2px 2px #f1f1f1;
+}
+
+#form_registro {
+    padding: 20px;
+    text-align: left!important;
+    border: 0.5px solid #f5f5f5;
+    padding: 30px 20px 20px 20px;
+    border-radius: 7px;
+}
+
+#form_registro .row-fluid {
+    text-align: left;
+}
+
+#form_registro input, select {
+    height: 40px;
+}
+
+label {
+    font-size: 14px;
+    font-weight: bold;
+    padding-bottom: 5px;
+}
+
+label i {
+    font-size: 12px!important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 40px!important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+    line-height: 40px;
+}
+
+.contenedor-carrera {
+    float: left;
+    padding: 5px;
+}
+
+.contenedor-carrera .div-carrera {
+    height: auto;
+    border: 0.5px solid #d3d3d3;
+    border-radius: 5px;
+}
+
+.contenedor-carrera .div-carrera .cabecera {
+    height: 40px!important;
+    padding: 5px;
+}
+
+.contenedor-carrera .div-carrera .cabecera span {
+    padding-left: 5px;
+    font-size: 12px;
+}
+
+.contenedor-carrera .div-carrera .cabecera input[type="checkbox"] {
+    width: 20px;
+    padding: 0;
+    margin-top: -5px;
+}
+
+.contenedor-carrera .div-carrera .detalle {
+    height: 25px!important;
+    padding-right: 5px;
+}
+
+.div-carrera:hover {
+    box-shadow: 4px 5px 1px 2px rgba(240,240,240,0.75);
+    -webkit-box-shadow: 4px 5px 1px 2px rgba(240,240,240,0.75);
+    -moz-box-shadow: 4px 5px 1px 2px rgba(240,240,240,0.75);
+}
+
+@media screen and (max-width: 600px) {
+    .contenedor-carrera {
+        width: 100%!important;
+    }
+}
+
+@media screen and (min-width: 600px) and (max-width: 900px) {
+    .contenedor-carrera {
+        width: 50%!important;
+    }
+}
+
+@media screen and (min-width: 900px) and (max-width: 1100px) {
+    .contenedor-carrera {
+        width: 33.3%!important;
+    }
+}
+
+@media screen and (min-width: 1100px) and (max-width: 1400px) {
+    .contenedor-carrera {
+        width: 25%!important;
+    }
+}
+
+@media screen and (min-width: 1400px) and (max-width: 1700px) {
+    .contenedor-carrera {
+        width: 20%!important;
+    }
+}
+
+@media screen and (min-width: 1700px) and (max-width: 2000px) {
+    .contenedor-carrera {
+        width: 16.6%!important;
+    }
+}
+
+@media screen and (min-width: 2000px) and (max-width: 2300px) {
+    .contenedor-carrera {
+        width: 14.2%!important;
+    }
+}
+
+@media screen and (min-width: 2300px) {
+    .contenedor-carrera {
+        width: 12.5%!important;
+    }
+}
+

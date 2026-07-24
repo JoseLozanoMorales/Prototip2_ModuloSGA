@@ -1,0 +1,320 @@
+.contenedorGeneral {
+    display: flex;
+}
+
+.contenedorMenuVertical{
+    width: 4%;
+    float: left;
+    height: 60%;
+}
+
+.contenedorContenido{
+    width: 96%;
+    float: left;
+    padding-left: 1%;
+    padding-right: 0.25%;
+}
+
+.fillContenido {
+    cursor: pointer;
+}
+
+@media screen and (max-width: 600px) {
+    .contenedorGeneral {
+        display: block;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .keep {
+        display: block;
+    }
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorMenuVertical {
+        width: 100%;
+        padding-bottom: 2%;
+    }
+
+    .contenedorContenido {
+        width: 100%;
+    }
+}
+
+@media screen and (min-width: 600px) and (max-width: 700px) {
+    .contenedorGeneral {
+        display: block;
+    }
+
+    .contenedorMenuVertical.ampliarmenu {
+        width: 30%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 70%;
+    }
+
+    .contenedorMenuVertical {
+        width: 10%;
+    }
+
+    .contenedorContenido {
+        width: 100%;
+    }
+}
+
+@media screen and (min-width: 700px) and (max-width: 800px) {
+    .contenedorvirtual {
+        display: block;
+    }
+
+    .contenedorMenuVertical.ampliarmenu {
+        width: 26%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 74%;
+    }
+
+    .contenedorMenuVertical {
+        width: 8.5%;
+    }
+}
+
+@media screen and (min-width: 800px) and (max-width: 1015px) {
+    .contenedorGeneral {
+        display: block;
+    }
+
+    .contenedorMenuVertical.ampliarmenu {
+        width: 23%;
+    }
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+    .contenedorContenido.reducirmenu {
+        width: 77%;
+    }
+    .contenedorMenuVertical {
+        width: 7%;
+    }
+}
+
+@media screen and (min-width: 1015px) and (max-width: 1100px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 20%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 80%;
+    }
+
+    .contenedorMenuVertical {
+        width: 7%;
+    }
+}
+
+@media screen and (min-width: 1100px) and (max-width: 1200px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 20%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 80%;
+    }
+
+    .contenedorMenuVertical {
+        width: 5.5%;
+    }
+}
+
+@media screen and (min-width: 1200px) and (max-width: 1300px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 16%;
+    }
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+    .contenedorContenido.reducirmenu {
+        width: 84%;
+    }
+    .contenedorMenuVertical {
+        width: 5%;
+    }
+}
+
+@media screen and (min-width: 1300px) and (max-width: 1400px) {
+    .menuvertical.ampliarmenu {
+        width: 15%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 85%;
+    }
+
+    .contenedorMenuVertical {
+        width: 4.5%;
+    }
+}
+
+@media screen and (min-width: 1400px) and (max-width: 1500px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 14%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 86%;
+    }
+
+    .contenedorMenuVertical {
+        width: 4%;
+    }
+}
+
+@media screen and (min-width: 1500px) and (max-width: 1700px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 13%;
+    }
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+    .contenedorContenido.reducirmenu {
+        width: 87%;
+    }
+    .contenedorMenuVertical {
+        width: 3.6%;
+    }
+    .contenedorContenido {
+        width: 96.4%;
+    }
+}
+
+@media screen and (min-width: 1700px) and (max-width: 1900px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 12%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 88%;
+    }
+
+    .contenedorMenuVertical {
+        width: 3.2%;
+    }
+
+    .contenedorContenido {
+        width: 96.8%;
+    }
+}
+
+@media screen and (min-width: 1900px) and (max-width: 2100px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 11%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 89%;
+    }
+
+    .contenedorMenuVertical {
+        width: 3%;
+    }
+
+    .contenedorContenido {
+        width: 97%;
+    }
+}
+
+@media screen and (min-width: 2100px) and (max-width: 2300px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 10%;
+    }
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+    .contenedorContenido.reducirmenu {
+        width: 90%;
+    }
+    .contenedorMenuVertical {
+        width: 2.6%;
+    }
+    .contenedorContenido {
+        width: 97.4%;
+    }
+}
+
+@media screen and (min-width: 2300px) and (max-width: 2500px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 9%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 91%;
+    }
+
+    .contenedorMenuVertical {
+        width: 2.3%;
+    }
+
+    .contenedorContenido {
+        width: 97.7%;
+    }
+}
+
+@media screen and (min-width: 2500px) {
+    .contenedorMenuVertical.ampliarmenu {
+        width: 8%;
+    }
+
+    .contenedorMenuVertical.ampliarmenu .itemsmenu {
+        display: inline-block;
+    }
+
+    .contenedorContenido.reducirmenu {
+        width: 92%;
+    }
+
+    .contenedorMenuVertical {
+        width: 2%;
+    }
+
+    .contenedorContenido {
+        width: 98%;
+    }
+}

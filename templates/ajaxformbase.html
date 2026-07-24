@@ -1,0 +1,415 @@
+{% extends "basebs.html" %}
+{% block heading %}
+    <script type="text/javascript" src='/static/js/jquery.validationEngine.js?v=1.0.0'></script>
+    <script type="text/javascript" src='/static/js/jquery.validationEngine-es.js?v=1.0.0'></script>
+    <link type='text/css' rel='stylesheet' href="/static/css/validationEngine.jquery.css?v=1.0.0"/>
+    <link type='text/css' rel='stylesheet' href="/static/uteq/css/chk-to-toggle.css">
+
+    <script type="text/javascript" src='/static/js/select2.js?v=1.0.0'></script>
+    <link type='text/css' rel='stylesheet' href="/static/css/select2.css?v=1.0.0"/>
+    <link type='text/css' rel='stylesheet' href="/static/uteq/base/form/css/formbase.css"/>
+    {% if datatablename %}
+        <link href="/static/css/mantenimientos.css?1.0.3" type="text/css" rel="stylesheet" />
+    {% endif %}
+    {% if not not_highcharts %}
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/modules/data.js"></script>
+        <script src="https://code.highcharts.com/highcharts-more.js"></script>
+    {% endif %}
+
+    <script type="text/javascript" src="/static/js/bootstrap-filestyle.min.js?v=1.0.1"></script>
+
+    {% if not not_ckeditor %}
+        <script src="/static/ckeditor/ckeditor-init.js?v=1.0.0" data-ckeditor-basepath="/static/ckeditor/ckeditor/" id="ckeditor-init-script"></script>
+        <script type="text/javascript" src="/static/ckeditor/ckeditor/ckeditor.js?v=1.0.0"></script>
+    {% endif %}
+    <script type="text/javascript">
+
+        defaultinterface = true;
+        mensajeinterfaz = 'Guardando información';
+        $(function () {
+            {% block javascript %}
+            {% endblock %}
+
+            $("select").select2({minimumResultsForSearch: 5 });
+
+            $("#form").validationEngine({autoHidePrompt: true, autoHideDelay: 1000});
+
+            envioformulario = function () {
+                abrir_showWaiting();
+                let valid = $("form").validationEngine('validate');
+                {% block validaciones %}{% endblock %}
+                if (valid) {
+                    $('.datepicker, .bootstrap-timepicker-widget').hide();
+                    const inputsTexto = $('.controls input[type="text"]');
+                    const inputsUppercase = $('.controls input:not([type="file"]):not([type="password"])').filter(function () {
+                        return $(this).css('text-transform') === 'uppercase';
+                    });
+                    // Procesar en batch para reducir reflows
+                    inputsTexto.each(function () {
+                        this.value = this.value.trim();
+                    });
+
+                    inputsUppercase.each(function () {
+                        this.value = this.value.toUpperCase();
+                    });
+
+                    try {
+                        for (instance in CKEDITOR.instances) {
+                            CKEDITOR.instances[instance].updateElement();
+                        }
+                    } catch (err) {
+                        console.log(err.message);
+                    }
+
+                    const formdata = new FormData($("#formulario")[0]);
+                    {% block agregarformdata %}{% endblock %}
+
+                    agregarListaAFormData(formdata);
+
+                    const actionUrl = "{% block formaction %}{% if datatablename %}{{ request.path }}{% else %}/{% endif %}{% endblock %}";
+                    const destUrl = "{% block formdestination %}{% if datatablename %}{{ request.path }}{% else %}/{% endif %}{% endblock %}";
+
+                    $.ajax({
+                        type: "POST",
+                        url: actionUrl,
+                        data: formdata,
+                        dataType: "json",
+                        cache: false,
+                        contentType: false,
+                        processData: false,
+                        success: function (data) {
+                            if (data.result === 'ok') {
+                                location.href = destUrl + (data.id || "");
+                            } else {
+                                if (defaultinterface) {
+                                    $.unblockUI();
+                                } else {
+                                    hideWaiting();
+                                }
+                                {% if datatablename %}
+                                    showAlert(type = 'warning', '', message = data.mensaje || 'No se pudo procesar la solicitud!', duration = 3000, is_html= data.is_html || false);
+                                {% else %}
+                                    abrirnotificacionmodal(data.mensaje);
+                                {% endif %}
+
+                            }
+                        },
+                        error: function (jqXHR) {
+                            if (defaultinterface) {
+                                $.unblockUI();
+                            } else {
+                                hideWaiting();
+                            }
+                            let mensaje = 'Error de conexión.';
+                            {#                            abrirnotificacionmodal('<p>status code: '+jqXHR.status+'</p><p>errorThrown: ' + errorThrown + '</p><p>jqXHR.responseText:</p><div>'+jqXHR.responseText + '</div>');#}
+                            if (jqXHR.responseText) {
+                                try {
+                                    const respuesta = JSON.parse(jqXHR.responseText);
+                                    if (respuesta.mensaje) {
+                                        mensaje = respuesta.mensaje;
+                                    }
+                                } catch (e) {
+                                    // Falló el parsing, usar mensaje por defecto
+                                }
+                            }
+                            abrirnotificacionmodal(mensaje);
+                        }
+                    });
+                } else {
+                    setTimeout(function () {
+                        const helpTexts = $('.help-text');
+                        helpTexts.each(function () {
+                            const field = $(this);
+                            field.html(field.attr('alert') || '');
+                        });
+                    }, 8000);
+
+                    if (defaultinterface) {
+                        $.unblockUI();
+                    } else {
+                        hideWaiting();
+                    }
+                }
+            };
+
+{#            {% if not permite_modificar %}#}
+{#                $('.controls').children().attr({'disabled': 'disabled'});#}
+{#                $('.controls input').attr({'disabled': 'disabled'});#}
+{#            {% endif %}#}
+
+            $(":file").filestyle({"input": false});
+
+            $("select").select2({minimumResultsForSearch: 10});
+
+            tipo_formulario($("#formulario"));
+
+            $(".select2hidden").each(function () {
+                let id = $(this).attr("id");
+                $("#" + id + "_select2").html('<option>' + $(this).attr("descripcion") + '</option>').trigger('change');
+            });
+        });
+
+        $(document).on('click', '#formbutton', function(e) {
+            console.log('Botón clickeado - evento capturado');
+            e.preventDefault();
+
+            try {
+                // Obtener referencia al formulario
+                const formulario = document.getElementById("formulario");
+
+                // Verificar que el formulario existe
+                if (!formulario) {
+                    console.error("Error: El formulario con ID 'formulario' no existe en el DOM");
+                    return;
+                }
+
+                // Validar el formulario usando checkValidity nativo
+                if (formulario.checkValidity() === false) {
+                    // Detener la propagación del evento si el formulario no es válido
+                    e.stopPropagation();
+
+                    // Mostrar los mensajes de validación nativos
+                    formulario.reportValidity();
+                    console.log('Formulario inválido, mostrando errores de validación');
+                } else {
+                    // Verificar que la función envioformulario exista
+                    if (typeof envioformulario !== 'function') {
+                        console.error("Error: La función 'envioformulario' no está definida");
+                        alert("Error: No se puede procesar el formulario");
+                        return;
+                    }
+
+                    // Si el formulario es válido, proceder con la función original
+                    console.log('Formulario válido, ejecutando envioformulario()');
+                    {% block antesguardar %}
+                        envioformulario();
+                    {% endblock %}
+                    {#                    formbutton();#}
+                }
+            } catch (error) {
+                console.error("Error al procesar el click:", error);
+            }
+        });
+
+        function abrir_showWaiting() {
+            if (defaultinterface) {
+                $.blockUI();
+            } else {
+                showWaiting(mensajeinterfaz, "Espere unos segundos por favor...");
+            }
+        }
+
+        {#function formbutton() {#}
+        {#    {% block antesguardar %}#}
+        {#        envioformulario();#}
+        {#    {% endblock %}#}
+        {# }#}
+
+        function agregarListaAFormData(formdata) {
+            try {
+                if (typeof lista_items1 !== "undefined") {
+                    formdata.append("lista_items1", JSON.stringify(lista_items1));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items2 !== "undefined") {
+                    formdata.append("lista_items2", JSON.stringify(lista_items2));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items3 !== "undefined") {
+                    formdata.append("lista_items3", JSON.stringify(lista_items3));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items4 !== "undefined") {
+                    formdata.append("lista_items4", JSON.stringify(lista_items4));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items5 !== "undefined") {
+                    formdata.append("lista_items5", JSON.stringify(lista_items5));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items6 !== "undefined") {
+                    formdata.append("lista_items6", JSON.stringify(lista_items6));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items7 !== "undefined") {
+                    formdata.append("lista_items7", JSON.stringify(lista_items7));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+            try {
+                if (typeof lista_items8 !== "undefined") {
+                    formdata.append("lista_items8", JSON.stringify(lista_items8));
+                }
+            } catch (err){
+                console.log(err.message);
+            }
+        }
+
+    </script>
+    {% if selects %}
+        <script>
+            const configurar_select = (id, url, action, placeholder, method='POST') => {
+                $(id).addClass("validate[required]");
+                $(id).select2({
+                    ajax: {
+                        type: method,
+                        url: url,
+                        dataType: 'json',
+                        quietMillis: 250,
+                        data: function (params) {
+                            return {
+                                action: action,
+                                q: params.term,
+                                s: 40
+                            };
+                        },
+                        processResults: function (data) {
+                            try {
+                                return {
+                                    results: $.map(data.results, function(obj) {
+                                        return { id: obj.id, text: obj.name };
+                                    })
+                                };
+                            } catch (e) {
+                                console.error("Error al procesar resultados desde "+url+":", e);
+                                return { results: [] };
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error("Error en la petición AJAX de Select2:", error);
+                        }
+                    },
+                    cache: true,
+                    placeholder: placeholder,
+                    minimumInputLength: 3,
+                    language: 'es'
+                });
+            };
+
+            $(function(){
+                {% for select in selects %}
+                    configurar_select(id='{{ select.id }}', url='{{ select.url}}', action='{{select.action}}', placeholder='{{select.placeholder}}', method='{{select.method}}');
+                {% endfor %}
+            });
+        </script>
+    {% endif %}
+    {% block extraheading %}
+    {% endblock %}
+{% endblock %}
+{% block atras %}{% if datatablename %}{{ request.path }}{% else %}/{% endif %}{% endblock %}
+{% block canvas %}
+    <div class='row-fluid {% if datatablename %}mantenimiento_tabla{% endif %}'>
+        <div class='span12'>
+            {% block mensajes_form %}{% endblock %}
+            <div class="{% block formwidth %}form-l{% endblock %}">
+                {% block pre_form %}{% endblock %}
+                {% if datatablename %}
+                    <div class="row-fluid" style="font-size: 16px; font-weight: bold;">
+                        <div class="header" style="background-color: transparent; padding: 0;">
+                            <div class="header-left">
+                                <div class="icon-header">
+                                    <i class="fa fa-wpforms"></i>
+                                </div>
+                                <div>
+                                    <h1 class="header-title">{{ title }}</h1>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="row-fluid no-marging-bottom" style="margin-bottom: 3px;">
+                        <div class="well" style="margin-bottom: 3px;padding: 10px;">
+                            <h4>{% block titulo %}{% endblock %}</h4>
+                        </div>
+                    </div>
+                {% endif %}
+                <div class='row-fluid'>
+                    <div class='well'>
+                        <form id="formulario" {% block formtagextra %}{% endblock %}
+                              formtype="{% block form-type %}form-horizontal{% endblock %}"
+                              style="width: 100%; margin-bottom: 0" onsubmit="return false">
+                            <div>
+                                {% block formextra %}
+                                    {% if params %}
+                                        {% for key, value in params.items %}
+                                            <input type='hidden' name='{{ key }}' value='{{ value }}'/>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if action %}
+                                            <input type='hidden' name='action' value='{{ action }}'/>
+                                        {% endif %}
+                                        {% if id %}
+                                            <input type='hidden' name='id' value='{{ id }}'/>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endblock %}
+                            </div>
+                            <div class="row-fluid">
+                                {% csrf_token %}
+                                {% block formbase %}
+                                    {% include 'formbase.html' with form=form %}
+                                {% endblock %}
+                            </div>
+                            <div class="row-fluid">
+                                {% block formsuffix %}
+                                {% endblock %}
+                            </div>
+                            <div {% if datatablename %}style="text-align: right; margin-bottom: 0;display: flex;justify-content: flex-end;gap: 10px;" class="row-btn-center" {% else %} class="row-fluid pb-0 form-buttons text-right"{% endif %}>
+                                {% block preextrabuttons %}{% endblock %}
+
+                                <a href="javascript:;" class="btn btn-success {% if datatablename %}btn-primary{% else %}btn-large{% endif %} formbutton" id="formbutton">
+                                    <i class="fa fa-save m-1"></i>
+                                    {% block buttonname %}Guardar{% endblock %}
+                                </a>
+
+                                {% block extrabuttons %}{% endblock %}
+
+                                <a href="{% block formback %}{% if datatablename %}{{ request.path }}{% else %}/{% endif %}{% endblock %}"
+                                   class="btn btn-large btn-danger bloqueo_pantalla">
+                                    {#                                    {% if permite_modificar %}#}
+                                    <i class="fa fa-close m-1"></i>
+                                    {% block cancelname %}Cancelar{% endblock %}
+                                    {#                                    {% else %}#}
+                                    {#                                        Aceptar#}
+                                    {#                                    {% endif %}#}
+                                </a>
+                            </div>
+                            <div class="row-fluid">
+                                {% block formadicional %}
+                                {% endblock %}
+                                {% if componente_html %}
+                                    {% include componente_html %}
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class='row-fluid'>
+        {% block extraalerts %}
+        {% endblock %}
+    </div>
+{% endblock %}

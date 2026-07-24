@@ -1,0 +1,200 @@
+<style>
+    .ln-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .ln-filter-wrap {
+        flex: 1;
+        position: relative;
+    }
+    .ln-filter-wrap .fa-search {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .ln-filter-bar #FilterTextBox {
+        padding-left: 30px;
+        text-transform: uppercase;
+        margin-bottom: 0;
+        width: 100%;
+    }
+    .ln-contador {
+        font-size: 11px;
+        color: #888;
+        white-space: nowrap;
+    }
+
+    .ln-table-container {
+        max-height: 340px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .ln-table {
+        table-layout: fixed;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .ln-table thead th {
+        background: color-mix(in srgb, var(--primary-color) 80%, transparent);
+        color: #fff;
+        padding: 8px 10px;
+        font-weight: 600;
+        border: none;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .ln-table thead th.th-num {
+        width: 36px;
+        text-align: center;
+    }
+    .ln-table thead th.th-check {
+        width: 48px;
+        text-align: center;
+    }
+    .ln-table thead th.th-check input[type=checkbox],
+    .ln-table td.td-check input[type=checkbox] {
+        cursor: pointer;
+        margin: 0;
+    }
+    .ln-table tbody tr {
+        border-bottom: 1px solid #e8e8e8;
+        transition: background 0.15s;
+    }
+    .ln-table tbody tr:hover {
+        background: #eaf3fb;
+    }
+    .ln-table tbody tr.ln-selected {
+        background: #d6eaf8;
+    }
+    .ln-table tbody td {
+        padding: 7px 10px;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .ln-table td.td-num {
+        text-align: center;
+        color: #aaa;
+        font-size: 11px;
+        width: 36px;
+    }
+    .ln-table td.td-check {
+        text-align: center;
+        width: 48px;
+    }
+    .ln-table .ln-empty td {
+        text-align: center;
+        color: #aaa;
+        padding: 20px;
+        font-style: italic;
+        white-space: normal;
+    }
+</style>
+
+<script>
+    (function () {
+        var seleccionMultiple = {{ seleccion_multiple|yesno:"true,false" }};
+
+        $(function () {
+            $(".filterable tr:has(td)").each(function () {
+                var t = $(this).text().toLowerCase();
+                $("<td class='indexColumn'></td>").hide().text(t).appendTo(this);
+            });
+
+            $("#FilterTextBox").on("input", function () {
+                var s = $(this).val().toLowerCase().split(" ");
+                $(".filterable tr:hidden").show();
+                $.each(s, function () {
+                    if (this !== "") {
+                        $(".filterable tr:visible .indexColumn:not(:contains('" + this + "'))").parent().hide();
+                    }
+                });
+                actualizarContador();
+            });
+
+            if (seleccionMultiple) {
+                $("#todo_checkbox").off("change.lnlist").on("change.lnlist", function () {
+                    var checked = $(this).is(":checked");
+                    $(".filterable tr:visible .item_checkbox").prop("checked", checked);
+                    $(".filterable tr:visible").toggleClass("ln-selected", checked);
+                    actualizarContador();
+                });
+            }
+
+            $(document).off("change.lnlist").on("change.lnlist", ".item_checkbox", function () {
+                if (seleccionMultiple) {
+                    $(this).closest("tr").toggleClass("ln-selected", $(this).is(":checked"));
+                    actualizarCheckTodos();
+                } else {
+                    $(".item_checkbox").not(this).prop("checked", false);
+                    $(".ln-table tbody tr").removeClass("ln-selected");
+                    if ($(this).is(":checked")) {
+                        $(this).closest("tr").addClass("ln-selected");
+                    }
+                }
+                actualizarContador();
+            });
+
+            function actualizarCheckTodos() {
+                var total = $(".filterable tr:visible .item_checkbox").length;
+                var checked = $(".filterable tr:visible .item_checkbox:checked").length;
+                $("#todo_checkbox").prop("checked", total > 0 && checked === total);
+            }
+
+            function actualizarContador() {
+                var checkedTotal = $(".item_checkbox:checked").length;
+                if (seleccionMultiple) {
+                    if (checkedTotal > 0) {
+                        $("#ln-sel-count").text(checkedTotal + " seleccionada(s)").show();
+                    } else {
+                        $("#ln-sel-count").hide();
+                    }
+                }
+            }
+
+            actualizarContador();
+        });
+    })();
+</script>
+
+<div class="ln-filter-bar">
+    <div class="ln-filter-wrap">
+        <i class="fa fa-search"></i>
+        <input type="search" class="form-control" id="FilterTextBox" name="FilterTextBox" placeholder="Buscar...">
+    </div>
+    {% if seleccion_multiple %}
+    <span class="ln-contador" id="ln-sel-count" style="display:none;"></span>
+    {% endif %}
+</div>
+
+<div class="ln-table-container">
+    <table class="ln-table filterable">
+        <thead>
+            <tr>
+                <th class="th-num">#</th>
+                <th style="width: 90%;">Descripción</th>
+                <th class="th-check">
+                    {% if seleccion_multiple %}
+                    <input type="checkbox" name="todo_checkbox" id="todo_checkbox" title="Seleccionar todos">
+                    {% endif %}
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% block tbody %}
+                <tr class="ln-empty">
+                    <td style="width: 1%;"><i class="fa fa-inbox"></i> No se encontraron datos que mostrar.</td>
+                </tr>
+            {% endblock %}
+        </tbody>
+    </table>
+</div>

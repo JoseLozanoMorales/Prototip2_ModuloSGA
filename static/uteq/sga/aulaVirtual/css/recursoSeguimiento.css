@@ -1,0 +1,73 @@
+/* ══════════════════════════════════════════════════════════════
+   Check de "visto" para recursos tipo ARCHIVO (DocumentosMateria).
+   Círculo a la derecha del recurso; se activa en verde con un check
+   al marcarse como revisado (automático o manual).
+   ══════════════════════════════════════════════════════════════ */
+.rec-check-wrap {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: 10px;
+}
+
+.rec-check {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
+    color: transparent;
+    flex-shrink: 0;
+}
+
+.rec-check:hover {
+    border-color: #0ca30c;
+    transform: scale(1.06);
+}
+
+.rec-check:active {
+    transform: scale(.94);
+}
+
+.rec-check i {
+    font-size: 15px;
+}
+
+.rec-check.rec-check--activo {
+    background: #0ca30c;
+    border-color: #0ca30c;
+    color: #fff;
+}
+
+.rec-check.rec-check--activo:hover {
+    background: #0a8c0a;
+    border-color: #0a8c0a;
+}
+
+.rec-check.disabled {
+    opacity: .6;
+    cursor: wait;
+    transform: none;
+}
+
+/* Solo indicador de estado (recursos que aún no han pasado su semana):
+   no es clickeable manualmente, se completa solo con la lectura/descarga. */
+.rec-check--solo {
+    cursor: default;
+}
+
+.rec-check--solo:hover {
+    border-color: #cbd5e1;
+    transform: none;
+}
+
+.rec-check--solo.rec-check--activo:hover {
+    background: #0ca30c;
+    border-color: #0ca30c;
+}

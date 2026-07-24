@@ -1,0 +1,33 @@
+#cronometroDiv {
+    width: 250px;
+    border-radius: 5px;
+    border: 1px solid #c7c7c7;
+    padding: 5px;
+    display: flex;
+    flex-direction: row;
+}
+
+.cronometroItemDiv {
+    width: 25%;
+    margin: 0 2px;
+}
+
+.itemValorDiv {
+    background-color: #e8e8e8;
+    color: black;
+    font-weight: bold;
+    border: 1px solid #ececec;
+    border-radius: 5px;
+    align-items: center;
+    align-self: center;
+    text-align: center;
+    padding: 3px;
+}
+
+.divItemText {
+    align-items: center;
+    align-self: center;
+    text-align: center;
+    padding: 0 3px;
+    font-size: 11px;
+}

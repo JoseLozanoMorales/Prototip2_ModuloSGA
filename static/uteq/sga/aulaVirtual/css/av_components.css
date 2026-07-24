@@ -1,0 +1,372 @@
+/* ══════════════════════════════════════════════════════════════
+   AV COMPONENTS — Biblioteca de componentes Aula Virtual
+   Uso: actividades.html, guiapracticas.html y otras vistas AV
+   Los colores institucionales viven en av_colores.css (debe
+   cargarse antes que este archivo).
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   COMPARTIDOS
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Encabezado de página ── */
+.av-header {
+    background: linear-gradient(135deg, #eff4f7 0%, #eff4f7 100%);
+    border-radius: 4px;
+    padding: 12px 16px 10px;
+    margin-bottom: 14px;
+    box-shadow: var(--av-sombra);
+}
+/* Fila superior: título a la izquierda, acciones a la derecha */
+.av-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.av-header-top .av-header-titulo {
+    margin-bottom: 0;
+}
+.av-header-top .btn-group .btn {
+    font-size: 12px;
+    padding: 3px 10px;
+    line-height: 1.6;
+}
+.av-header-titulo {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: .3px;
+    margin-bottom: 6px;
+}
+.av-header-titulo i { margin-right: 6px; }
+.av-header-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    font-size: 12px;
+    opacity: .92;
+}
+.av-header-info span i { margin-right: 4px; }
+
+/* ── Estado vacío ── */
+.av-vacio {
+    text-align: center;
+    color: #aaa;
+    font-size: 12px;
+    padding: 20px 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GUÍA DE PRÁCTICAS  (.gp-*)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Tarjeta de unidad ── */
+.gp-unidad-card {
+    margin-bottom: 14px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: var(--av-sombra);
+}
+.gp-unidad-header {
+    display: flex;
+    align-items: center;
+    background: var(--av-gris-fondo);
+    color: #0a0808;
+    padding: 7px 10px;
+    gap: 0;
+}
+.gp-unidad-num {
+    background: var(--av-azul-claro);
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+.gp-unidad-titulo {
+    flex: 1;
+    font-size: 13px;
+    font-weight: bold;
+}
+.gp-unidad-acciones { display: flex; gap: 6px; align-items: center; }
+.gp-unidad-acciones a {
+    color: var(--av-azul-medio) !important;
+    font-size: 17px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    transition: background .15s;
+}
+.gp-unidad-acciones a:hover { background: rgba(46,134,193,.12); color: var(--av-azul) !important; }
+
+.gp-unidad-body {
+    background: #fff;
+    border: 1px solid var(--av-gris-borde);
+    border-top: none;
+    padding: 8px;
+}
+
+/* ── Tarjeta de práctica ── */
+.gp-practica-card {
+    border: 1px solid var(--av-gris-borde);
+    border-left: 4px solid var(--av-azul-claro);
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 8px;
+    background: #fff;
+    box-shadow: var(--av-sombra);
+    overflow: hidden;
+}
+.gp-practica-card:last-child { margin-bottom: 0; }
+
+.gp-practica-head {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px 6px;
+    border-bottom: 1px solid var(--av-gris-borde);
+    gap: 8px;
+}
+.gp-practica-icono img { width: 38px; flex-shrink: 0; }
+.gp-practica-info { flex: 1; }
+.gp-practica-tema-label {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: .5px;
+}
+.gp-practica-tema-nombre {
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1.3;
+}
+
+.gp-practica-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: center;
+}
+.gp-practica-btns a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 26px;
+    border-radius: 4px;
+    border: 1px solid var(--av-gris-borde);
+    font-size: 14px;
+    color: #555;
+    transition: background .15s, color .15s;
+}
+.gp-practica-btns a:hover { background: var(--av-gris-fondo); color: var(--av-azul); }
+
+/* ── Indicadores ── */
+.gp-indicadores {
+    padding: 5px 10px 4px;
+    border-bottom: 1px solid var(--av-gris-fondo);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+/* ── Cuerpo de contenido ── */
+.gp-practica-body { padding: 8px 12px; }
+.gp-sub {
+    font-weight: bold;
+    font-size: 11px;
+    color: var(--av-azul-medio);
+    border-left: 3px solid var(--av-azul-claro);
+    padding-left: 5px;
+    margin: 8px 0 3px;
+}
+.gp-bloque {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 3px 6px;
+    margin-bottom: 4px;
+}
+
+/* ── Actividades vinculadas ── */
+.gp-actividades-seccion {
+    margin-top: 10px;
+    border: 1px solid var(--av-gris-borde);
+    border-top: 3px solid var(--av-azul-claro);
+    border-radius: 0 0 4px 4px;
+}
+.gp-actividades-titulo {
+    background: var(--av-gris-fondo);
+    border-bottom: 1px solid var(--av-gris-borde);
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--av-azul-medio);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.gp-actividades-titulo i { color: var(--av-azul-claro); margin-right: 5px; }
+.gp-actividades-seccion .gp-actividad-card {
+    border: none;
+    border-bottom: 1px solid var(--av-gris-borde);
+    border-radius: 0;
+    margin-top: 0;
+}
+.gp-actividades-seccion .gp-actividad-card:last-child { border-bottom: none; }
+
+/* ── Tarjeta de actividad vinculada ── */
+.gp-actividad-card {
+    border: 1px solid var(--av-gris-borde);
+    border-radius: 4px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+.gp-actividad-header {
+    background: var(--av-gris-fondo);
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--av-azul);
+    border-bottom: 1px solid var(--av-gris-borde);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.gp-actividad-body { padding: 6px 10px; font-size: 12px; }
+
+/* ── Stats (pie charts) ── */
+.gp-stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+.gp-stat-box {
+    border: 1px solid var(--av-gris-borde);
+    border-radius: 4px;
+    padding: 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    background: #fff;
+}
+.gp-stat-num { font-size: 22px; font-weight: bold; color: var(--av-azul); }
+.gp-stat-lbl { color: #777; font-size: 10px; line-height: 1.2; }
+
+/* ── Accordion override ── */
+.ziehharmonika h3 {
+    font-size: 12px !important;
+    padding: 5px 8px !important;
+    background: var(--av-gris-fondo) !important;
+    border: 1px solid var(--av-gris-borde) !important;
+    border-left: 3px solid var(--av-azul-claro) !important;
+    color: var(--av-azul-medio) !important;
+    margin: 4px 0 0 !important;
+    font-weight: bold !important;
+}
+.ziehharmonika > div { font-size: 12px; line-height: 1.5; padding: 6px 8px; }
+
+/* ══════════════════════════════════════════════════════════════
+   ACTIVIDADES  (.act-*)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Filtro de materia ── */
+.act-filtro {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid var(--av-gris-borde);
+    border-left: 4px solid var(--av-azul-claro);
+    border-radius: 0 4px 4px 0;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--av-sombra);
+}
+.act-filtro label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--av-azul-medio);
+    white-space: nowrap;
+    margin: 0;
+}
+.act-filtro label i { color: var(--av-azul-claro); margin-right: 4px; }
+.act-filtro select { flex: 1; font-size: 12px; }
+
+/* ── Tabla de actividades ── */
+.act-tabla-wrap {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: var(--av-sombra);
+    overflow: hidden;
+    border: 1px solid var(--av-gris-borde);
+}
+.act-tabla thead th {
+    padding: 9px 12px;
+    font-weight: bold;
+    font-size: 12px;
+    letter-spacing: .2px;
+    border: none;
+}
+.act-tabla tbody tr {
+    border-bottom: 1px solid var(--av-gris-borde);
+    transition: background .12s;
+}
+.act-tabla tbody tr:last-child { border-bottom: none; }
+.act-tabla tbody tr:hover { background: var(--av-gris-fondo); }
+.act-tabla td {
+    padding: 9px 12px;
+    vertical-align: middle;
+    border: none;
+}
+
+/* ── Celdas ── */
+.act-td-fecha {
+    text-align: center;
+    white-space: nowrap;
+    font-size: 11px;
+    color: #555;
+    min-width: 80px;
+}
+.act-td-nombre { cursor: pointer; }
+.act-td-nombre:hover .act-nombre-texto { color: var(--av-azul-claro); }
+.act-nombre-texto {
+    font-weight: bold;
+    /*font-size: 13px;*/
+    color: var(--av-azul-medio);
+    display: block;
+    margin-bottom: 4px;
+    transition: color .12s;
+}
+.act-nombre-materia {
+    font-style: italic;
+    font-size: 11px;
+    color: rgba(0,0,0,.55);
+    display: block;
+    margin-top: 2px;
+}
+.act-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+
+.act-td-calificar {
+    text-align: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--av-azul-medio);
+    min-width: 60px;
+}
+.act-td-calificar span { display: block; font-size: 10px; color: #888; font-weight: normal; }
+.act-td-estado { text-align: center; min-width: 80px; }
+
+/* ── Notificaciones en modal ── */
+.notify-row ul li { padding: 0; }
+.notify-row .badge {
+    position: absolute;
+    right: 3px;
+    top: -7px;
+    z-index: 100;
+}

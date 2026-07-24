@@ -1,0 +1,80 @@
+/* ══════════════════════════════════════════════════════════════
+   AV COLORES — Paleta central de colores del Aula Virtual
+   Un solo lugar para tocar los colores de las tarjetas de materia,
+   los encabezados (header.html, header_materia.html) y demás
+   componentes del módulo. Cambiar un valor aquí lo cambia en
+   todas las plantillas que usan estas variables.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+    /* ── Marca / primario ── */
+    --av-azul:       #18669a;
+    --av-azul-medio: #1a5276;
+    --av-azul-claro: #2e86c1;
+    --av-azul-suave: #5bc0de;
+
+    /* ── Estados semánticos ── */
+    --av-exito:        #059669;
+    --av-exito-suave:  #d1fae5;
+    --av-exito-texto:  #065f46;
+    --av-exito-fuerte: #15803d;
+    --av-exito-borde:  #bbf7d0;
+    --av-exito-fondo-fila: #f0fdf4;
+
+    --av-peligro:        #dc2626;
+    --av-peligro-suave:  #fee2e2;
+    --av-peligro-texto:  #991b1b;
+    --av-peligro-fuerte: #b91c1c;
+    --av-peligro-borde:  #fecaca;
+    --av-peligro-fondo-fila: #fff1f2;
+
+    --av-advertencia:       #f89406;
+    --av-advertencia-suave: #fef3c7;
+    --av-advertencia-texto: #b45309;
+    --av-advertencia-borde: #fde68a;
+    --av-advertencia-fondo-fila: #fffbeb;
+
+    --av-info:       #1d4ed8;
+    --av-info-suave: #dbeafe;
+    --av-info-borde: #bfdbfe;
+
+    /* ── Neutros ── */
+    --av-blanco:          #fff;
+    --av-gris-oscuro:     #374151;
+    --av-gris-texto:      #4b5563;
+    --av-gris-texto-alt:  #555;
+    --av-gris-medio:      #6b7280;
+    --av-gris-suave:      #9ca3af;
+    --av-gris-tenue:      #94a3b8;
+    --av-gris-fondo:      #f4f6f9;
+    --av-gris-fondo-alt:  #f8fafc;
+    --av-gris-borde:      #dde3ea;
+    --av-gris-borde-suave: #e5e9ef;
+    --av-gris-borde-alt:  #e2e8f0;
+
+    /* ── Sombras ── */
+    --av-sombra:       0 1px 4px rgba(0,0,0,.08);
+    --av-sombra-hover: 0 6px 20px rgba(0,0,0,.13);
+
+    /* ── Overlay blanco sobre fondos de color (headers, íconos, chips) ── */
+    --av-overlay-sutil:  rgba(255,255,255,.15);
+    --av-overlay-tenue:  rgba(255,255,255,.18);
+    --av-overlay-medio:  rgba(255,255,255,.28);
+    --av-overlay-fuerte: rgba(255,255,255,.35);
+    --av-texto-sobre-color:      rgba(255,255,255,.82);
+    --av-texto-sobre-color-alto: rgba(255,255,255,.92);
+
+    /* ── Efecto "atenuado" de los encabezados de tarjeta/página ── */
+    --av-header-filtro:   saturate(0.75) brightness(0.94);
+    --av-header-opacidad: 0.7;
+
+    /* Aliases para estilos inline existentes en las plantillas */
+    --verde:       #18669a;
+    --verde-medio: #1a5276;
+    --verde-claro: #2e86c1;
+    --azul:        #18669a;
+    --azul-medio:  #1a5276;
+    --azul-claro:  #2e86c1;
+    --gris-fondo:  #f4f6f9;
+    --gris-borde:  #dde3ea;
+    --sombra:      0 1px 4px rgba(0,0,0,.08);
+}

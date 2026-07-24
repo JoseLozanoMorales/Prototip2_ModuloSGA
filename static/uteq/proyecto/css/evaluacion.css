@@ -1,0 +1,1366 @@
+/* ============================================
+   ESTILOS BASE
+============================================ */
+strong {
+    font-size: 11.8px;
+}
+
+/* ============================================
+   CARD RESUMEN
+============================================ */
+.card-resumen {
+    background-color: #f1f0f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 75%;
+    border: 0.5px solid rgba(200, 200, 200, 0.3);
+    box-sizing: border-box;
+}
+
+.card-resumen:hover {
+    background-color: #e0e2ea;
+}
+
+.card-resumen.minimizada .contenido {
+    display: none;
+}
+
+.card-resumen.minimizada .header {
+    cursor: pointer;
+}
+
+.card-resumen .toggle-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background-color: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #888;
+}
+
+.card-resumen > .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding-right: 30px;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+.card-resumen > .header > .toggle-btn-resumen {
+    position: absolute;
+    right: 15px;
+    background-color: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    color: #888;
+    z-index: 2;
+}
+
+.card-resumen .titulo {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    letter-spacing: 0.5px;
+}
+
+.card-resumen .label {
+    font-weight: 600;
+    color: #555;
+}
+
+.card-resumen .valor {
+    color: #222;
+}
+
+@media (min-width: 992px) {
+    .card-resumen-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+    }
+}
+
+/* ============================================
+   TABLA COMPACTA
+============================================ */
+#tabla_compacta {
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+}
+
+#tabla_compacta tr td,
+#tabla_compacta tr th {
+    padding: 4px 6px;
+    line-height: 1;
+    vertical-align: middle;
+    font-size: 11.2px;
+}
+
+#tabla_compacta td p,
+#tabla_compacta td div {
+    margin: 0;
+    padding: 0;
+}
+
+/* ============================================
+   EVALUADOR ITEM
+============================================ */
+.evaluador-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #eaeaea;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.evaluador-item:hover {
+    background-color: #f1f3f6;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.evaluador-item > div:first-child {
+    flex: 1 1 60%;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.evaluador-item > div:last-child {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* --- Sección de información --- */
+.info {
+    display: flex;
+    flex-direction: column;
+}
+
+.nombre {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2d3748;
+    word-break: break-word;
+}
+
+.detalle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+/* --- Etiquetas de estado --- */
+.estado {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 2px 8px;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.activo {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.inactivo {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.info-label {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.warning-label {
+    background-color: #fef9c3;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+/* --- Botones --- */
+.botones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.boton {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.boton:active {
+    transform: scale(0.97);
+}
+
+.editar {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.editar:hover {
+    background-color: #2563eb;
+}
+
+.eliminar {
+    background-color: #ef4444;
+    color: white;
+}
+
+.eliminar:hover {
+    background-color: #dc2626;
+}
+
+/* --- Mensaje vacío --- */
+.sin-evaluadores {
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 12px;
+    padding: 20px;
+}
+
+/* ============================================
+   SECCIONES
+============================================ */
+.section-bloque {
+    /*margin-top: 12px;*/
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.02);
+    box-sizing: border-box;
+}
+
+.criterios-section {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.02);
+    box-sizing: border-box;
+}
+
+.criterios-section .btn {
+    margin: 4px 4px 4px 0;
+}
+
+.criterios-header {
+    font-weight: 600;
+    font-size: 11px;
+    color: #334155;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+}
+
+.criterios-table {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ============================================
+   FILA DE CRITERIO (Grid responsivo)
+============================================ */
+.criterio-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1.5fr 10px;
+    align-items: center;
+    background: white;
+    border-radius: 10px;
+    padding: 10px 14px;
+    gap: 10px;
+    transition: all .2s ease-in-out;
+    box-sizing: border-box;
+}
+
+.criterio-row:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+
+.criterio-nombre {
+    font-size: 12px;
+    color: #374151;
+    word-break: break-word;
+}
+
+.criterio-estado {
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    text-align: center;
+    width: auto;
+}
+
+.criterio-valor {
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 20px;
+    padding: 4px 10px;
+}
+
+.criterio-btn {
+    text-align: center;
+}
+
+.criterio-btn a {
+    display: inline-block;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    font-size: 12px;
+}
+
+/* Inputs y textareas dentro de los criterios */
+.criterio-row input[type="number"],
+.criterio-row .valor-criterio {
+    width: 100% !important;
+    max-width: 150px;
+    box-sizing: border-box;
+}
+
+.criterio-row textarea,
+.criterio-row .observacion-criterio {
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0 !important;
+    min-height: 36px;
+}
+
+/* ============================================
+   BADGE RESULTADO
+============================================ */
+.badge-resultado {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 25px;
+    padding: 0 8px;
+    background-color: #0d6efd;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+}
+
+.badge-resultado:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.resultado-global-row {
+    background: #f1f5f9 !important;
+    border: 1px dashed #cbd5e1;
+}
+
+/* ============================================
+   ========== RESPONSIVE BREAKPOINTS ==========
+============================================ */
+
+/* ---------- DESKTOP GRANDE (≥1400px) ---------- */
+@media (min-width: 1400px) {
+    .criterio-row {
+        grid-template-columns: 3fr 1fr 1.2fr 1.8fr 10px;
+        gap: 14px;
+    }
+
+    .criterio-nombre {
+        font-size: 13px;
+    }
+}
+
+/* ---------- DESKTOP MEDIANO (1200px – 1399px) ---------- */
+@media (max-width: 1399px) and (min-width: 1200px) {
+    .criterio-row {
+        grid-template-columns: 2.5fr 1fr 1fr 1.5fr;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+}
+
+/* ---------- LAPTOPS / TABLET HORIZONTAL (992px – 1199px) ---------- */
+@media (max-width: 1199px) and (min-width: 992px) {
+    .card-resumen {
+        width: 90%;
+    }
+
+    .criterio-row {
+        grid-template-columns: 2.2fr 1fr 1fr 1.4fr;
+        gap: 6px;
+        padding: 8px 10px;
+    }
+
+    .criterio-nombre {
+        font-size: 11.5px;
+    }
+
+    .criterio-row input[type="number"],
+    .criterio-row .valor-criterio {
+        max-width: 100px;
+        height: 28px !important;
+    }
+
+    .nombre {
+        font-size: 13px;
+    }
+}
+
+/* ---------- TABLET (768px – 991px) ---------- */
+@media (max-width: 991px) and (min-width: 768px) {
+    .card-resumen {
+        width: 100%;
+    }
+
+    /* Layout cambia: las dos columnas span5 y span7 pasan a 100% */
+    .row-fluid .span5,
+    .row-fluid .span7 {
+        width: 100% !important;
+        margin-left: 0 !important;
+        float: none;
+    }
+
+    .row-fluid .span5 {
+        margin-bottom: 16px;
+    }
+
+    .criterio-row {
+        grid-template-columns: 2fr 1fr 1fr 1.5fr;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .criterios-section {
+        padding: 10px 12px;
+    }
+
+    .evaluador-item {
+        padding: 10px 14px;
+    }
+
+    .nombre {
+        font-size: 13px;
+    }
+
+    .estado {
+        font-size: 9px;
+        padding: 2px 6px;
+        margin-left: 4px;
+    }
+}
+
+/* ---------- MÓVIL HORIZONTAL / TABLET VERTICAL (576px – 767px) ---------- */
+@media (max-width: 767px) and (min-width: 576px) {
+    .card-resumen {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .row-fluid .span5,
+    .row-fluid .span7 {
+        width: 100% !important;
+        margin-left: 0 !important;
+        float: none;
+    }
+
+    /* La fila de criterios pasa a 2 columnas */
+    .criterio-row {
+        grid-template-columns: 1.5fr 1fr;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    /* Estado, valor y observación ocupan toda la fila */
+    .criterio-estado {
+        grid-column: 2 / 3;
+        justify-self: end;
+    }
+
+    .criterio-row > div:nth-child(3),
+    .criterio-row > div:nth-child(4) {
+        grid-column: 1 / -1;
+        text-align: left;
+    }
+
+    .criterio-row input[type="number"],
+    .criterio-row .valor-criterio {
+        max-width: 100%;
+    }
+
+    .criterio-row textarea,
+    .criterio-row .observacion-criterio {
+        margin-left: 0 !important;
+    }
+
+    .evaluador-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .evaluador-item > div:last-child {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .resultado-global-row {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .resultado-global-row .criterio-nombre {
+        grid-column: 1 / 2;
+    }
+}
+
+/* ---------- MÓVIL (≤575px) ---------- */
+@media (max-width: 575px) {
+    body, html {
+        overflow-x: hidden;
+    }
+
+    h3 {
+        font-size: 18px;
+    }
+
+    h4 {
+        font-size: 14px;
+    }
+
+    .card-resumen {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+    }
+
+    .card-resumen .titulo {
+        font-size: 11px;
+    }
+
+    .row-fluid .span5,
+    .row-fluid .span7,
+    .row-fluid .span12 {
+        width: 100% !important;
+        margin-left: 0 !important;
+        float: none;
+        box-sizing: border-box;
+    }
+
+    .row-fluid .span5 {
+        margin-bottom: 12px;
+    }
+
+    /* Sección criterios compactada */
+    .criterios-section {
+        padding: 8px 10px !important;
+        margin-top: 8px;
+    }
+
+    .criterios-section .btn {
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .section-bloque {
+        padding: 8px 10px;
+        margin-top: 8px;
+    }
+
+    /* Evaluador en columna vertical */
+    .evaluador-item {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+        border-radius: 10px;
+        gap: 10px;
+    }
+
+    .evaluador-item > div:first-child {
+        flex: 1 1 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .evaluador-item > div:last-child {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .evaluador-item > div:last-child .btn,
+    .evaluador-item > div:last-child a {
+        flex: 1 1 auto;
+        min-width: 40px;
+        text-align: center;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .nombre {
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .estado {
+        margin-left: 0;
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+
+    .label {
+        font-size: 9.5px !important;
+        padding: 2px 6px !important;
+    }
+
+    /* Fila de criterio en MÓVIL: layout tipo "tarjeta" */
+    .criterio-row {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+        gap: 6px;
+        border: 1px solid #e5e7eb;
+        background: white;
+    }
+
+    .criterio-row:hover {
+        transform: none;
+    }
+
+    .criterio-nombre {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #1f2937;
+        border-bottom: 1px dashed #e5e7eb;
+        padding-bottom: 6px;
+        margin-bottom: 4px;
+    }
+
+    .criterio-nombre::before {
+        content: "📋 ";
+    }
+
+    .criterio-estado {
+        text-align: left;
+        font-size: 11px;
+    }
+
+    .criterio-estado::before {
+        content: "Estado: ";
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 10.5px;
+    }
+
+    /* Caja de valor */
+    .criterio-row > div:nth-child(3) {
+        text-align: left !important;
+    }
+
+    .criterio-row > div:nth-child(3)::before {
+        content: "Valor: ";
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 10.5px;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .criterio-row input[type="number"],
+    .criterio-row .valor-criterio {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 36px !important;
+        font-size: 13px !important;
+    }
+
+    /* Observación */
+    .criterio-row > div:nth-child(4) {
+        text-align: left !important;
+    }
+
+    .criterio-row > div:nth-child(4)::before {
+        content: "Observación: ";
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 10.5px;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .criterio-row textarea,
+    .criterio-row .observacion-criterio {
+        width: 100% !important;
+        margin-left: 0 !important;
+        min-height: 50px;
+        font-size: 12px !important;
+    }
+
+    /* Resultado global en móvil */
+    .resultado-global-row {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 12px !important;
+        background: #eef2ff !important;
+        border: 2px solid #c7d2fe !important;
+    }
+
+    .resultado-global-row .criterio-nombre {
+        font-size: 14px !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .resultado-global-row .criterio-nombre::before {
+        content: "🏆 ";
+    }
+
+    .badge-resultado {
+        min-width: 70px;
+        height: 30px;
+        font-size: 14px;
+    }
+
+    /* Tabla compacta scroll horizontal */
+    #tabla_compacta {
+        font-size: 10.5px;
+    }
+
+    /* Botones de acción dentro de los criterios más compactos */
+    .btn-large {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+/* ---------- MÓVIL PEQUEÑO (≤375px) ---------- */
+@media (max-width: 375px) {
+    .criterios-section,
+    .section-bloque {
+        padding: 6px 8px !important;
+    }
+
+    .evaluador-item {
+        padding: 8px;
+    }
+
+    .nombre {
+        font-size: 12px;
+    }
+
+    .criterio-row {
+        padding: 8px;
+    }
+
+    .criterio-nombre {
+        font-size: 12px;
+    }
+
+    h3 {
+        font-size: 16px;
+    }
+
+    h4 {
+        font-size: 13px;
+    }
+}
+
+/*!* ============================================*/
+/*   AJUSTES GENERALES PARA MODAL EN MÓVIL*/
+/*============================================ *!*/
+/*@media (max-width: 767px) {*/
+/*    #modalDetalle,*/
+/*    .modal {*/
+/*        width: 95% !important;*/
+/*        max-width: 95% !important;*/
+/*        margin-left: -47.5% !important;*/
+/*    }*/
+
+/*    .modal-footer .btn {*/
+/*        margin-bottom: 4px;*/
+/*    }*/
+/*}*/
+
+/* ============================================
+   UTILIDADES
+============================================ */
+.tu, .tl {
+    cursor: pointer;
+}
+
+/* Asegurar que los botones de acción no se desborden */
+.action_toggle_status,
+.action_delete,
+.data-informacion-evaluacion,
+.data_confirmacion_save_notas {
+    white-space: nowrap;
+}
+
+.porcentaje-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.porcentajeValor {
+    font-size: 29px;
+    font-weight: 700;
+    font-family: "Orbitron", sans-serif;
+    transition: color 0.3s ease;
+    letter-spacing: 1px;
+}
+
+/* ============================================
+   OBSERVACIÓN GENERAL — FILA ESPECIAL
+============================================ */
+.observacion-general-row {
+    display: flex !important;
+    flex-direction: column;
+    grid-template-columns: none !important;
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%) !important;
+    border: 1px solid #fde68a !important;
+    border-radius: 12px;
+    padding: 0 !important;
+    margin-top: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.08);
+}
+
+.observacion-general-row:hover {
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
+}
+
+/* --- Header --- */
+.og-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    /*background: linear-gradient(135deg, #fefce8 0%, #f1f1f1 100%) !important;;*/
+    color: #0a0808;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #041a37;
+}
+
+.og-icon {
+    font-size: 18px;
+    /*color: white;*/
+    background: rgba(255, 255, 255, 0.25);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.og-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.og-subtitulo {
+    font-size: 11.5px;
+    opacity: 0.9;
+    font-weight: 400;
+    margin-left: auto;
+    font-style: italic;
+}
+
+/* --- Body en dos columnas --- */
+.og-body {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 14px;
+    padding: 14px 16px;
+    width: 100%;
+}
+
+.og-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #78350f;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.og-label i {
+    color: #d97706;
+}
+
+/* --- Textarea --- */
+.og-textarea-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-width: 50%;
+    max-width: 100%;
+}
+
+.og-textarea-wrapper .observacion_general {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #fcd34d;
+    background: white;
+    font-size: 13px;
+    color: #1f2937;
+    resize: vertical;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.og-textarea-wrapper .observacion_general:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.og-textarea-wrapper .observacion_general::placeholder {
+    color: #a8a29e;
+    font-style: italic;
+}
+
+.og-contador {
+    font-size: 10.5px;
+    color: #92400e;
+    text-align: right;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.og-contador-actual {
+    font-weight: 700;
+    color: #d97706;
+}
+
+/* --- File input personalizado --- */
+.og-archivo-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-width: 50%;
+    max-width: 100%;
+}
+
+.og-archivo-drop {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    padding: 12px;
+    border: 2px dashed #fcd34d;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.og-archivo-drop:hover {
+    border-color: #f59e0b;
+    background: #fffbeb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.12);
+}
+
+.og-archivo-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.og-archivo-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.og-archivo-icon {
+    font-size: 24px;
+    color: #d97706;
+    margin-bottom: 2px;
+}
+
+.og-archivo-text {
+    font-size: 12px;
+    color: #44403c;
+    line-height: 1.3;
+}
+
+.og-archivo-text strong {
+    color: #b45309;
+}
+
+.og-archivo-hint {
+    font-size: 10px;
+    color: #a8a29e;
+    font-style: italic;
+}
+
+/* --- Preview de archivo seleccionado --- */
+.og-archivo-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: white;
+    border: 1.5px solid #10b981;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+    margin-top: 8px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.og-preview-icon {
+    font-size: 22px;
+    color: #dc2626;
+    flex-shrink: 0;
+}
+
+.og-preview-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.og-preview-nombre {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.og-preview-tamano {
+    font-size: 10.5px;
+    color: #6b7280;
+}
+
+.og-preview-quitar {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.og-preview-quitar:hover {
+    background: #dc2626;
+    color: white;
+    transform: rotate(90deg);
+}
+
+/* --- Responsive --- */
+@media (max-width: 991px) {
+    .og-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575px) {
+    .og-header {
+        padding: 10px 12px;
+    }
+    .og-titulo { font-size: 13.5px; }
+    .og-subtitulo {
+        margin-left: 0;
+        flex-basis: 100%;
+        font-size: 10.5px;
+    }
+    .og-body { padding: 10px 12px; }
+    .og-archivo-drop { min-height: 70px; }
+    .og-archivo-icon { font-size: 20px; }
+    .og-archivo-text { font-size: 11px; }
+}
+
+/* --- Body en dos columnas (CORREGIDO) --- */
+.og-body {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 14px;
+    padding: 14px 16px;
+    align-items: start;  /* 👈 evita que las columnas se estiren entre sí */
+}
+
+/* --- Textarea: altura fija y consistente --- */
+.og-textarea-wrapper .observacion_general {
+    width: 100%;
+    min-height: 100px;        /* 👈 altura mínima garantizada */
+    height: 100px;            /* 👈 altura inicial fija */
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #fcd34d;
+    background: white;
+    font-size: 13px;
+    color: #1f2937;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+/* --- Archivo wrapper: contenedor con altura controlada --- */
+.og-archivo-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100px;  /* 👈 igual al textarea para consistencia visual */
+}
+
+/* --- Dropzone más compacto --- */
+.og-archivo-drop {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;       /* 👈 altura fija igual al textarea */
+    padding: 8px 12px;
+    border: 2px dashed #fcd34d;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* --- Preview del archivo: reemplaza al dropzone sin agregar margin --- */
+.og-archivo-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: white;
+    border: 1.5px solid #10b981;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+    margin-top: 0;          /* 👈 antes era 8px, ahora 0 */
+    min-height: 100px;      /* 👈 misma altura que el dropzone */
+    box-sizing: border-box;
+    animation: slideIn 0.3s ease;
+}
+
+.og-preview-nombre {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;          /* 👈 evita que nombres largos rompan el layout */
+    display: block;
+}
+
+.og-preview-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;          /* 👈 contiene el texto largo */
+}
+
+/* ============================================
+   COLUMNAS DE IGUAL ALTURA
+============================================ */
+.row-fluid.igual-altura {
+    display: flex;
+    align-items: stretch;        /* las columnas se estiran al mismo alto */
+    flex-wrap: wrap;             /* permite que bajen en móvil */
+}
+
+.row-fluid.igual-altura > [class*="span"] {
+    float: none !important;      /* desactiva el float de Bootstrap */
+    display: flex;
+    flex-direction: column;
+}
+
+/* El contenido interno de cada columna también ocupa toda la altura */
+.row-fluid.igual-altura > .span7 > .section-bloque {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.row-fluid.igual-altura > .span7 > .section-bloque > iframe {
+    flex: 1;
+    min-height: 730px;           /* altura mínima base */
+    height: 100%;
+    width: 100%;
+}
+
+/* Responsive: en pantallas pequeñas vuelven a apilarse */
+@media (max-width: 767px) {
+    .row-fluid.igual-altura {
+        display: block;
+    }
+    .row-fluid.igual-altura > [class*="span"] {
+        display: block;
+    }
+}
+
+.span7 iframe {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 730px;
+    border: 0;
+    display: flex;
+    align-items: stretch;
+}
+
+/* ============================================
+   COLUMNAS DE IGUAL ALTURA (PDF vs Evaluadores)
+============================================ */
+.row-fluid.columnas-iguales {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.row-fluid.columnas-iguales > [class*="span"] {
+    float: none !important;
+    display: flex;
+    flex-direction: column;
+}
+
+/* El section-bloque del PDF se estira para llenar TODA la altura */
+.row-fluid.columnas-iguales .section-bloque-pdf {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 730px;
+}
+
+/*.row-fluid.columnas-iguales .section-bloque-pdf .pdf-viewer-wrapper {*/
+/*    flex: 1;*/
+/*    display: flex;*/
+/*    flex-direction: column;*/
+/*    min-height: 0;          !* importante para que flex respete el alto del padre *!*/
+/*}*/
+
+.row-fluid.columnas-iguales .section-bloque-pdf iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    min-height: 730px;
+}
+
+/* En móvil/tablet vuelven a apilarse */
+@media (max-width: 767px) {
+    .row-fluid.columnas-iguales {
+        display: block;
+    }
+    .row-fluid.columnas-iguales > [class*="span"] {
+        display: block;
+    }
+    .row-fluid.columnas-iguales .section-bloque-pdf iframe {
+        height: 500px;
+        min-height: 500px;
+    }
+}
+
+/* La columna derecha es flex container */
+.row-fluid.igual-altura > .span5 {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Cada section-bloque crece proporcionalmente para llenar el espacio */
+.row-fluid.igual-altura > .span5 > .section-bloque {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;  /* quita el margin que rompe el flex */
+}
+
+/* La tabla de criterios se estira para empujar el "Resultado Global" hacia abajo */
+.row-fluid.igual-altura > .span5 .criterios-table {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* El "Resultado Global" queda fijo al fondo */
+.row-fluid.igual-altura > .span5 .resultado-global-row {
+    margin-top: auto;
+}

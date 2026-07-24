@@ -1,0 +1,30 @@
+/*.showPassword {*/
+/*    margin: 0;*/
+/*    padding: 0;*/
+/*    width: 100%;*/
+/*    outline: none;*/
+/*    height: 30px;*/
+/*    border-radius: 5px;*/
+/*}*/
+
+.showPassword {
+    font-size: 15px;
+    position: absolute;
+    width: 13%;
+    border-radius: 5px;
+    right: -3px;
+    z-index: 2;
+    top: 8px;
+    height: 28px;
+    cursor: pointer;
+    color: #8f8f8f;
+    /*background-color: rgba(138,221,45,0);*/
+    transform: translateX(8px);
+}
+
+:root {
+  /* Define la unidad base de espaciado (puedes ajustar este valor según tus necesidades) */
+  --spacing: 0.25rem; /* 4px con base en font-size de 16px */
+}
+
+

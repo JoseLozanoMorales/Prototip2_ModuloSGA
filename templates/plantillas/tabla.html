@@ -1,0 +1,470 @@
+{% extends "basebs.html" %}
+{% load sga_extras %}
+{% block heading %}
+<link href="/static/css/table-responsive.css?1.0.0" type="text/css" rel="stylesheet" />
+<link href="/static/css/mantenimientos.css?1.0.3" type="text/css" rel="stylesheet" />
+{% endblock %}
+{% block atras %}{{ back_path }}{% endblock %}
+
+{% block canvas %}
+{% block tabla_canvas %}
+<div class="mantenimiento_tabla">
+    {% if not to_json %}
+    <div class="header">
+            <div class="header-left">
+                <div class="icon-header">
+                    <i class="fa {% if head_icon %}{{ head_icon }}{% else %}fa-table{% endif %}"></i>
+                </div>
+                <div>
+                    <h1 class="header-title">{% if title %}{{ title }}{% else %}Administración de registros de {{ title_table }}{% endif %}</h1>
+                    {% if subtitle %}<p class="header-subtitle">{{ subtitle }}</p>{% endif %}
+                </div>
+
+            </div>
+            {% block header_actions %}
+            <div class="header-actions">
+                {% if permiso_agregar %}
+                <a id="add_btn_{{ table_name }}" nhref="{{ main_url_path }}?action=add_{{ table_name }}{%if postfix_ajax_url %}&{{ postfix_ajax_url|safe }}{% endif %}" class="btn btn-success formdynamics btn-primary"><i class="fa fa-plus" aria-hidden="true"></i>Agregar</a>
+                {% endif %}
+            </div>
+            {% endblock %}
+        </div>
+    {% endif %}
+    {% block filters_table %}
+    <div class='row-fluid'>
+            <!-- Filters -->
+        <div class="filters-container">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>Buscar</label>
+                    <div class="filter-input-wrapper">
+                        <i class="fa fa-search"></i>
+                        <input type="text" class="form-control filter_dt_{{ table_name }}" name="search" placeholder="Escribir y presionar Enter">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+    <div class='row-fluid'>
+        <div class='span12 tabla_generica' style="position: relative;">
+            <div class="table-header">
+                <div class="table-info">
+                    <span id="records_{{ table_name }}" class="badge badge-success">0 registros</span>
+                </div>
+            </div>
+            <table id="tabla_generica_{{ table_name }}" class="display table responsive table-striped table-bordered tabla_generica">
+                <thead>
+                    <tr>
+                        {% for campo in campos %}
+                            <th>
+                                {% if campo.verbose_name %}
+                                    {{ campo.verbose_name|capfirst }}
+                                {% else %}
+                                    {{ campo|capfirst }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                        {% if permiso_acciones %}
+                            <th class="dt-center actions-cell" style="width: 5%;  text-align: center">Acciones</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="10" style="text-align: center;line-height: 5">
+                            <p>CARGANDO REGISTROS ...</p>
+                        </td>
+                    </tr>
+                </tbody>
+                <div id="tableLoader_{{ table_name }}" class="table-loader">
+                    <div class="spinner"></div>
+                    <p>Cargando datos...</p>
+                </div>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script>
+$(document).ready(function() {
+    function showLoader_{{ table_name }}() {
+        document.getElementById('tableLoader_{{ table_name }}').classList.remove('hide');
+        //bloqueointerface();
+    }
+    function hideLoader_{{ table_name }}() {
+        document.getElementById('tableLoader_{{ table_name }}').classList.add('hide');
+        //$.unblockUI();
+    }
+    function get_filters_data_{{ table_name }}(d){
+        d.search = $('#search_{{ table_name }}').val();
+        var searchElements_{{ table_name }} = $('.filter_dt_{{ table_name }}');
+        if (searchElements_{{ table_name }}.length > 0) {
+            searchElements_{{ table_name }}.each(function() {
+                var $element = $(this);
+                var fieldName = $element.attr('name') || $element.attr('id');
+                var fieldValue = null;
+                var elementType = $element.attr('type');
+                // Obtener valor según el tipo de elemento
+                if ($element.is('select')) {
+                    // Para selects
+                    fieldValue = $element.val();
+                } else if (elementType === 'checkbox') {
+                    // Para checkboxes - enviar solo los marcados
+                    if ($element.is(':checked')) {
+                        fieldValue = $element.val() || '1'; // Usar '1' si no tiene valor definido
+                    }
+                } else if (elementType === 'radio') {
+                    // Para radio buttons - solo el seleccionado
+                    if ($element.is(':checked')) {
+                        fieldValue = $element.val();
+                    }
+                } else {
+                    // Para inputs de texto, number, date, etc.
+                    fieldValue = $element.val();
+                }
+                // Solo agregar si tiene un nombre/id y un valor válido
+                if (fieldName && fieldValue !== null && fieldValue !== '' && fieldValue !== undefined) {
+                    d[fieldName] = fieldValue;
+                }
+            });
+        }
+    }
+    var tabla_{{ table_name }} = $('#tabla_generica_{{  table_name }}').DataTable({
+        pageLength: {{ length }},
+        processing: false,
+        autoWidth: false,
+        responsive: false,
+        serverSide: {% if server_side %}true{% else %}false{% endif %},
+        lengthMenu: [10, 25, 50],
+        dom: '{% if doble_paginate %}<"top"p>{% endif %}tir<"bottom"lp>',
+        info: false,
+        searching: {% if server_side %}false{% else %}true{% endif %},
+        order: [],
+        ordering: {% if server_side %}false{% else %}true{% endif %},
+        language: {
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "NO HAY DATOS DISPONIBLES. ¡CREA TU PRIMER REGISTRO!",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sSearch": "Buscar:",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+                "sFirst": "Primero",
+                "sLast": "Último",
+                "sNext": "Siguiente",
+                "sPrevious": "Anterior"
+            }
+        },
+        paging: true,
+        pagingType: "simple_numbers",
+        columns: [
+            {% for campo in campos %}
+                {% if campo.name %}
+            {"data":"{{ campo.name }}",
+             className: 'dt-center'},
+                {% else %}
+             {"data":"{{ campo }}",
+                 className: 'dt-center'},
+                {% endif %}
+            {% endfor %}
+            {% if permiso_acciones %}
+            {
+                targets: {{ campos|length }},
+                orderable: false,
+                searchable: false,
+                className: 'dt-center actions-cell',
+                render: function (data, type, row) {
+                    return `
+                        <div class="actions-group">
+                            {% if permiso_editar %}
+                                <a href="javascript:;" class="btn-action btn-edit formdynamics" nhref="{{ main_url_path }}?action=edit_{{ table_name }}&id=${row.id}{%if postfix_ajax_url %}&{{ postfix_ajax_url|safe }}{% endif %}"><i class="fa fa-edit"></i><span class="tooltip-text">Editar</span></a>
+                            {% endif %}
+                            {% if acciones_extra %}
+                                {{ acciones_extra|safe }}
+                            {% endif %}
+                            {% if permiso_eliminar %}
+                                <a href="javascript:;" class="btn-action btn-delete action_delete" data-id="${row.id}"
+                                    data-action="del_{{ table_name }}"
+                                    data-name="${row['{{ campo_descripcion }}']}"
+                                    data-functionName="recargarTabla"
+                                    data-toast="true">
+                                    <i class="fa fa-trash"></i>
+                                    <span class="tooltip-text">Eliminar</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    `;
+                }
+            }{% endif %}
+
+        ],
+        ajax: {
+            "url": "{{ main_url_path }}?action=get_{{ table_name }}{%if postfix_ajax_url %}&{{ postfix_ajax_url|safe }}{% endif %}",
+            "type": "GET",
+            "data": function (d) {
+                showLoader_{{ table_name }}();
+                get_filters_data_{{ table_name }}(d);
+            },
+            "dataSrc": function (json) {
+                hideLoader_{{ table_name }}();
+                try {
+                    if (json && Array.isArray(json.data)) {
+                        return json.data;
+                    } else {
+                        console.warn("Respuesta inesperada del servidor:", json);
+                        return [];
+                    }
+                } catch (e) {
+                    console.error("Error procesando respuesta JSON:", e);
+                    return [];
+                }
+            },
+            error: function (xhr, status, err) {
+                hideLoader_{{ table_name }}();
+                $('.dataTables_processing').hide();
+                if (xhr.status === 404) {
+                    console.error('Endpoint no encontrado');
+                } else if (xhr.status === 500) {
+                    console.error('Error del servidor');
+                } else if (xhr.status === 403) {
+                    console.error('Sin permisos');
+                }
+                var msg = 'ERROR AL CARGAR LOS DATOS. INTENTE NUEVAMENTE. SI EL PROBLEMA PERSISTE, REPÓRTELO EN EL SISTEMA O CONTACTE AL SOPORTE TÉCNICO.';
+                $('#tabla_generica_{{  table_name }} tbody').html(
+                    '<tr style="background-color: #e4caca;"><td colspan="100%" style="text-align: center;padding-top: 30px;padding-bottom: 30px;">' + msg + '</td></tr>'
+                );
+            }
+        },
+        drawCallback: function(settings) {
+            try {
+                var api = this.api();
+                var recordsDisplay = api.page.info().recordsDisplay
+                var pagination = $(this)
+                    .closest('.dataTables_wrapper')
+                    .find('.dataTables_paginate');
+                var selectorCantidad = $(this)
+                    .closest('.dataTables_wrapper')
+                    .find('.dataTables_length');
+                selectorCantidad.toggle(recordsDisplay > 9);
+                pagination.toggle(api.page.info().pages > 1);
+                var texto_regoistros = recordsDisplay + ' registros'
+                if(recordsDisplay === 1){
+                    texto_regoistros = '1 registro'
+                }else {
+                    if (recordsDisplay === 0) {
+                        texto_regoistros = 'Sin registros'
+                    }
+                }
+                $('#records_{{ table_name }}').text(texto_regoistros);
+                {% block customDrawCallback %}
+                {% endblock %}
+            }catch (e) {
+                console.log('Error en DrawDT')
+            }
+            hideLoader_{{ table_name }}();
+        },
+        columnDefs: [
+            {
+              targets: 0,   // índice de la columna ID (0 = primera)
+              visible: false,
+              searchable: false
+            }{% if cols_right %},
+            { targets: [{{ cols_right }}], className: 'dt-right' }{% endif %}
+        ],
+        createdRow: function(row, data, dataIndex) {
+            let headers = [{% for campo in campos %}{% if campo.verbose_name %}"{{ campo.verbose_name|capfirst }}",{% else %}"{{ campo|capfirst }}",{% endif %}{% endfor %}];
+            headers = headers.filter(title => title.toLowerCase() !== 'id');
+
+            headers.forEach((title, i) => {
+                let cell = $('td', row).eq(i);
+                let content = cell.html();
+                if(title.toLowerCase() === '{{ campo_descripcion }}'){
+                    cell.html('<strong>' + content + '</strong>');
+                }
+                cell.attr('data-title', title);
+            });
+        },
+        initComplete: function() {
+            var select = $('select[name="tabla_generica_{{  table_name }}_length"]');
+            select.attr('data-type', "normal");
+        }
+    });
+    $('#search_btn_{{ table_name }}').on('click', function () {
+         tabla_{{ table_name }}.ajax.reload();
+    });
+    $(document).on('keydown', '.filter_dt_{{ table_name }}:not([type="checkbox"]):not([type="radio"]):not(select)', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            tabla_{{ table_name }}.ajax.reload();
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            $(this).val('');
+            tabla_{{ table_name }}.ajax.reload();
+        }
+    });
+
+    // Detección de cambios en selects, checkboxes y radio buttons (inmediato)
+    $(document).on('change', '.filter_dt_{{ table_name }}[type="checkbox"], .filter_dt_{{ table_name }}[type="radio"], select.filter_dt_{{ table_name }}', function() {
+        tabla_{{ table_name }}.ajax.reload();
+    });
+
+    // Detección de cambios en inputs de fecha y número (inmediato)
+    $(document).on('change', '.filter_dt_{{ table_name }}[type="date"], .filter_dt_{{ table_name }}[type="number"]', function() {
+        tabla_{{ table_name }}.ajax.reload();
+    });
+
+    // Mapa de variantes -> icono FA y clase de color para el ícono del modal
+    var _modalVariantMap = {
+        'btn-primary':  { icon: 'fa-check-circle', iconClass: 'modal-icon-primary' },
+        'btn-danger':   { icon: 'fa-exclamation-triangle', iconClass: 'modal-icon-danger' },
+        'btn-warning':  { icon: 'fa-exclamation-circle', iconClass: 'modal-icon-warning' },
+        'btn-info':     { icon: 'fa-info-circle', iconClass: 'modal-icon-info' },
+        'btn-success':  { icon: 'fa-check-circle', iconClass: 'modal-icon-success' },
+    };
+
+    function sendToServerProcess(element) {
+        var $btn = $(element);
+        var href = $btn.attr('nhref');
+        var confirmar = $btn.attr('data-confirmar') === 'true';
+        var titulo = $btn.attr('data-confirmar-titulo') || 'Confirmar acción';
+        var mensaje = $btn.attr('data-confirmar-mensaje') || '¿Está seguro de que desea continuar?';
+        var textoBotonConfirmar = $btn.attr('data-confirmar-boton') || 'Continuar';
+        var claseBoton = $btn.attr('data-confirmar-clase-boton') || 'btn-primary';
+
+        if (confirmar) {
+            showConfirmationModalGeneric(titulo, mensaje, textoBotonConfirmar, claseBoton);
+
+            $('#confirmGeneric').off('click').on('click', function () {
+                $('#confirmationModalGeneric').modal('hide');
+                ejecutarSolicitudAjax($btn, href);
+            });
+
+            $('#closeGeneric').off('click').on('click', function () {
+                $('#confirmationModalGeneric').modal('hide');
+            });
+
+            return;
+        }
+
+        ejecutarSolicitudAjax($btn, href);
+    }
+
+    function showConfirmationModalGeneric(titulo, mensaje, textoBoton, claseBoton) {
+        var variant = _modalVariantMap[claseBoton] || _modalVariantMap['btn-primary'];
+
+        // Título y mensaje
+        $('#confirmationTitleGeneric').text(titulo);
+        $('#confirmationMessageGeneric').html(mensaje);
+
+        // Ícono: clase FA + clase de color institucional
+        var $icon = $('#confirmationModalGeneric .modal-icon span');
+        $icon.attr('class', 'fa ' + variant.icon);
+        $('#confirmationModalGeneric .modal-icon')
+            .removeClass('modal-icon-primary modal-icon-danger modal-icon-warning modal-icon-info modal-icon-success')
+            .addClass(variant.iconClass);
+
+        // Botón confirmar: preservar clases base, solo reemplazar variante de color
+        var $btnConfirm = $('#confirmGeneric');
+        $btnConfirm
+            .attr('class', 'btn btn-large ' + claseBoton)
+            .html('<i class="fa ' + variant.icon + '"></i>' + textoBoton);
+
+        $('#confirmationModalGeneric').modal({ 'width': '450' }).modal('show');
+    }
+
+    function ejecutarSolicitudAjax($btn, href) {
+        bloqueointerface();
+        var functionName = $btn.attr('data-functionName') || '';
+        var reload = $btn.attr('data-reload') || 'false';
+        var responsetype = $btn.attr('data-responsetype') || 'json';
+        var method = ($btn.attr('data-method') || 'GET').toUpperCase();
+
+        var ajaxOptions = {
+            url: href,
+            type: method,
+            success: function (data) {
+                $.unblockUI();
+                if (data.result === 'ok') {
+                    if (typeof window[functionName] === 'function') {
+                        window[functionName]($btn, data);
+                    } else {
+                        if (reload === 'true') { window.location.reload(); }
+                        showAlert('success', '', data.mensaje || data.html || 'Solicitud realizada con éxito.', 3000, data.is_html || false);
+                    }
+                } else {
+                    showAlert('warning', '', data.mensaje || 'No se pudo procesar la solicitud. Intente nuevamente.', 3000, false);
+                }
+            },
+            error: function () {
+                $.unblockUI();
+                showAlert('error', '', 'Error de conexión.', 3000, false);
+            },
+            dataType: responsetype
+        };
+
+        if (method === 'POST') {
+            var urlParts = href.split('?');
+            ajaxOptions.url = urlParts[0];
+            var params = urlParts[1] ? Object.fromEntries(new URLSearchParams(urlParts[1])) : {};
+            params['csrfmiddlewaretoken'] = $('[name=csrfmiddlewaretoken]').val() || '{{ csrf_token }}';
+            ajaxOptions.data = params;
+        }
+
+        $.ajax(ajaxOptions);
+    }
+
+    $(document).on('click', '.sendToServerProcess', function (event) {
+        event.preventDefault();
+        try {
+            sendToServerProcess(this);
+        } catch (e) {
+            console.log('Error en sendToServerProcess', e);
+        }
+    });
+    window.recargarTabla = function (elemento, data) {
+        showAlert(type = 'success', '', message = data.mensaje || data.html || 'Solicitud se realizó con exito!', duration = 3000, is_html= data.is_html || false);
+        tabla_{{ table_name }}.ajax.reload(null, false);
+    }
+    {% block customFuncions %}
+    {% endblock %}
+});
+</script>
+<!-- Modal para formularios -->
+<div class="modal fade" id="formModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        </div>
+    </div>
+</div>
+
+<!-- Modal genérico de confirmación para sendToServerProcess -->
+<div class="mantenimiento_tabla modal-oction-delete modal-confirm-generic modal fade static" id="confirmationModalGeneric" tabindex="-1"
+     aria-labelledby="confirmationModalGenericLabel"
+     aria-hidden="true">
+    <div class="modal-header_action">
+        <div class="modal-icon">
+            <span class="fa fa-question-circle"></span>
+        </div>
+    </div>
+    <div class="modal-content">
+        <h3 class="modal-title" id="confirmationTitleGeneric">Confirmar acción</h3>
+        <div class="modal-body text-center" id="confirmationMessageGeneric">
+            <!-- Aquí se insertará el mensaje personalizado -->
+        </div>
+    </div>
+    <div class="modal-actions">
+        <a class="btn btn-large btn-secondary" id="closeGeneric">
+            <i class="fa fa-times"></i>Cancelar
+        </a>
+        <a class="btn btn-success btn-primary" id="confirmGeneric">
+            <i class="fa fa-"></i>Continuar
+        </a>
+    </div>
+</div>
+{% endblock %}

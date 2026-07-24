@@ -1,0 +1,32 @@
+.progress-bar{
+    width: 100%;
+    position: relative;
+    text-align: center;
+    padding: 10px 0px 5px 0px;
+}
+.barOverflow{
+    position: relative;
+    overflow: hidden;
+    width: 100px; height: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: -19px;
+}
+.bar{
+    position: absolute;
+    top: 0; left: 0;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 15px solid gray;
+    border-bottom-color: darkred;
+    border-right-color: darkred;
+}
+.progress-bar .estado{
+    color: #0c6251;
+    font-weight: bold;
+    line-height: 0;
+    margin-bottom: 3px;
+    margin-top: -2px;
+}
+

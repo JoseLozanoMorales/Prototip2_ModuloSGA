@@ -1,0 +1,424 @@
+.contenedor-div {
+    margin-bottom: 10px;
+}
+
+.contenedor-encabezado {
+    /*padding: 10px;*/
+}
+
+.background_revisado {
+    background-color: #0c6251;
+}
+
+.background_sin_revisado, .background-encabezado  {
+    background-color: #d7d7d7;
+}
+
+.border_revisado {
+    border: 0.5px solid #0c6251;
+}
+
+.border_sin_revisado, .border_encabezado {
+    border: 0.5px solid #d7d7d7;
+}
+
+.item {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 30px;
+    font-weight: bold;
+    padding: 10px;
+    padding-top: 15px;
+    text-align: center;
+    float: left;
+    color: white;
+    margin-top: -5px;
+    position: relative;
+    margin-bottom: -5px
+}
+
+.contenedor-titulo {
+    width: 81%;
+    padding: 10px 5px;
+    border-top-right-radius: 10px;
+    float: left;
+    margin-left: -15px;
+}
+
+.contenedor-titulo h4 {
+    padding-left: 15px;
+}
+
+.contenedor-opciones {
+    width: 16.5%;
+    padding: 10px 5px;
+    float: left;
+}
+
+.contenedor-detalle {
+    width: 100%;
+    padding: 2px 0 0 2%;
+    /*margin-left: 3%;*/
+    display: grid;
+
+}
+
+.contenedor-detalle .detalle {
+    padding: 5px;
+    margin-top: -2px;
+    border-top-right-radius: 10px;
+    text-align: justify;
+    font-size: 12px;
+}
+
+input[type=checkbox]
+{
+    /* Double-sized Checkboxes */
+    -ms-transform: scale(2); /* IE */
+    -moz-transform: scale(2); /* FF */
+    -webkit-transform: scale(2); /* Safari and Chrome */
+    -o-transform: scale(2); /* Opera */
+    transform: scale(2);
+}
+
+.lista-ol {
+    padding: 2px 2px;
+}
+
+.lista-ul {
+    list-style: none;
+}
+
+.lista-ol li, .lista-ul li {
+    line-height: 23px;
+}
+
+.modal {
+    width: 100% !important;
+}
+
+.datogeneral {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.item_datogeneral {
+    border-bottom: #f1f1f1 0.5px solid;
+    padding: 8px;
+    text-align: left;
+}
+
+@media screen and (max-width: 1500px){
+    .contenedor-titulo {
+        width: 81%;
+    }
+
+    .contenedor-opciones {
+        width: 16%;
+    }
+}
+
+@media screen and (max-width: 1250px){
+    .contenedor-titulo {
+        width: 81%;
+    }
+
+    .contenedor-opciones {
+        width: 15%;
+    }
+}
+
+@media screen and (max-width: 1100px){
+    .contenedor-titulo {
+        width: 80%;
+    }
+
+    .contenedor-opciones {
+        width: 14%;
+    }
+}
+@media screen and (max-width: 666px){
+    .contenedor-opciones {
+        width: 18%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+    }
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 581px){
+    .contenedor-opciones {
+        width: 23%;
+    }
+
+    .contenedor-titulo {
+        width: 70%;
+        font-size: 15px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 520px){
+    .contenedor-opciones {
+        width: 16%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+        font-size: 15px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 467px){
+    .contenedor-opciones {
+        width: 15%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+        font-size: 15px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 430px){
+    .contenedor-opciones {
+        width: 14%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+        font-size: 15px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 400px){
+    .contenedor-opciones {
+        width: 13%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+        font-size: 13.5px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 380px){
+    .contenedor-opciones {
+        width: 13%;
+    }
+
+    .contenedor-titulo {
+        width: 75%;
+        font-size: 13.5px;
+    }
+
+    .datogeneral {
+        display: none;
+    }
+    .datogeneral div{
+        width: 100%;
+    }
+}
+
+.fa fa-folder-open{background-position:-408px -120px;width:16px;}
+.well{min-height:20px;padding:19px;margin-bottom:20px;background-color:#f5f5f5;border:1px solid #e3e3e3;-webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px;-webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);-moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);}.well blockquote{border-color:#ddd;border-color:rgba(0, 0, 0, 0.15);}
+.well-large{padding:24px;-webkit-border-radius:6px;-moz-border-radius:6px;border-radius:6px;}
+.well-small{padding:9px;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px;}
+.close{float:right;font-size:20px;font-weight:bold;line-height:20px;color:#000000;text-shadow:0 1px 0 #ffffff;opacity:0.2;filter:alpha(opacity=20);}.close:hover,.close:focus{color:#000000;text-decoration:none;cursor:pointer;opacity:0.4;filter:alpha(opacity=40);}
+button.close{padding:0;cursor:pointer;background:transparent;border:0;-webkit-appearance:none;}
+.tree {
+    min-height:20px;
+    /*padding:10px;*/
+    margin-bottom:10px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius:4px;
+    border-radius:4px;
+}
+.tree li {
+    list-style-type:none;
+    margin: 0;
+    padding:10px 0 0 5px;
+    position:relative
+}
+.tree li::before, .tree li::after {
+    content:'';
+    left:-20px;
+    position:absolute;
+    right:auto
+}
+.tree li::before {
+    border-left:1px solid #999;
+    bottom:50px;
+    height:100%;
+    top:0;
+    width:1px
+}
+.tree li::after {
+    border-top:1px solid #999;
+    height:20px;
+    top:30px;
+    width:25px
+}
+.tree li span {
+    border-bottom-left-radius:5px;
+    display:inline-block;
+    padding:3px 8px;
+    text-decoration:none;
+    display: inline-block;
+    border: 1px solid #d9d9d9;
+    border-right: 0;
+    border-top: 0;
+    width: 98%;
+}
+.tree li.parent_li>span {
+    cursor:pointer
+}
+.tree>ul>li::before, .tree>ul>li::after {
+    border:0
+}
+.tree li:last-child::before {
+    height:30px
+}
+.tree li.parent_li>span:hover, .tree li.parent_li>span:hover+ul li span {
+    background:#eee;
+    border:1px solid #94a0b4;
+    color:#000
+}
+
+.title-contenedor-componente {
+    border: 0.5px solid #d9d9d9;
+    position: relative;
+    padding: 5px;
+    border-top-right-radius: 10px;
+    background-color: #d9d9d9;
+}
+
+.title-small {
+    width: 300px !important;
+}
+
+.title-medium {
+    width: 50% !important;
+}
+
+.title-large {
+    width: 80% !important;
+}
+
+.contenedor_componente {
+    -moz-border-radius:5px;
+    -webkit-border-radius:5px;
+    border:1px solid #d9d9d9;
+    border-radius:5px;
+    border-top-left-radius: 0;
+    display:inline-block;
+    padding:5px 8px;
+    text-decoration:none;
+    min-height:20px;
+    /*padding:10px;*/
+    margin-bottom:5px;
+    /*margin-left: 35px;*/
+    width: 100%;
+}
+
+.contenedor_componente .lista-ul li a {
+    font-size: 12px;
+}
+
+.observacion_semanal, .observacion_guiapractica {
+    border:1px solid #d9d9d9;
+    border-radius:5px;
+    border-top-left-radius: 0;
+    width: 100%;
+}
+
+p {
+    -webkit-margin-before: 3px;
+    -webkit-margin-after: 0;
+}
+
+.title-guia-pc {
+    display: flex;
+    flex-direction: row;
+}
+
+.title-guia-pc .contenedor-opciones {
+    align-self: flex-end;
+    width: 50%;
+}
+
+/*Estilo paara checkbox de la semana*/
+@keyframes blink {
+    /*50% {*/
+    /*    opacity: 0.25;*/
+    /*}*/
+    from {
+        box-shadow: 0 0 7px #05b9b9;
+    }
+
+    to {
+        box-shadow: 0 0 5px rgb(180, 246, 246);
+    }
+}
+
+.sin_checked, .sin {
+    animation: blink 2s linear infinite;
+}
+
+@keyframes obs_semana {
+    from {
+        box-shadow: 0 0 7px #05b9b9;
+    }
+    to {
+        box-shadow: 0 0 5px rgb(180, 246, 246);
+    }
+}
+
+.sin_observacion_semanal, .sin_observacion_guiapractica {
+    animation: obs_semana 2s linear infinite;
+}
+
+

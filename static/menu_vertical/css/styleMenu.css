@@ -1,0 +1,102 @@
+.menu{
+    display: inline-block;
+    cursor: pointer;
+}
+
+div.menu {
+    display: none;
+    width: 100%;
+    font-size: 16px;
+}
+
+.itemsmenu {
+    display: none;
+    padding-left: 2px;
+}
+
+aside {
+    width: 100%;
+    background: #fff;
+    height: 100%;
+    box-shadow: 1px 3px 5px #6d6d6d;
+    overflow: hidden;
+    z-index: 99;
+}
+
+aside ul {
+    list-style: none;
+    width: 100%;
+    margin-left: 0px;
+}
+
+aside ul .menuicono {
+    font-size: 20px;
+    width: 20px;
+}
+
+aside ul li {
+    border-bottom: 1px solid #ccc;
+    padding: 10px 20px;
+}
+
+aside ul li a {
+    font-size: 12px;
+    color: #4a4a4a;
+    text-decoration: none;
+    /*text-transform:uppercase;*/
+    white-space: nowrap;
+    display: inline-block;
+}
+
+aside ul li a span {
+    display: inline-block;
+    vertical-align: middle;
+    color: #000000;
+    width: 100%;
+}
+
+aside ul li:hover {
+    background: #fff;
+    box-shadow: inset 0px 0px 77px #eeeeee;
+    border-top: 1px solid #ebf8ff;
+}
+
+aside.keep.width {
+    width: 300px;
+}
+
+@-webkit-keyframes blinker {
+    from {opacity: 1.0;}
+    to {opacity: 0.0;}
+}
+
+.menuactivo {
+    background-color: #3a87ad;
+    font-weight: bold;
+}
+
+.menuactivo a span {
+    color: white;
+}
+
+.menuactivo:hover {
+    background: #3a87ad;
+    box-shadow: inset 0px 0px 77px #3a87ad;
+    border-top: 1px solid #ebf8ff;
+}
+/*Estilos reponsive*/
+@media screen and (max-width: 600px) {
+    div.menu {
+        display: block;
+    }
+
+    #id_menu {
+        display: none;
+    }
+
+    .keep {
+        display: none;
+    }
+}
+
+

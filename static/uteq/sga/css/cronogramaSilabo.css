@@ -1,0 +1,387 @@
+.planificacionSilabo {
+    display: flex;
+    flex-direction: row;
+}
+
+.contenido {
+    width: 100%!important;
+}
+
+.planificacionSilabo-menu {
+    width: 200px;
+}
+
+#planificacionSilabo-Contenido {
+    width: 100% !important;
+    padding: 0 2px 10px 10px;
+}
+
+.contenidoSemanal {
+    background-color: #f8f9fa; /* Fondo claro */
+    border: 1px solid #ddd; /* Borde suave */
+    border-radius: 5px; /* Esquinas redondeadas */
+    padding: 10px 10px 0 10px; /* Espaciado interno */
+    width: 100%; /* Ancho fijo (puedes ajustar) */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave */
+}
+
+.semanaTitulo {
+    width: 100%;
+    padding-bottom: 10px;
+}
+
+.semanaTitulo span {
+    font-size: 13px;
+}
+
+.semanaDetalle {
+    padding: 15px 10px;
+    background-color: white;
+    border: #D8D8D8 1px solid;
+    padding-top: 1%;
+    -webkit-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.menu-div {
+    background-color: #f5f5f5;
+    /*padding: 5px 8px;*/
+    border-radius: 5px;
+}
+
+.menu-div-title {
+    font-size: 15px; /* Tamaño de fuente mayor */
+    font-weight: normal; /* Negrita */
+    color: #333; /* Color de texto oscuro */
+    /*margin-bottom: 10px; !* Espaciado inferior *!*/
+    /*display: flex; !* Alinear icono con texto *!*/
+    align-items: center; /* Centrar icono con el texto */
+    background-color: #c9ecfa;
+    padding: 8px 10px;
+}
+
+.menu-group {
+    list-style-type: none;
+    font-size: 11px;
+    /*background-color: #efefef;*/
+}
+
+.menu-item {
+    padding: 4px 6px;
+    line-height: 12px;
+    cursor: pointer;
+    border: 0.5px solid #ebebeb;
+}
+
+.first-letter::first-letter {
+    color: green;
+    font-weight: bold;
+}
+
+.menu-item:hover {
+    background-color: #cecece;
+}
+
+div.menu-group li.selected {
+    background-color: rgb(255, 177, 75); /* Color de fondo naranja */
+    color: #ffffff; /* Color de texto blanco */
+    border-color: #ffffff; /* Borde ligeramente más oscuro */
+}
+
+.cont-virt-titulo a {
+    color: black;
+}
+
+div.menu-group li.selected span i {
+    color: #ffffff;
+}
+
+.componente-2 {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px; /* Espaciado entre los bloques */
+    margin: 10px 0; /* Margen superior e inferior */
+}
+
+.componenteSilabo {
+    width: 100%;
+    border: solid 0.5px rgba(241, 243, 243, 0.92);
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
+
+.cs-colum-small{
+    width: 70%;
+}
+
+.header-detalle-silabo {
+    padding: 7px 10px;
+    background-color: rgba(241, 243, 243, 0.92);
+}
+
+.header-detalle-silabo h5 i{
+    font-size: 17px;
+}
+
+.header-detalle-silabo h5 i:first-child:hover {
+    color: black;
+}
+
+.body-detalle-silabo {
+    padding: 3px 5px;
+}
+
+/*Diseño de listas*/
+#lista-items {
+    counter-reset: li;
+    list-style: none;
+    *list-style: decimal;
+    font-size: 12px;
+    padding: 0;
+    margin-bottom: 1em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.5);
+    line-height: 5px!important;
+}
+
+#lista-items li{
+    position: relative;
+    display: block;
+    padding: .4em .4em .4em .8em;
+    *padding: .4em;
+    margin: .5em 0 .5em 2.5em;
+    border: 0.5px solid #eaeaea;;
+    color: #444;
+    text-decoration: none;
+    transition: all .3s ease-out;
+    cursor: pointer;
+}
+
+#lista-items li:hover{
+    background: #fafafa;
+}
+
+#lista-items li:before{
+    content: counter(li);
+    counter-increment: li;
+    position: absolute;
+    left: -2.5em;
+    top: 43%;
+    margin-top: -1em;
+    background: #ffb14b;
+    height: 2.3em;
+    width: 2em;
+    line-height: 2.3em;
+    text-align: center;
+    font-weight: bold;
+}
+
+#lista-items li:after{
+    position: absolute;
+    content: '';
+    border: .5em solid transparent;
+    left: -1em;
+    top: 50%;
+    margin-top: -.5em;
+    transition: all .3s ease-out;
+}
+
+#lista-items li:hover:after{
+    left: -.5em;
+    border-left-color: #ffb14b;
+}
+
+/* Lista de recursos*/
+
+.lista-recurso {
+    counter-reset: li;
+    list-style-type: none;
+}
+
+.lista-recurso li {
+    position: relative;
+    display: block;
+    padding: .3em .3em .3em .7em;
+    margin: .5em 0 .5em 0;
+    border: 0.5px solid #eaeaea;;
+    color: #444;
+    transition: all .3s ease-out;
+    cursor: pointer;
+}
+
+.lista-recurso li:hover{
+    background: #fafafa;
+}
+
+.boton {
+    padding: 2px 2px;
+    border-radius: 3px;
+    text-align: center;
+    align-items: center;
+    vertical-align: center;
+}
+
+.boton i {
+    font-size: 18px;
+}
+
+.boton i:hover{
+    color: black;
+}
+
+.block {
+    display: block;
+}
+
+.bg-slate-50 {
+    background-color: rgb(248 250 252);
+}
+
+.box-border {
+    box-sizing: border-box;
+}
+
+.p-2 {
+    padding: 0.5rem;
+} /* 8px */
+
+.m-1 {
+    margin: 0.25rem;
+} /* 4px */
+
+.shadow-sm	{
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.opacity-20	{
+    opacity: 0.2;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.my-1 {
+    margin-top: 0.25rem; /* 4px */
+    margin-bottom: 0.25rem;
+} /* 4px */
+
+.rounded-lg	{
+    border-radius: 0.5rem;
+} /* 8px */
+
+.border-slate-50 {
+    border-color: rgb(248 250 252);
+}
+.border-slate-100 {
+    border-color: rgb(241 245 249);
+}
+
+.border-slate-200 {
+    border-color: rgb(226 232 240);
+}
+
+.border-solid {
+    border: solid 0.25px;
+}
+
+.text-slate-400 {
+    color: rgb(162, 162, 162);
+}
+
+.text-sm {
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.25rem; /* 20px */
+}
+
+.text-lg {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.75rem; /* 28px */
+}
+
+.actividad-titulo {
+    font-size: 12px;
+}
+
+
+.body-detalle-silabo {
+    transition: all 0.3s ease-in-out; /* Transición suave */
+}
+
+.menu-item-hide {
+    display: none;
+}
+
+.black {
+    background-color: black;
+}
+
+.menu-item-small {
+    border: 0.5px solid white;
+    border-radius: 50%;
+    background-color: red;
+    color: white;
+    width: 40px;
+    height: 40px;
+    align-content: center;
+    align-items: center;
+    align-self: center;
+}
+
+.cumple-contenido {
+    background-color: #0b6a14;
+}
+/* bloque de responsive */
+
+@media (max-width: 900px) {
+    .componente-2 {
+        display: block!important;
+        width: 100%;
+    }
+}
+
+.semana-numero {
+    font-weight: bold;
+    color: #007bff;
+}
+
+@media (max-width: 768px) {
+    .menu-item-md {
+        flex-direction: column;
+    }
+
+    .semana-numero {
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+
+    .cs-colum-small {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .menu-div-title span {
+        transition: ease;
+        display: none;
+    }
+
+    .planificacionSilabo-menu {
+        width: auto;
+    }
+
+    .menu-div {
+        width: auto;
+    }
+
+    .menu-item-small-hide {
+        display: none;
+    }
+
+    .menu-item-small {
+        display: block;
+    }
+
+    .cs-colum-small {
+        width: 100%;
+    }
+}

@@ -1,0 +1,300 @@
+/* =======================================================
+   SISTEMA GLOBAL PLANIFICACION (ODS / PND / ALINEACION)
+   ======================================================= */
+
+/* ================== WRAPPER ================== */
+
+.periodo-wrapper {
+    padding: 16px;
+    background: transparent;
+}
+
+.periodo-card {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e3e7ef;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+    padding: 22px;
+    transition: all 0.2s ease;
+}
+
+.periodo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+    border-color: #d6dbe6;
+}
+
+/* ================== HEADER ================== */
+
+.periodo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eef1f6;
+}
+
+.periodo-left {
+    flex: 1;
+    min-width: 250px;
+}
+
+.periodo-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.periodo-date {
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.periodo-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* ================== ESTADO ================== */
+
+.estado-pill {
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.estado-activo {
+    background: #e6f9f0;
+    color: #1ca56d;
+}
+
+.estado-inactivo {
+    background: #fdecea;
+    color: #d93025;
+}
+
+/* ================== BOTONES SUPERIORES ================== */
+
+.acciones-top .btn {
+    border-radius: 6px;
+}
+
+/* ================== CONTENEDORES LISTAS ================== */
+
+.objetivos-container,
+.ejes-container {
+    margin-top: 20px;
+    border-top: 1px solid #eef1f6;
+    padding-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ================== ITEM GENERICO ================== */
+
+.objetivo-item,
+.eje-item,
+.pnd-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    background: #f9fafc;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #edf1f7;
+    transition: 0.2s ease;
+}
+
+.objetivo-item:hover,
+.eje-item:hover,
+.pnd-item:hover {
+    background: #f1f5ff;
+    border-color: #dbe4ff;
+}
+
+/* ================== NUMEROS CIRCULARES ================== */
+
+.objetivo-numero,
+.eje-numero,
+.ods-numero {
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #1ca56d;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ================== CONTENIDO ================== */
+
+.objetivo-contenido,
+.eje-contenido {
+    flex: 1;
+}
+
+.objetivo-texto,
+.eje-texto,
+.pnd-texto {
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 4px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* ================== ACCIONES INTERNAS ================== */
+
+.objetivo-acciones,
+.eje-acciones,
+.pnd-acciones,
+.ods-acciones {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ================== BOTONES ICONOS ================== */
+
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    text-decoration: none;
+}
+
+.icon-btn.edit {
+    background: #e7f1ff;
+    color: #0d6efd;
+}
+
+.icon-btn.edit:hover {
+    background: #0d6efd;
+    color: white;
+}
+
+.icon-btn.delete {
+    background: #fdecea;
+    color: #d93025;
+}
+
+.icon-btn.delete:hover {
+    background: #d93025;
+    color: white;
+}
+
+.icon-btn.detail {
+    background: #f2f2f2;
+    color: #555;
+}
+
+.icon-btn.detail:hover {
+    background: #555;
+    color: white;
+}
+
+/* ================== TABLAS (CUANDO USES TABLA) ================== */
+
+.ejes-table {
+    width: 100%;
+    margin-top: 18px;
+    border-collapse: collapse;
+}
+
+.ejes-table thead {
+    background: #f4f6fa;
+}
+
+.ejes-table th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px;
+    color: #5a6474;
+    border-bottom: 1px solid #e3e7ef;
+}
+
+.ejes-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #edf1f7;
+    font-size: 13px;
+}
+
+.ejes-table tbody tr:hover {
+    background: #f8faff;
+}
+
+/* ================== EMPTY STATES ================== */
+
+.empty-box {
+    text-align: center;
+    padding: 45px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px dashed #d3d9e4;
+}
+
+.empty-box i {
+    font-size: 40px;
+    margin-bottom: 10px;
+    color: #adb5bd;
+}
+
+.empty-box h4 {
+    margin: 10px 0 5px;
+}
+
+.empty-box p {
+    color: #6c757d;
+}
+
+.sin-objetivos,
+.sin-registros {
+    font-size: 13px;
+    color: #999;
+    padding: 12px;
+    text-align: center;
+}
+
+/* ================== RESPONSIVE ================== */
+
+@media (max-width: 768px) {
+
+    .periodo-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .objetivo-item,
+    .eje-item,
+    .pnd-item {
+        flex-direction: column;
+    }
+
+    .objetivo-acciones,
+    .eje-acciones,
+    .pnd-acciones {
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+}

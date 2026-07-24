@@ -1,0 +1,204 @@
+/* Estilo para el título principal */
+h3.text-primary {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* Estilo para el nombre del profesor */
+h4.text-muted {
+    color: #6c757d; /* Color gris suave */
+    font-weight: normal;
+    margin-bottom: 10px;
+}
+
+/* Estilo para la información del curso */
+.course-info {
+    /*background-color: #f8f9fa; !* Fondo gris claro *!*/
+    /*padding: 15px;*/
+    /*border-radius: 8px;*/
+    /*border: 1px solid #ddd;*/
+}
+
+.course-header, .course-detail {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.course-header {
+    border-radius: 8px 8px 0 0;
+}
+
+.course-detail {
+    border-radius: 0 0 8px 8px;
+}
+
+.course-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #606060;
+}
+
+.course-info p strong {
+    color: #495057; /* Color de texto más oscuro */
+}
+
+.notify-row ul li{
+    padding: 0;
+}
+
+.notify-row .badge {
+    position: absolute;
+    right: 3px;
+    top: -7px;
+    z-index: 100;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PANEL DE SEMANAS — planificacionSemanal.css
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Panel contenedor (sticky para que no desaparezca al hacer scroll) ── */
+.div-menu {
+    background: #fff;
+    border: 1px solid #e0e7ef;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 20px auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    position: sticky;
+    top: 10px;
+}
+
+/* ── Cabecera del panel ── */
+.div-menu > .div-menu-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: #18669a;
+    padding: 9px 12px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+}
+
+.div-menu > .div-menu-title > i {
+    margin-right: 7px;
+    color: #fff;
+    font-size: 13px;
+}
+
+/* ── Lista con scroll fijo ── */
+ul.responsive-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Scrollbar delgada */
+ul.responsive-menu::-webkit-scrollbar { width: 4px; }
+ul.responsive-menu::-webkit-scrollbar-track { background: #f0f4f8; }
+ul.responsive-menu::-webkit-scrollbar-thumb { background: #b0c8dc; border-radius: 4px; }
+
+/* ── Ítem de semana ── */
+ul.responsive-menu li.item_cronograma {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-bottom: 1px solid #eef1f5;
+    cursor: pointer;
+    transition: background .13s;
+    line-height: 1.3;
+}
+
+ul.responsive-menu li.item_cronograma:last-child { border-bottom: none; }
+
+ul.responsive-menu li.item_cronograma:hover {
+    background: #f0f6fb;
+}
+
+/* ── Badge con número de semana ── */
+ul.responsive-menu li.item_cronograma .sem-badge {
+    background: #e8f1f8;
+    color: #18669a;
+    border: 1px solid #c5ddf0;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 26px;
+    text-align: center;
+    padding: 3px 4px;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+/* ── Texto y fecha del ítem ── */
+ul.responsive-menu li.item_cronograma .sem-info {
+    flex: 1;
+    min-width: 0;
+}
+
+ul.responsive-menu li.item_cronograma .sem-nombre {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #2c4f68;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+ul.responsive-menu li.item_cronograma .sem-fechas {
+    font-size: 9.5px;
+    color: #8a9bb0;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Ítem seleccionado ── */
+ul.responsive-menu li.item_cronograma.selected {
+    background: #18669a;
+    border-bottom-color: #1a5276;
+}
+
+ul.responsive-menu li.item_cronograma.selected .sem-badge {
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    border-color: rgba(255,255,255,.3);
+}
+
+ul.responsive-menu li.item_cronograma.selected .sem-nombre {
+    color: #fff;
+}
+
+ul.responsive-menu li.item_cronograma.selected .sem-fechas {
+    color: rgba(255,255,255,.75);
+}
+
+.cont-virt-titulo a { color: black; }
+
+/* ── Contenedor del contenido de la semana ── */
+#contenedor_semana {
+    background: #fff;
+    border: 1px solid #e0e7ef;
+    border-radius: 6px;
+    padding: 14px 12px 0;
+    margin: 20px auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    min-height: 120px;
+}
+
+.bloque { padding: 10px 6px; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    ul.responsive-menu { max-height: 220px; }
+    .div-menu { position: static; }
+}

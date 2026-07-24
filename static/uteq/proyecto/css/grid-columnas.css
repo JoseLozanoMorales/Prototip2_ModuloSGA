@@ -1,0 +1,44 @@
+.grid-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Estilos base para todas las columnas */
+[class*="grid-col-"] {
+    display: grid;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e0e0e0;
+
+    /* Agregamos esta línea: usa la variable --cols si existe,
+       si no, usa el repeat estándar */
+    grid-template-columns: var(--cols, repeat(var(--n), 1fr));
+}
+
+/* Configuración específica para cada número de columnas */
+.grid-col-1  { --n: 1; }
+.grid-col-2  { --n: 2; }
+.grid-col-3  { --n: 3; }
+.grid-col-4  { --n: 4; }
+.grid-col-4  { --n: 5; }
+.grid-col-4  { --n: 6; }
+.grid-col-4  { --n: 7; }
+.grid-col-4  { --n: 8; }
+.grid-col-4  { --n: 9; }
+.grid-col-4  { --n: 10; }
+.grid-col-4  { --n: 11; }
+.grid-col-4  { --n: 12; }
+
+/*.grid-col-1 { grid-template-columns: 1fr; }*/
+/*.grid-col-2 { grid-template-columns: repeat(2, 1fr); }*/
+/*.grid-col-3 { grid-template-columns: repeat(3, 1fr); }*/
+/*.grid-col-4 { grid-template-columns: repeat(4, 1fr); }*/
+/*.grid-col-5 { grid-template-columns: repeat(5, 1fr); }*/
+/*.grid-col-6 { grid-template-columns: repeat(6, 1fr); }*/
+/*.grid-col-7 { grid-template-columns: repeat(7, 1fr); }*/
+/*.grid-col-8 { grid-template-columns: repeat(8, 1fr); }*/
+/*.grid-col-9 { grid-template-columns: repeat(9, 1fr); }*/
+/*.grid-col-10 { grid-template-columns: repeat(10, 1fr); }*/
+/*.grid-col-11 { grid-template-columns: repeat(11, 1fr); }*/
+/*.grid-col-12 { grid-template-columns: repeat(12, 1fr); }*/

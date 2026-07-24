@@ -1,0 +1,115 @@
+.alert-progress {
+    position: fixed !important;
+    bottom: 50px;
+    left: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    display: none; /* ← CAMBIO CLAVE */
+    align-items: center;
+    gap: 16px;
+    transform: translateY(100px);
+    opacity: 0 !important;
+    transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 9999;
+    max-width: 360px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.alert-progress.show {
+    display: flex; /* ← CAMBIO CLAVE */
+    transform: translateY(0);
+    opacity: 1 !important;
+    visibility: visible;
+}
+
+.alert-progress::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    transition: none;
+}
+
+.alert-progress.success::before {
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+}
+
+.alert-progress.error::before {
+    background: linear-gradient(90deg, #f44336, #ff6b6b);
+}
+
+.alert-progress.warning::before {
+    background: linear-gradient(90deg, #FF9800, #FFB74D);
+}
+
+.alert-progress.info::before {
+    background: linear-gradient(90deg, #2196F3, #42A5F5);
+}
+
+.alert-progress.animate-progress::before {
+    animation: progress-bar var(--duration, 4s) linear;
+}
+
+@keyframes progress-bar {
+    from {
+        width: 0%;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+.alert-progress .icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.alert-progress.success .icon-wrapper {
+    background: linear-gradient(135deg, #E8F5E8, #C8E6C9);
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.alert-progress.error .icon-wrapper {
+    background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+    color: #f44336;
+}
+
+.alert-progress.warning .icon-wrapper {
+    background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+    color: #FF9800;
+}
+
+.alert-progress.info .icon-wrapper {
+    background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+    color: #2196F3;
+}
+
+.alert-progress .content {
+    flex: 1;
+}
+
+.alert-progress .title {
+    font-weight: 600;
+    color: #333;
+    font-size: 15px;
+    margin-bottom: 3px;
+    text-shadow: none !important;
+}
+
+.alert-progress .message {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+    text-shadow: none !important;
+}

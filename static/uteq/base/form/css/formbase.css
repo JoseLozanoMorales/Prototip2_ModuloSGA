@@ -1,0 +1,486 @@
+/*!* ==========================================*/
+/*   Form Containers and Sizing*/
+/*   ========================================== *!*/
+
+/*!* Form Sizing Classes *!*/
+.form-s {
+    width: 37%;
+    max-width: 400px;
+    min-height: 100px;
+    margin: 25px auto;
+}
+
+
+.form-m {
+    width: 650px;
+    max-width: 600px;
+    min-height: 100px;
+    margin: 25px auto;
+}
+
+.form-l {
+    width: 850px;
+    max-width: 800px;
+    min-height: 100px;
+    margin: 25px auto;
+}
+
+.form-xl {
+    width: 100%;
+    max-width: 1000px;
+    min-height: 100px;
+    margin: 25px auto;
+}
+
+.form-full {
+    width: 100%;
+}
+
+/*!* Form Container Elements *!*/
+/*.form-container {*/
+/*    margin-bottom: 20px;*/
+/*}*/
+
+/*.form-header {*/
+/*    margin-bottom: 8px;*/
+/*}*/
+
+.form-header .well {
+    padding: 10px;
+    margin-bottom: 3px;
+}
+
+.form-content .well {
+    padding: 20px;
+}
+
+/*.form-fields {*/
+/*    margin-bottom: 20px;*/
+/*}*/
+
+.text-right {
+    text-align: right;
+}
+
+.form-buttons {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/*!* ==========================================*/
+/*   Control Groups and Form Elements*/
+/*   ========================================== *!*/
+
+/*.control-group {*/
+/*    margin-bottom: 15px;*/
+/*    position: relative;*/
+/*}*/
+
+.control-label {
+    margin-bottom: 5px;
+    text-align: right!important;
+    line-height: 20px;
+    padding-right: 10px;
+    vertical-align: middle;
+    float: left;
+    gap: 5px!important;
+    width: 150px;
+}
+
+/*.controls {*/
+/*    position: relative;*/
+/*    width: 100%;*/
+/*}*/
+
+.required-field .control-label:after {
+    content: "*";
+    color: #dc3545;
+    margin-left: 4px;
+    font-size: 0.8em;
+}
+
+.required-indicator {
+    display: inline-block;
+    vertical-align: top;
+}
+
+/*!* Form Inputs *!*/
+/*.form-control {*/
+/*    width: 100%;*/
+/*    padding: 8px 12px;*/
+/*    border: 1px solid #ced4da;*/
+/*    border-radius: 4px;*/
+/*    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;*/
+/*}*/
+
+.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/*!* Help Text *!*/
+.help-text-container {
+    transition: opacity 0.3s ease;
+}
+
+.help-text {
+    display: block;
+    font-size: 0.85em;
+    color: #6c757d;
+    padding: 5px 8px;
+    border-radius: 4px;
+}
+
+/*!* ==========================================*/
+/*   Validation States*/
+/*   ========================================== *!*/
+
+/*.has-error .form-control {*/
+/*    border-color: #dc3545;*/
+/*}*/
+
+/*.is-invalid {*/
+/*    border-color: #dc3545;*/
+/*}*/
+
+/*.is-valid {*/
+/*    border-color: #28a745;*/
+/*}*/
+
+/*.invalid-feedback {*/
+/*    display: block;*/
+/*    width: 100%;*/
+/*    margin-top: 4px;*/
+/*    font-size: 80%;*/
+/*    color: #dc3545;*/
+/*}*/
+
+/*!* ==========================================*/
+/*   Special Elements*/
+/*   ========================================== *!*/
+
+/*.separator-line {*/
+/*    width: 100%;*/
+/*    height: 1px;*/
+/*    float: left;*/
+/*}*/
+
+/*!* Column Container Classes *!*/
+.cont-20 { width: 20%; float: left; }
+.cont-25 { width: 25%; float: left; }
+.cont-30 { width: 30%; float: left; }
+.cont-35 { width: 35%; float: left; }
+.cont-40 { width: 40%; float: left; }
+.cont-45 { width: 45%; float: left; }
+.cont-50 { width: 50%; float: left; }
+.cont-55 { width: 55%; float: left; }
+.cont-60 { width: 60%; float: left; }
+.cont-65 { width: 65%; float: left; }
+.cont-70 { width: 70%; float: left; }
+.cont-75 { width: 75%; float: left; }
+.cont-80 { width: 80%; float: left; }
+.cont-100 { width: 100%; float: left; }
+
+/*!* Divided Container Classes *!*/
+.cont-div-25 { width: 14%; float: left; }
+.cont-div-30 { width: 29%; float: left; }
+.cont-div-35 { width: 40%; float: left; }
+.cont-div-40 { width: 48%; float: left; }
+.cont-div-45 { width: 53%; float: left; }
+.cont-div-50 { width: 58.5%; float: left; }
+.cont-div-55 { width: 58%; float: left; }
+.cont-div-60 { width: 65%; float: left; }
+.cont-div-65 { width: 68.5%; float: left; }
+.cont-div-70 { width: 71%; float: left; }
+.cont-div-75 { width: 72.5%; float: left; }
+.cont-div-80 { width: 65%; float: left; }
+.cont-div-90 { width: 70%; float: left; }
+.cont-div-95 { width: 75%; float: left; }
+.cont-div-100 { width: 79.8%; float: left; }
+
+/* Plugin Customizations */
+.django-ckeditor-widget {
+    width: 100%;
+}
+
+/* CKEditor Customization */
+.cke_chrome {
+    border: 1px solid #ced4da !important;
+    border-radius: 4px;
+}
+
+/*!* Select2 Customization *!*/
+/*.select2-container .select2-selection--single {*/
+/*    height: 38px;*/
+/*}*/
+
+/*.select2-container--default .select2-selection--single .select2-selection__rendered {*/
+/*    line-height: 38px;*/
+/*}*/
+
+/*.select2-container--default .select2-selection--single .select2-selection__arrow {*/
+/*    height: 36px;*/
+/*}*/
+
+/*!* File Input Styling *!*/
+/*!*.filestyle {*!*/
+/*!*    width: 100%;*!*/
+/*!*}*!*/
+
+/*!*.bootstrap-filestyle label {*!*/
+/*!*    margin-bottom: 0;*!*/
+/*!*}*!*/
+
+/*!*.form-xl div>form .row-fluid div .cont-div-100 {*!*/
+/*!*    width: 87.75%;*!*/
+/*!*}*!*/
+
+/*!* ==========================================*/
+/*   Responsive Adjustments*/
+/*   ========================================== *!*/
+
+/*!* Mobile Screens *!*/
+@media screen and (max-width: 500px) {
+    .form-s {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-m {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-l {
+        width: 90%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 100%;
+        float: none;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .form-s {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-m {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-l {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 100%;
+        float: none;
+    }
+}
+
+@media screen and (max-width: 700px) {
+    .form-s {
+        width: 80%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-m {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-l {
+        width: 90%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .cont-25, .cont-30, .cont-35, .cont-40, .cont-45,
+    .cont-50, .cont-55, .cont-60, .cont-65, .cont-70,
+    .cont-75, .cont-80, .cont-100 {
+        float: none;
+        width: 100% !important;
+    }
+
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 100%;
+        float: none;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .control-label {
+        text-align: left !important;
+    }
+
+    .form-buttons {
+        text-align: center;
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .form-s {
+        width: 70%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-m {
+        width: 90%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-l {
+        width: 80%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .cont-60, .cont-40 {
+        float: none;
+        width: 100%;
+    }
+
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 100%;
+        float: none;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .form-s {
+        width: 60%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-m {
+        width: 100%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .form-l {
+        width: 90%;
+        min-height: 100px;
+        margin: 25px auto;
+    }
+
+    .cont-60 {
+        float: left;
+        width: 60%;
+    }
+
+    .cont-40 {
+        float: left;
+        width: 40%;
+    }
+
+    .controls {
+        width: 100%;
+    }
+
+    .control-label {
+        text-align: left !important;
+    }
+
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 100%;
+        float: none;
+    }
+}
+
+/* Large Screens */
+@media screen and (min-width: 900px) and (max-width: 950px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 79%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 951px) and (max-width: 1000px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 80%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1001px) and (max-width: 1050px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 78%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1051px) and (max-width: 1100px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 79%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1101px) and (max-width: 1150px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 80%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1151px) and (max-width: 1200px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 81%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1201px) and (max-width: 1250px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 82%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1251px) and (max-width: 1300px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 83%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1301px) and (max-width: 1350px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 84%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1351px) and (max-width: 1400px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 85%;
+        float: left;
+    }
+}
+
+@media screen and (min-width: 1401px) and (max-width: 1500px) {
+    .form-xl div>form .row-fluid div .cont-div-100 {
+        width: 86%;
+        float: left;
+    }
+}

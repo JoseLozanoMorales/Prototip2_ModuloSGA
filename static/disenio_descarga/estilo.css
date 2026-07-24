@@ -1,0 +1,738 @@
+/* ============================================
+   SISTEMA DE REPORTES - Diseño Institucional UTEQ
+   Compatible con Bootstrap 2.2
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+/* ============================================
+   VARIABLES DE DISEÑO
+   ============================================ */
+
+:root {
+    /* Acento institucional — azul marino */
+    --accent:           #1e3a5f;
+    --accent-dark:      #152c48;
+    --accent-light:     #eaeff7;
+    --accent-border:    #c2d0e5;
+
+    /* Superficies */
+    --surface:          #ffffff;
+    --surface-alt:      #f8f9fb;
+    --surface-hover:    #f1f4f8;
+
+    /* Bordes */
+    --border:           #dde1e7;
+    --border-strong:    #b8c0cc;
+
+    /* Texto */
+    --text-primary:     #1a202c;
+    --text-secondary:   #4a5568;
+    --text-muted:       #718096;
+
+    /* Estados semánticos */
+    --success:          #1a5c3a;
+    --success-bg:       #eef7f1;
+    --success-border:   #b3d9c4;
+    --error:            #7a1a1a;
+    --error-bg:         #fdf1f1;
+    --error-border:     #f0b8b8;
+
+    /* Radios */
+    --radius-sm:        3px;
+    --radius:           5px;
+    --radius-lg:        7px;
+
+    /* Sombras */
+    --shadow-sm:        0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow:           0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-lg:        0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+
+    /* Tipografía */
+    --font-serif:       'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-sans:        'Source Sans 3', system-ui, -apple-system, sans-serif;
+}
+
+/* ============================================
+   ENCABEZADO DE PÁGINA
+   ============================================ */
+
+.encabezado-pagina {
+    background: var(--surface);
+    padding: 26px 30px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+}
+
+.encabezado-pagina h1 {
+    font-family: var(--font-serif);
+    font-size: 23px;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+.encabezado-pagina p {
+    font-family: var(--font-sans);
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ============================================
+   TABLA DE REPORTES
+   ============================================ */
+
+.tabla-reportes {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.encabezado-tabla {
+    background: var(--surface-alt);
+    padding: 13px 24px;
+    border-bottom: 2px solid var(--accent);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--accent);
+    display: grid;
+    grid-template-columns: 1fr 180px 150px 120px;
+    gap: 20px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+}
+
+.fila-tabla {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 180px 150px 120px;
+    gap: 20px;
+    align-items: center;
+    transition: background 0.15s ease;
+    cursor: pointer;
+    font-family: var(--font-sans);
+}
+
+/* Filas alternadas */
+.fila-tabla:nth-child(even) {
+    background: var(--surface-alt);
+}
+
+.fila-tabla:hover {
+    background: var(--accent-light) !important;
+}
+
+.fila-tabla:last-child {
+    border-bottom: none;
+}
+
+.fila-tabla.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.fila-tabla.disabled:hover {
+    background: inherit !important;
+}
+
+/* Nombre del reporte */
+.nombre-reporte {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.caja-icono-reporte {
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.texto-nombre-reporte h3 {
+    font-family: var(--font-sans);
+    font-size: 14.5px;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.texto-nombre-reporte p {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Formato */
+.formato-reporte {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.insignia-formato {
+    padding: 2px 8px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+/* Tiempo */
+.tiempo-reporte {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   PANEL NOTIFICACIÓN — Esquina inferior derecha
+   ============================================ */
+
+.panel-notificacion {
+    position: fixed;
+    bottom: 40px;
+    right: 5px;
+    width: 360px;
+    background: var(--surface);
+    /* Izquierda redondeada (cara al contenido), derecha con radio mínimo por el gap de 5 px */
+    border-radius: var(--radius-lg) var(--radius-sm) var(--radius-sm) var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transform: translateX(375px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity   0.3s ease,
+                visibility 0.3s ease;
+    z-index: 9999;
+    font-family: var(--font-sans);
+}
+
+.panel-notificacion.show {
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Barra de progreso superior */
+.barra-progreso {
+    height: 3px;
+    background: var(--border);
+    position: relative;
+}
+
+.relleno-progreso {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Brillo animado solo mientras está en proceso */
+.relleno-progreso::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.28),
+        transparent
+    );
+    animation: destellar 2s infinite;
+}
+
+@keyframes destellar {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.contenido-notificacion {
+    padding: 18px 20px 16px 24px;  /* 4 px extra en el lado izquierdo */
+}
+
+/* Fila de encabezado del toast */
+.encabezado-notificacion {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.icono-notificacion {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.icono-notificacion.success {
+    background: var(--success);
+}
+
+.icono-notificacion.error {
+    background: var(--error);
+    color: #b91c1c;
+}
+
+.icono-notificacion .girando {
+    animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.texto-notificacion {
+    flex: 1;
+    min-width: 0;
+}
+
+.titulo-notificacion {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subtitulo-notificacion {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.cerrar-notificacion {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 3px 6px;
+    font-size: 13px;
+    transition: color 0.15s, background 0.15s;
+    border-radius: var(--radius-sm);
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.cerrar-notificacion:hover {
+    color: var(--text-primary);
+    background: var(--surface-alt);
+}
+
+/* Filas de información */
+.fila-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+
+.fila-info:first-child {
+    border-top: none;
+}
+
+.etiqueta-info {
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.valor-info {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Botones de acción */
+.acciones-notificacion {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.boton-notificacion {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    letter-spacing: 0.01em;
+}
+
+.boton-cancelar {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.boton-cancelar:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+    color: #b91c1c;
+}
+
+.boton-ocultar {
+    background: var(--surface-alt);
+    border-color: var(--border);
+    color: var(--text-secondary);
+}
+
+.boton-ocultar:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+/* ============================================
+   MODAL CONFIRMAR CANCELAR REPORTE
+   ============================================ */
+
+.modal-cancelar-reporte {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    animation: aparecerModalCancelar 0.22s ease-out;
+}
+
+@keyframes aparecerModalCancelar {
+    from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+.mcr-icono {
+    display: flex;
+    justify-content: center;
+    padding: 30px 24px 12px;
+}
+
+.mcr-icono-circulo {
+    width: 68px;
+    height: 68px;
+    background: #fef3c7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #92400e;
+}
+
+.mcr-cuerpo {
+    padding: 8px 28px 22px;
+    text-align: center;
+}
+
+.mcr-titulo {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+}
+
+.mcr-descripcion {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin: 0;
+}
+
+.mcr-acciones {
+    display: flex;
+    gap: 10px;
+    padding: 16px 24px;
+    background: var(--surface-alt);
+    border-top: 1px solid var(--border);
+}
+
+.mcr-btn {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+}
+
+.mcr-btn-neutro {
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+}
+
+.mcr-btn-neutro:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.mcr-btn-peligro {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+.mcr-btn-peligro:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+@media (max-width: 480px) {
+    .mcr-acciones {
+        flex-direction: column-reverse;
+    }
+
+    .mcr-btn {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   ESTADO ÉXITO
+   ============================================ */
+
+.panel-notificacion.success .relleno-progreso {
+    background: var(--success);
+}
+
+.panel-notificacion.success .relleno-progreso::after {
+    display: none;
+}
+
+.panel-notificacion.success .etiqueta-info i {
+    color: var(--success);
+}
+
+/* ============================================
+   ESTADO CANCELADO
+   ============================================ */
+
+.icono-notificacion.cancelado {
+    background: #92400e;
+}
+
+.panel-notificacion.cancelado .relleno-progreso {
+    background: #d97706;
+}
+
+.panel-notificacion.cancelado .relleno-progreso::after {
+    display: none;
+}
+
+/* ============================================
+   ESTADO ERROR
+   ============================================ */
+
+.panel-notificacion.error .relleno-progreso {
+    background: var(--error);
+}
+
+.panel-notificacion.error .relleno-progreso::after {
+    display: none;
+}
+
+
+/* ============================================
+   RESPONSIVO
+   ============================================ */
+
+@media (max-width: 768px) {
+    .encabezado-tabla,
+    .fila-tabla {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .encabezado-tabla {
+        display: none;
+    }
+
+    .formato-reporte,
+    .tiempo-reporte {
+        font-size: 12px;
+    }
+
+    /* Móvil: cajón compacto pegado al borde inferior absoluto */
+    .panel-notificacion {
+        width: 100%;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+        transform: translateY(100%);
+    }
+
+    .panel-notificacion.show {
+        transform: translateY(0);
+    }
+
+    /* Ocultar filas de detalle en móvil para reducir altura */
+    .panel-notificacion .fila-info {
+        display: none;
+    }
+
+    /* Reducir padding interno en móvil */
+    .panel-notificacion .contenido-notificacion {
+        padding: 14px 16px 12px;
+    }
+
+    .panel-notificacion .encabezado-notificacion {
+        margin-bottom: 10px;
+    }
+
+    .panel-notificacion .acciones-notificacion {
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .encabezado-pagina {
+        padding: 18px 20px;
+    }
+
+    .encabezado-pagina h1 {
+        font-size: 20px;
+    }
+}
+
+/* ============================================
+   IMPRESIÓN
+   ============================================ */
+
+@media print {
+    /* Ocultar panel flotante */
+    .panel-notificacion {
+        display: none !important;
+    }
+
+    .encabezado-pagina {
+        box-shadow: none;
+        border: 1px solid #bbb;
+        border-left: 3pt solid #1e3a5f;
+        page-break-after: avoid;
+    }
+
+    .encabezado-pagina h1 {
+        font-size: 16pt;
+        color: #000;
+    }
+
+    .encabezado-pagina p {
+        font-size: 10pt;
+        color: #444;
+    }
+
+    .tabla-reportes {
+        box-shadow: none;
+        border: 1px solid #bbb;
+        page-break-inside: auto;
+    }
+
+    .encabezado-tabla {
+        background: #e8edf5 !important;
+        color: #1e3a5f !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .fila-tabla {
+        border-bottom: 1px solid #ddd;
+        page-break-inside: avoid;
+    }
+
+    .fila-tabla:nth-child(even) {
+        background: #f7f8fb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .fila-tabla:hover {
+        background: inherit !important;
+    }
+
+    .caja-icono-reporte {
+        background: #1e3a5f !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .acciones-notificacion,
+    .boton-notificacion {
+        display: none !important;
+    }
+}

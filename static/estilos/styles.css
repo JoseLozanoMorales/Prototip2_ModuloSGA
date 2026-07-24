@@ -1,0 +1,173 @@
+.border-plata{
+    border: 1px solid #ced4da;
+}
+.sombra-cian:hover{
+    -webkit-box-shadow: 0px 1px 4px 2px rgba(132,240,226,0.81);
+    -moz-box-shadow: 0px 1px 4px 2px rgba(132,240,226,0.81);
+    box-shadow: 0px 1px 4px 2px rgba(132,240,226,0.81);
+}
+
+.sombra-gris:hover{
+    -webkit-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    -moz-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    box-shadow: 0px 1px 4px 2px #D3D3D3;
+}
+
+.ul-vertical {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+}
+.ul-vertical li {
+    background-color: rgb(245, 245, 245);
+    width: 100%;
+    height: 30px;
+    /*margin-top: 0.5px;*/
+    padding: 5px;
+    border: 1px solid #A9A9A9;
+}
+
+.ul-vertical li:hover{
+    -webkit-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    -moz-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    box-shadow: 0px 1px 4px 2px #D3D3D3;
+}
+
+.ul-vertical-sinborde {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+}
+
+.ul-vertical-sinborde li {
+    /*background-color: rgb(245, 245, 245);*/
+    width: 100%;
+    height: 30px;
+    /*margin-top: 0.5px;*/
+    padding: 5px;
+    cursor: pointer;
+    /*border: 1px solid #A9A9A9;*/
+}
+
+.ul-vertical-sinborde li:hover{
+    -webkit-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    -moz-box-shadow: 0px 1px 4px 2px #D3D3D3;
+    box-shadow: 0px 1px 4px 2px #D3D3D3;
+}
+
+.li-select{
+    color: white;
+    -webkit-box-shadow: inset 10px 10px 5px 200px rgba(167,208,235,1);
+    -moz-box-shadow: inset 10px 10px 5px 200px rgba(167,208,235,1);
+    box-shadow: inset 10px 10px 5px 200px rgba(167,208,235,1);
+}
+.ul-lista-vertical{
+    width: 70%;
+    border-radius: 5px;
+    font-size: 12px;
+}
+.ul-lista-vertical li {
+    list-style-type:none;
+    margin: 0;
+    padding:10px 5px 0 5px;
+    position:relative;
+}
+.ul-lista-vertical li article{
+    border-radius: 5px;
+    border: #d5d5d5 1px solid;
+    width: 100%;
+    padding: 5px 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.ul-lista-vertical li ul li::before, .ul-lista-vertical li ul li::after {
+    content:'';
+    left:-20px;
+    position:absolute;
+    right:auto
+}
+.ul-lista-vertical li ul li::before {
+    border-left:1px solid #999;
+    height:100%;
+    top: 0;
+    width:1px
+}
+.ul-lista-vertical li ul li:last-child::before{
+    top: -26px;
+}
+.ul-lista-vertical li ul li:first-child::before{
+    top: 0;
+}
+.ul-lista-vertical li ul li::after {
+    border-top:1px solid #999;
+    height:20px;
+    top:16px;
+    width:28px
+}
+
+.ul-lista-vertical li ul li {
+    list-style-type:none;
+    padding:5px 10px 8px 8px;
+    position:relative;
+    cursor: pointer;
+}
+
+.ul-lista-vertical li ul li div{
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.ul-lista-vertical li ul li div:hover{
+    /*-webkit-box-shadow: 0px 1px 4px 2px #D3D3D3;*/
+    /*-moz-box-shadow: 0px 1px 4px 2px #D3D3D3;*/
+    /*box-shadow: 0px 1px 4px 2px #D3D3D3;*/
+    /*border-radius: 5px;*/
+    /*-webkit-border-radius: 5px;*/
+    /*-moz-border-radius: 5px;*/
+    /*padding:5px 10px 6px 15px;*/
+    font-weight: bold;
+}
+
+/*Colores*/
+.info {
+    color: #2f96b4;
+    border-color: #2f96b4 #2f96b4 #1f6377;
+    border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+}
+
+.warning {
+    color: #f89406;
+    text-shadow: 0 -1px 0 rgb(0 0 0 / 25%);
+    border-color: #f89406 #f89406 #ad6704;
+    border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+}
+
+.danger {
+    color: #da4f49;
+    text-shadow: 0 -1px 0 rgb(0 0 0 / 25%);
+    border-color: #bd362f #bd362f #802420;
+    border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1)
+}
+
+.success {
+    color: #5bb75b;
+    text-shadow: 0 -1px 0 rgb(0 0 0 / 25%);
+    border-color: #51a351 #51a351 #387038;
+    border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+}
+
+.inverse {
+    color: #363636;
+    text-shadow: 0 -1px 0 rgb(0 0 0 / 25%);
+    border-color: #222 #222 #000;
+    border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+}
+
+.elemento-full {
+    width: 100% !important;
+}
+
+.abotondisabled {
+    pointer-events: none;
+    opacity: 0.4;
+}

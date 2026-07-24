@@ -1,0 +1,213 @@
+<!-- Modal para mensajes moderno, responsivo y atractivo -->
+{% if messages %}
+<div class="modal fade" id="mensajesModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-body p-0">
+        {% for message in messages %}
+          <div class="message-container 
+            {% if message.tags == 'error' %}border-danger
+            {% elif message.tags == 'warning' %}border-warning
+            {% elif message.tags == 'success' %}border-success
+            {% else %}border-info{% endif %}">
+            
+            <div class="message-icon">
+              <span class="fa 
+                {% if message.tags == 'error' %}fa-exclamation-circle danger
+                {% elif message.tags == 'warning' %}fa-exclamation-triangle warning
+                {% elif message.tags == 'success' %}fa-check-circle success
+                {% else %}fa-info-circle text-info{% endif %}">
+              </span>
+            </div>
+            
+            <div class="message-content">
+              <h5 class="message-title 
+                {% if message.tags == 'error' %}text-danger
+                {% elif message.tags == 'warning' %}text-warning
+                {% elif message.tags == 'success' %}text-success
+                {% else %}text-info{% endif %}">
+                {% if message.tags == 'error' %}Error
+                {% elif message.tags == 'warning' %}Advertencia
+                {% elif message.tags == 'success' %}Éxito
+                {% else %}Información{% endif %}
+              </h5>
+              <p class="message-text">{{ message }}</p>
+            </div>
+            
+            <div class="message-close">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos personalizados para el modal mejorado y responsivo -->
+<style>
+  /* Estilos del modal */
+  #mensajesModal .modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  #mensajesModal .modal-dialog {
+    {#max-width: 450px;#}
+    {#margin: 1.75rem auto;#}
+    width: 100%;
+  }
+  
+  /* Estilos del contenedor de mensaje */
+  .message-container {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 
+      "icon content close";
+    gap: 16px;
+    padding: 20px;
+    position: relative;
+    border-left: 5px solid;
+    background-color: #fff;
+  }
+  
+  /* Barra de color lateral */
+  .border-danger { border-color: #dc3545; }
+  .border-warning { border-color: #ffc107; }
+  .border-success { border-color: #28a745; }
+  .border-info { border-color: #17a2b8; }
+  
+  /* Estilos del ícono */
+  .message-icon {
+    grid-area: icon;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  
+  .message-icon .fa {
+    font-size: 3rem;
+  }
+  
+  /* Estilos del contenido */
+  .message-content {
+    grid-area: content;
+    min-width: 0; /* Importante para text-overflow en responsive */
+  }
+  
+  .message-title {
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .message-text {
+    color: #333;
+    margin: 0;
+    word-wrap: break-word;
+    font-size: 15px;
+  }
+  
+  /* Estilos del botón de cierre */
+  .message-close {
+    grid-area: close;
+    align-self: flex-start;
+  }
+  
+  .message-close .close {
+    font-size: 24px;
+    opacity: 0.6;
+    color: #444;
+    transition: opacity 0.2s;
+  }
+  
+  .message-close .close:hover {
+    opacity: 1;
+  }
+  
+  /* Animación de entrada */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Media queries para responsive */
+  @media (max-width: 576px) {
+    #mensajesModal .modal-dialog {
+      margin: 0.5rem;
+      max-width: calc(100% - 1rem);
+    }
+    
+    .message-container {
+      grid-template-columns: auto 1fr;
+      grid-template-areas: 
+        "icon title close"
+        "icon content content";
+      gap: 10px;
+      padding: 15px;
+    }
+    
+    .message-icon .fa {
+      font-size: 24px;
+    }
+    
+    .message-title {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    
+    .message-text {
+      font-size: 14px;
+    }
+  }
+  
+  /* Ajustes para pantallas muy pequeñas */
+  @media (max-width: 380px) {
+    .message-container {
+      grid-template-columns: 1fr;
+      grid-template-areas: 
+        "title close"
+        "content content";
+      gap: 8px;
+      padding: 12px;
+    }
+    
+    .message-icon {
+      display: none; /* Ocultamos el ícono en pantallas muy pequeñas para ahorrar espacio */
+    }
+  }
+</style>
+
+<!-- Script para mostrar el modal automáticamente -->
+<script>
+  $(document).ready(function() {
+    $('#mensajesModal').modal({
+      backdrop: false,
+      keyboard: true,
+      show: true
+    });
+    
+    // Auto cerrar después de 5 segundos para mensajes no críticos
+    {% if messages.0.tags != 'error' %}
+      setTimeout(function() {
+        $('#mensajesModal').modal('hide');
+      }, 5000);
+    {% endif %}
+    
+    // Para evitar que los modales se apilen si hay múltiples mensajes
+    $('#mensajesModal').on('hidden.bs.modal', function() {
+      $(this).remove();
+    });
+  });
+</script>
+{% endif %}

@@ -1,0 +1,132 @@
+{% extends "basebs.html" %}
+{% load sga_extras %}
+{% block heading %}
+    <link href="/static/css/table-responsive.css?1.0.0" type="text/css" rel="stylesheet"/>
+    <link href="/static/css/mantenimientos.css?1.0.3" type="text/css" rel="stylesheet"/>
+    <script src="/static/charts/chart.umd.js"></script>
+    <script src="/static/charts/chartjs-plugin-datalabels.min.js"></script>
+    <link href="/static/charts/charts.css?1.0.1" rel="stylesheet" type="text/css"/>
+    <script src="/static/charts/charts.js?1.0.5"></script>
+    <script>window.CHART_SHOW_VALUES = {{ chart_show_values|default:True|yesno:"true,false" }};</script>
+    {% block adicionalheading %}{% endblock %}
+{% endblock %}
+{% block atras %}{{ back_path }}{% endblock %}
+
+{% block canvas %}
+    <div class="mantenimiento_tabla">
+
+        <div class="header">
+            <div class="header-left">
+                <div class="icon-header">
+                    <i class="fa {% if head_icon %}{{ head_icon }}{% else %}fa-bar-chart{% endif %}"></i>
+                </div>
+                <div>
+                    <h1 class="header-title">{% if title %}{{ title }}{% else %}Dashboard{% endif %}</h1>
+                    {% if subtitle %}<p class="header-subtitle">{{ subtitle }}</p>{% endif %}
+                </div>
+            </div>
+            <div class="header-right" style="display:flex;align-items:center;gap:10px;">
+                {% block header_actions %}{% endblock %}
+            </div>
+        </div>
+
+        {# Filtros visibles en la página #}
+        {% block filters_page %}{% endblock %}
+
+        {# Tarjetas KPI opcionales #}
+        {% block kpi_section %}{% endblock %}
+
+        {# Widgets #}
+        {% block charts_layout %}{% endblock %}
+
+        {# Funciones JS del template hijo #}
+        {% block customChartFunctions %}{% endblock %}
+
+        {# ── FAB flotante (paleta + exportar todo) ───────────────────── #}
+        {% if chart_show_fab|default:True %}
+            <div class="chart-fab-container" id="chart_fab_container">
+                <button class="chart-fab-main" id="chart_fab_btn" type="button" title="Opciones de gráficas">
+                    <i class="fa fa-sliders"></i>
+                </button>
+                <div class="chart-fab-menu" id="chart_fab_menu">
+
+                    {% if chart_allow_palette|default:True %}
+                        <div class="chart-fab-section">
+                            <span class="chart-fab-section-label">Paleta de colores</span>
+                            <div class="chart-fab-palettes" id="chart_fab_palettes"></div>
+                        </div>
+                    {% endif %}
+
+                    {% if chart_allow_export_all|default:True %}
+                        <div class="chart-fab-section">
+                            <span class="chart-fab-section-label">Exportar</span>
+                            <button class="chart-fab-action" type="button" onclick="window._chartExportAll()">
+                                <i class="fa fa-download"></i> Descargar todas las gráficas
+                            </button>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        {% endif %}
+
+        <script>
+            (function () {
+                // ── FAB toggle ────────────────────────────────────────────
+                var $fab = $('#chart_fab_btn');
+                var $menu = $('#chart_fab_menu');
+                $fab.on('click', function (e) {
+                    e.stopPropagation();
+                    var open = $menu.hasClass('open');
+                    $menu.toggleClass('open', !open);
+                    $fab.toggleClass('active', !open);
+                });
+                $(document).on('click', function () {
+                    $menu.removeClass('open');
+                    $fab.removeClass('active');
+                });
+                $menu.on('click', function (e) { e.stopPropagation(); });
+
+                // ── Selector de paleta dentro del FAB ────────────────────
+                function buildPaletteFab() {
+                    var $c = $('#chart_fab_palettes');
+                    if (!$c.length || typeof window.CHART_PALETTES === 'undefined') return;
+                    Object.keys(window.CHART_PALETTES).forEach(function (key) {
+                        var pal = window.CHART_PALETTES[key];
+                        var dots = pal.colors.slice(0, 4).map(function (c) {
+                            return '<span style="background:' + c + '"></span>';
+                        }).join('');
+                        var $btn = $('<button class="chart-palette-btn" type="button"></button>')
+                            .attr('data-palette', key)
+                            .html('<div class="palette-dots">' + dots + '</div>' +
+                                '<span class="palette-btn-label">' + pal.label + '</span>');
+                        if (key === (window.CHART_ACTIVE_PALETTE || 'uteq')) $btn.addClass('active');
+                        $btn.on('click', function () {
+                            $('#chart_fab_palettes .chart-palette-btn').removeClass('active');
+                            $(this).addClass('active');
+                            window.setChartPalette(key);
+                        });
+                        $c.append($btn);
+                    });
+                }
+
+                $(document).ready(function () { buildPaletteFab(); });
+            })();
+        </script>
+
+    </div>
+
+    {# ── Controlador genérico de tabs — funciona en cualquier dashboard con .chart-tab-btn #}
+    <script>
+        (function() {
+            $(document).on('click', '.chart-tab-btn', function() {
+                var tabId = $(this).data('tab');
+                $('.chart-tab-btn').removeClass('active');
+                $(this).addClass('active');
+                $('.chart-tab-panel').removeClass('active');
+                $('#' + tabId).addClass('active');
+                $(document).trigger('chart-tab-activated', [tabId]);
+            });
+        })();
+    </script>
+{% endblock %}

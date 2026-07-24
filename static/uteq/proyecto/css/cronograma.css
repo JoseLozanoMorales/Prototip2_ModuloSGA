@@ -1,0 +1,265 @@
+/* ═══════════════════════════════════════════════
+   CRONOGRAMA – CSS MEJORADO Y CORREGIDO
+   Responsive: móvil, tablet, escritorio
+   ═══════════════════════════════════════════════ */
+
+:root {
+  --crono-verde-oscuro:   #065f46;
+  --crono-verde:          #10b981;
+  --crono-verde-medio:    #059669;
+  --crono-verde-claro:    #d1fae5;
+  --crono-verde-hover:    #a7f3d0;
+  --crono-amarillo:       #fef3c7;
+  --crono-amarillo-borde: #f59e0b;
+  --crono-rojo:           #fee2e2;
+  --crono-rojo-borde:     #dc2626;
+  --crono-gris-borde:     #e2e8f0;
+  --crono-gris-bg:        #f8fafc;
+  --crono-gris-fila-par:  #f1f5f9;
+  --crono-texto:          #1f2937;
+  --crono-texto-suave:    #4b5563;
+  --crono-radio:          12px;
+  --crono-sombra:         0 8px 30px rgba(0,0,0,0.08);
+  --crono-celda-h:        52px;
+  --crono-act-w:          240px;      /* Ancho columna Actividades */
+  --crono-mes-w:          65px;       /* Ancho columna mes */
+}
+
+/* ══════════════════════════════════
+   CONTENEDOR PRINCIPAL
+   ══════════════════════════════════ */
+.cronograma * {
+  box-sizing: border-box;
+}
+
+.cronograma {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #fff;
+  border-radius: var(--crono-radio);
+  box-shadow: var(--crono-sombra);
+  margin: 20px 0;
+  border: 1px solid var(--crono-gris-borde);
+  animation: crono-entrada 0.5s cubic-bezier(.4,0,.2,1);
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes crono-entrada {
+  from { opacity: 0; transform: translateY(15px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar personalizada */
+.cronograma::-webkit-scrollbar { height: 8px; }
+.cronograma::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+.cronograma::-webkit-scrollbar-thumb {
+  background: var(--crono-verde-medio);
+  border-radius: 8px;
+}
+
+/* ══════════════════════════════════
+   FILAS (Uso de Grid/Flex alineado)
+   ══════════════════════════════════ */
+.fila {
+  display: flex;
+  min-width: max-content; /* Vital para que no se encoja al hacer scroll */
+  border-bottom: 1px solid var(--crono-gris-borde);
+}
+.fila:last-child { border-bottom: none; }
+.cuerpo .fila:nth-child(even) { background: var(--crono-gris-fila-par); }
+.cuerpo .fila:hover { background: #f0fdf4 !important; }
+
+/* ══════════════════════════════════
+   CELDAS – BASE (Meses)
+   ══════════════════════════════════ */
+.cell {
+  flex: 0 0 var(--crono-mes-w);
+  width: var(--crono-mes-w);
+  min-height: var(--crono-celda-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-right: 1px solid var(--crono-gris-borde);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--crono-texto-suave);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.cell:last-child { border-right: none; }
+
+/* ── Columna Actividades (Sticky/Fija) ── */
+.cell:first-child {
+  flex: 0 0 var(--crono-act-w);
+  width: var(--crono-act-w);
+  justify-content: flex-start;
+  text-align: left;
+  padding: 10px 16px;
+  font-weight: 600;
+  color: var(--crono-texto);
+  background: #ffffff; /* Color sólido obligatorio */
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  box-shadow: 3px 0 8px rgba(0,0,0,0.05); /* Sombra para separar al hacer scroll */
+}
+
+.cuerpo .fila:nth-child(even) .cell:first-child {
+  background: var(--crono-gris-fila-par); /* Mantener cebra en columna sticky */
+}
+
+/* ══════════════════════════════════
+   CABECERA
+   ══════════════════════════════════ */
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--crono-verde-oscuro);
+}
+
+.cabecera .fila {
+  border-bottom: 2px solid var(--crono-verde-medio);
+}
+
+.cabecera .cell {
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  background: var(--crono-verde-oscuro);
+  border-right: 1px solid rgba(255,255,255,0.1);
+  min-height: 48px;
+}
+
+/* CORRECCIÓN DE OVERLAP: Fondo sólido para la primera celda de cabecera */
+.cabecera .cell:first-child {
+  background: var(--crono-verde-oscuro);
+  z-index: 21; /* Debe estar por encima del resto */
+  font-size: 12px;
+  justify-content: center;
+  border-right: 2px solid var(--crono-verde-medio);
+}
+
+/* ══════════════════════════════════
+   ESTADOS DE CELDAS (INTERACTIVIDAD)
+   ══════════════════════════════════ */
+.cuerpo .cell:not(.actividad) {
+  cursor: pointer;
+  margin: 4px; /* Para efecto "píldora" */
+  border-radius: 6px;
+  border: 1px solid transparent;
+  flex-basis: calc(var(--crono-mes-w) - 8px); /* Ajuste por el margin */
+}
+
+.cuerpo .cell:not(.actividad):hover {
+  background: var(--crono-verde-claro);
+  color: var(--crono-verde-oscuro);
+  border-color: var(--crono-verde);
+  transform: scale(0.95);
+}
+
+/* ── Pendiente ── */
+.cuerpo .cell.pendiente {
+  background: var(--crono-amarillo) !important;
+  color: #92400e !important;
+  font-weight: bold;
+  border: 1px solid var(--crono-amarillo-borde);
+}
+
+/* ── Completada (Activa) ── */
+.cuerpo .cell.activa {
+  background: var(--crono-verde) !important;
+  color: #fff !important;
+  font-weight: bold;
+  border: 1px solid var(--crono-verde-oscuro);
+  box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+}
+
+/* ── Retrasada ── */
+.cuerpo .cell.retrasada {
+  background: var(--crono-rojo) !important;
+  color: #991b1b !important;
+  font-weight: bold;
+  border: 1px solid var(--crono-rojo-borde);
+}
+
+/* ── Actividad seleccionada (Columna 1) ── */
+.actividad.seleccionada {
+  background: var(--crono-verde-claro) !important;
+  color: var(--crono-verde-oscuro) !important;
+  border-left: 4px solid var(--crono-verde);
+}
+
+/* ── Error/No permitida ── */
+.cell.no-permitida {
+  background: #fde8e8 !important;
+  border-color: var(--crono-rojo-borde) !important;
+  animation: crono-shake .3s ease-in-out;
+}
+
+@keyframes crono-shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* ══════════════════════════════════
+   TÍTULO Y LEYENDA
+   ══════════════════════════════════ */
+.cronograma-titulo {
+  font-size: clamp(20px, 4vw, 26px);
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+  margin: 10px 0 20px;
+}
+
+.cronograma-leyenda {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--crono-texto-suave);
+}
+.leyenda-color {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+}
+.leyenda-color.activa { background: var(--crono-verde); border: 1px solid var(--crono-verde-oscuro);}
+.leyenda-color.pendiente { background: var(--crono-amarillo); border: 1px solid var(--crono-amarillo-borde);}
+.leyenda-color.retrasada { background: var(--crono-rojo); border: 1px solid var(--crono-rojo-borde);}
+
+/* ══════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --crono-act-w: 160px;
+    --crono-mes-w: 50px;
+    --crono-celda-h: 46px;
+  }
+  .cell:first-child { font-size: 12px; padding: 8px 10px; }
+  .cabecera .cell { font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --crono-act-w: 130px;
+    --crono-mes-w: 40px;
+    --crono-celda-h: 40px;
+  }
+  .cell:first-child { font-size: 11px; padding: 6px 8px; line-height: 1.2; }
+  .cabecera .cell { font-size: 9px; min-height: 40px; }
+  .cuerpo .cell:not(.actividad) { margin: 2px; flex-basis: calc(var(--crono-mes-w) - 4px); font-size: 10px; }
+}

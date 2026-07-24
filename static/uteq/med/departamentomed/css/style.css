@@ -1,0 +1,130 @@
+.miPerfil {
+    padding: 2px 3px;
+    background-color: white;
+    text-align: center!important;
+    width: 100%;
+}
+
+.perfil-img {
+    border: 0.5px solid #e1e1e1;
+    border-radius: 10px;
+    padding: 5px 8px;
+}
+
+.contenedor-perfil {
+    width: 100%;
+    text-align: -webkit-center;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.contenedor-perfil:last-child {
+    margin-bottom: 0!important;
+}
+
+.miPerfil img {
+    width: 250px;
+    min-width: 50px;/* Ancho del contenedor */
+    height: 250px;
+    min-height: 50px;/* Alto del contenedor */
+    border-radius: 50%; /* Hace el contenedor redondo */
+    border: #b9b9b9 0.5px solid;
+    overflow: hidden;   /* Esconde cualquier parte de la imagen que exceda el contenedor */
+}
+
+.miPerfil .perfil-nombre hr {
+    width: 80%;
+    padding: 0;
+    margin: 3px auto;
+    height: 3px;
+    background-color: #e1e1e1;
+}
+
+.contenedor-perfil .nav li {
+    text-align: left;
+}
+
+.card{
+    background-color: white;
+    border-radius: 10px;
+}
+
+.card-header {
+    background-color: rgba(233, 248, 253, 0.71);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    padding: 10px 10px 10px;
+    align-items: center;
+}
+
+.card-body {
+    border: 0.5px solid #f1f1f1;
+    padding: 10px;
+}
+
+
+.list-group {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    text-decoration: none;
+    color: #000;
+    background-color: #fff;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.list-group-item .badge {
+    background-color: #007bff;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 50px;
+    font-size: 0.875rem;
+}
+
+.row-fluid div label {
+    font-weight: bold;
+    text-align: right;
+}
+
+.row-fluid {
+    margin-bottom: 0!important;
+}
+
+.row-fluid  div .fila {
+    width: 100%;
+    display: block;
+}
+
+.border-bottom {
+    border-bottom: 1px solid rgb(234, 234, 234) !important;
+    padding-bottom: 2px;
+}
+
+.padding-bottom {
+    padding-bottom: 5px;
+}
+
+.contenResp {
+    border-bottom: 0.5px solid orange;
+}
+
+
+.text-danger {
+    color: #c70404;
+}
+
+
+

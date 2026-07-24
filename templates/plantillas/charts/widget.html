@@ -1,0 +1,281 @@
+{% load sga_extras %}
+<div class="chart-card" id="widget_{{ widget_name }}">
+    <div class="chart-card-header">
+        {% if widget_title %}
+        <span class="chart-card-title">{{ widget_title }}</span>
+        {% endif %}
+        {% if chart_allow_export|default:True %}
+        <button class="chart-export-btn" id="ch_export_{{ widget_name }}" title="Descargar imagen" style="display:none" type="button" onclick="window._chartExportWidget('{{ widget_name }}', '{{ widget_export_title|default:widget_title|default:widget_name }}', '{{ widget_export_title|default:widget_title }}')">
+            <i class="fa fa-download"></i>
+        </button>
+        {% endif %}
+    </div>
+    {% if widget_subtitle %}
+    <p class="chart-card-subtitle">{{ widget_subtitle }}</p>
+    {% endif %}
+    <div class="chart-wrap" style="height:{{ widget_height|default:'260px' }}; min-height:{{ widget_height|default:'260px' }}; position:relative;">
+        <canvas id="canvas_{{ widget_name }}" role="img" aria-label="{{ widget_title|default:widget_name }}" style="display:none"></canvas>
+
+        {% if widget_type == 'line' or widget_type == 'area' %}
+        <div class="chart-skeleton chart-skeleton-line" id="ch_skeleton_{{ widget_name }}">
+            <svg class="sk-line-svg" viewBox="0 0 300 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <polyline class="sk-line-stroke sk-line-1" points="0,90 40,65 80,75 120,40 160,55 200,25 240,45 300,30"/>
+                <polyline class="sk-line-stroke sk-line-2" points="0,110 40,95 80,100 120,70 160,80 200,55 240,70 300,60"/>
+            </svg>
+            <div class="sk-line-dots">
+                <div class="sk-line-dot"></div><div class="sk-line-dot"></div><div class="sk-line-dot"></div>
+                <div class="sk-line-dot"></div><div class="sk-line-dot"></div><div class="sk-line-dot"></div>
+            </div>
+            <p class="chart-skeleton-label">Cargando datos...</p>
+        </div>
+
+        {% elif widget_type == 'pie' or widget_type == 'doughnut' %}
+        <div class="chart-skeleton chart-skeleton-pie" id="ch_skeleton_{{ widget_name }}">
+            <div class="sk-pie-wrap">
+                <div class="sk-pie-circle {% if widget_type == 'doughnut' %}sk-pie-doughnut{% endif %}">
+                    <div class="sk-pie-slice sk-pie-s1"></div>
+                    <div class="sk-pie-slice sk-pie-s2"></div>
+                    <div class="sk-pie-slice sk-pie-s3"></div>
+                    {% if widget_type == 'doughnut' %}<div class="sk-pie-hole"></div>{% endif %}
+                </div>
+                <div class="sk-pie-legend">
+                    <div class="sk-legend-item"><div class="sk-legend-dot"></div><div class="sk-legend-label"></div></div>
+                    <div class="sk-legend-item"><div class="sk-legend-dot"></div><div class="sk-legend-label" style="width:55%"></div></div>
+                    <div class="sk-legend-item"><div class="sk-legend-dot"></div><div class="sk-legend-label" style="width:70%"></div></div>
+                </div>
+            </div>
+            <p class="chart-skeleton-label">Cargando datos...</p>
+        </div>
+
+        {% elif widget_type == 'barH' %}
+        <div class="chart-skeleton chart-skeleton-barh" id="ch_skeleton_{{ widget_name }}">
+            <div class="chart-skeleton-hbars">
+                <div class="skeleton-hbar" style="width:80%"></div>
+                <div class="skeleton-hbar" style="width:55%"></div>
+                <div class="skeleton-hbar" style="width:90%"></div>
+                <div class="skeleton-hbar" style="width:40%"></div>
+                <div class="skeleton-hbar" style="width:70%"></div>
+                <div class="skeleton-hbar" style="width:60%"></div>
+            </div>
+            <p class="chart-skeleton-label">Cargando datos...</p>
+        </div>
+
+        {% else %}
+        <div class="chart-skeleton" id="ch_skeleton_{{ widget_name }}">
+            <div class="chart-skeleton-bars">
+                <div class="skeleton-bar" style="height:75%"></div>
+                <div class="skeleton-bar" style="height:55%"></div>
+                <div class="skeleton-bar" style="height:90%"></div>
+                <div class="skeleton-bar" style="height:45%"></div>
+                <div class="skeleton-bar" style="height:70%"></div>
+                <div class="skeleton-bar" style="height:60%"></div>
+                <div class="skeleton-bar" style="height:80%"></div>
+            </div>
+            <p class="chart-skeleton-label">Cargando datos...</p>
+        </div>
+        {% endif %}
+        <div class="chart-nodata" id="ch_nodata_{{ widget_name }}" style="display:none">
+            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+            Sin datos para mostrar
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var _chart_{{ widget_name }} = null;
+    var _endpoint_{{ widget_name }} = 'get_{{ widget_endpoint }}';
+
+    // Inicializar coordinador global si no existe
+    if (!window.CHART_COORDINATOR) {
+        window.CHART_COORDINATOR = {
+            _registry: {},    // endpoint -> [widget_names]
+            _pending: {},     // endpoint -> true/false (llamada en curso)
+
+            register: function (widgetName, endpoint) {
+                if (!this._registry[endpoint]) this._registry[endpoint] = [];
+                if (this._registry[endpoint].indexOf(widgetName) === -1) {
+                    this._registry[endpoint].push(widgetName);
+                }
+            },
+
+            // Recoge filtros de TODOS los widgets que usan este endpoint + filtros globales (.filter_ch_all)
+            _getFilters: function (endpoint) {
+                var params = {};
+                var self = this;
+                function readEl(el) {
+                    var $el = $(el);
+                    var name = $el.attr('name') || $el.attr('id');
+                    var val;
+                    if ($el.is('select')) val = $el.val();
+                    else if ($el.attr('type') === 'checkbox') val = $el.is(':checked') ? ($el.val() || '1') : null;
+                    else if ($el.attr('type') === 'radio') val = $el.is(':checked') ? $el.val() : null;
+                    else val = $el.val();
+                    if (name && val != null && val !== '') params[name] = val;
+                }
+                var widgets = this._registry[endpoint] || [];
+                widgets.forEach(function (wName) {
+                    $('.filter_ch_' + wName).each(function () { readEl(this); });
+                });
+                // Filtros globales: aplican a todos los endpoints
+                $('.filter_ch_all').each(function () { readEl(this); });
+                return params;
+            },
+
+            // Muestra skeleton en todos los widgets del endpoint
+            _showSkeletons: function (endpoint) {
+                (this._registry[endpoint] || []).forEach(function (wName) {
+                    $('#ch_skeleton_' + wName).show();
+                    $('#ch_nodata_' + wName).hide();
+                    $('#canvas_' + wName).hide();
+                    $('#ch_export_' + wName).hide();
+                });
+            },
+
+            // Llama al endpoint y distribuye la respuesta a cada widget
+            fetch: function (endpoint, baseUrl) {
+                if (this._pending[endpoint]) return;
+                this._pending[endpoint] = true;
+                this._showSkeletons(endpoint);
+                var self = this;
+                $.ajax({
+                    url: baseUrl + '?action=' + endpoint,
+                    type: 'GET',
+                    data: self._getFilters(endpoint),
+                    success: function (resp) {
+                        self._pending[endpoint] = false;
+                        if (resp.result !== 'ok') {
+                            self._showError(endpoint);
+                            return;
+                        }
+                        (self._registry[endpoint] || []).forEach(function (wName) {
+                            var data = (resp.graficas && resp.graficas[wName])
+                                ? resp.graficas[wName]
+                                : resp;
+                            // En respuestas multi, propagar los kpis raíz a todos los widgets
+                            if (resp.graficas && resp.kpis && resp.kpis.length) {
+                                data = Object.assign({}, data, { kpis: resp.kpis });
+                            }
+                            self._renderWidget(wName, data);
+                        });
+                    },
+                    error: function () {
+                        self._pending[endpoint] = false;
+                        self._showError(endpoint);
+                    }
+                });
+            },
+
+            _renderWidget: function (wName, data) {
+                $('#ch_skeleton_' + wName).hide();
+                // Actualizar KPIs siempre, independientemente de si hay datos en el gráfico
+                if (data.kpis && data.kpis.length && window.renderKpis) {
+                    var kpiContainerFn = window['renderChartKpis_' + wName];
+                    if (typeof kpiContainerFn === 'function') kpiContainerFn(data.kpis);
+                }
+                if (!data.labels || !data.labels.length) {
+                    $('#ch_nodata_' + wName).show();
+                    return;
+                }
+                // Destruir instancia previa y reemplazar el canvas para evitar acumulación de tamaño
+                var $wrap = $('#canvas_' + wName).parent();
+                var oldCanvas = document.getElementById('canvas_' + wName);
+                if (oldCanvas && typeof Chart !== 'undefined') {
+                    var existing = Chart.getChart(oldCanvas);
+                    if (existing) existing.destroy();
+                }
+                // Reemplazar el canvas con uno nuevo limpio
+                // Sin estilos CSS de width/height — Chart.js lo gestiona con responsive:true
+                var $newCanvas = $('<canvas></canvas>')
+                    .attr('id', 'canvas_' + wName)
+                    .attr('role', 'img');
+                $(oldCanvas).replaceWith($newCanvas);
+                var fn = window['renderChart_' + wName];
+                if (typeof fn === 'function') {
+                    fn($newCanvas[0], data);
+                    $('#ch_export_' + wName).show();
+                } else {
+                    console.warn('charts: falta definir renderChart_' + wName + '()');
+                }
+            },
+
+            _showError: function (endpoint) {
+                (this._registry[endpoint] || []).forEach(function (wName) {
+                    $('#ch_skeleton_' + wName).hide();
+                    $('#ch_nodata_' + wName).show();
+                });
+            }
+        };
+    }
+
+    // Registrar este widget en el coordinador
+    window.CHART_COORDINATOR.register('{{ widget_name }}', _endpoint_{{ widget_name }});
+
+    // fetchChart_<widget_name> delega al coordinador (respeta la API pública)
+    window.fetchChart_{{ widget_name }} = function () {
+        window.CHART_COORDINATOR.fetch(
+            _endpoint_{{ widget_name }},
+            '{{ main_url_path }}'
+        );
+    };
+
+    // Recarga al cambiar filtros de este widget
+    $(document).on('change', '.filter_ch_{{ widget_name }}', function () {
+        fetchChart_{{ widget_name }}();
+    });
+    $(document).on('keydown', '.filter_ch_{{ widget_name }}[type=text], .filter_ch_{{ widget_name }}[type=search]', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); fetchChart_{{ widget_name }}(); }
+        if (e.key === 'Escape') { e.preventDefault(); $(this).val(''); fetchChart_{{ widget_name }}(); }
+    });
+    $(document).on('change', '.filter_ch_{{ widget_name }}[type=date], .filter_ch_{{ widget_name }}[type=number]', function () {
+        fetchChart_{{ widget_name }}();
+    });
+
+    // Filtros globales: al cambiar recargan todos los endpoints registrados (se vincula una sola vez)
+    if (!window._chAllBound) {
+        window._chAllBound = true;
+        function _reloadAll() {
+            var coord = window.CHART_COORDINATOR;
+            if (!coord) return;
+            var fetched = {};
+            Object.keys(coord._registry).forEach(function (endpoint) {
+                if (fetched[endpoint]) return;
+                fetched[endpoint] = true;
+                coord._pending[endpoint] = false;
+                var widgets = coord._registry[endpoint] || [];
+                if (widgets.length && typeof window['fetchChart_' + widgets[0]] === 'function') {
+                    window['fetchChart_' + widgets[0]]();
+                }
+            });
+        }
+        $(document).on('change', '.filter_ch_all', _reloadAll);
+        $(document).on('keydown', '.filter_ch_all[type=text], .filter_ch_all[type=search]', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); _reloadAll(); }
+            if (e.key === 'Escape') { e.preventDefault(); $(this).val(''); _reloadAll(); }
+        });
+    }
+
+    // Lazy load por tab: solo carga si el widget está visible (tab activo o sin tabs)
+    if (!window._chTabBound) {
+        window._chTabBound = true;
+        $(document).on('chart-tab-activated', function(e, panelId) {
+            $('#' + panelId).find('canvas[id^="canvas_"]').each(function() {
+                var wName = this.id.replace('canvas_', '');
+                var fetchFn = window['fetchChart_' + wName];
+                if (typeof fetchFn === 'function' && !Chart.getChart(this)) {
+                    fetchFn();
+                }
+            });
+        });
+    }
+
+    // Carga inicial — usar setTimeout(0) para que todos los widgets se registren primero
+    $(document).ready(function () {
+        setTimeout(function () {
+            var $panel = $('#canvas_{{ widget_name }}').closest('.chart-tab-panel');
+            if ($panel.length && !$panel.hasClass('active')) return;
+            fetchChart_{{ widget_name }}();
+        }, 0);
+    });
+})();
+</script>

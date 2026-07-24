@@ -1,0 +1,1130 @@
+/**
+ * Estilos Unificados para Formularios
+ * Compatible con: Rubros, Gastos Personales y otros formularios
+ * jQuery 2.x + Bootstrap 2.x + Font Awesome
+ */
+
+/* ============================================
+   VARIABLES Y ESTILOS BASE
+   ============================================ */
+
+:root {
+    --primary-color: #5bb75b;
+    --secondary-color: #dc3545;
+    --success-color: #2ecc71;
+    --info-color: #0066cc;
+    --warning-color: #f0ad4e;
+    --dark-color: #2c3e50;
+    --light-color: #f8f9fa;
+    --border-color: #dee2e6;
+    --text-color: #495057;
+    --border-radius: 6px;
+    --transition: all 0.2s ease;
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --spacing-xl: 30px;
+}
+
+/* ============================================
+   CONTENEDOR PRINCIPAL
+   ============================================ */
+
+.form-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ============================================
+   ENCABEZADO DEL FORMULARIO
+   ============================================ */
+
+.form-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #4a9d4a 100%);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.form-header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
+.icon-header {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   CUERPO DEL FORMULARIO
+   ============================================ */
+
+.form-body {
+    padding: var(--spacing-xl);
+}
+
+.form-body {
+    padding: var(--spacing-xl) var(--spacing-xl);
+}
+
+/* ============================================
+   GRILLAS DE FORMULARIO
+   ============================================ */
+
+.form-grid,
+.form-grid-full {
+    display: grid;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.form-grid-full {
+    grid-template-columns: 1fr;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* ============================================
+   LABELS
+   ============================================ */
+
+.form-group label,
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.form-label-required {
+    color: var(--secondary-color);
+}
+
+/* ============================================
+   CAMPOS DE ENTRADA
+   ============================================ */
+
+.form-input,
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group input[type="file"],
+.form-group textarea,
+.form-group select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: white;
+    font-size: 14px;
+    color: var(--text-color);
+    transition: var(--transition);
+    font-family: inherit;
+    height: auto;
+}
+
+.form-input:focus,
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(91, 183, 91, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+    cursor: pointer;
+}
+
+/* ============================================
+   CAMPOS DESHABILITADOS
+   ============================================ */
+
+input:disabled,
+textarea:disabled,
+select:disabled,
+.form-input:disabled {
+    background-color: #e9ecef !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+}
+
+/* ============================================
+   BOTONES DE OPCIÓN / BADGES
+   ============================================ */
+
+.options-group,
+.option-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.option-btn,
+.option-button {
+    padding: 10px 18px;
+    border: 2px solid var(--border-color);
+    background: white;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    text-decoration: none;
+}
+
+.option-btn:hover,
+.option-button:hover {
+    border-color: var(--primary-color);
+    background: var(--light-color);
+}
+
+.option-btn.active,
+.option-button.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(91, 183, 91, 0.3);
+}
+
+.option-btn:disabled,
+.option-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   GRID DE MESES
+   ============================================ */
+
+.meses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: var(--spacing-xs);
+}
+
+.mes-option,
+.month-option {
+    padding: 12px 10px;
+    border: 2px solid var(--border-color);
+    background: white;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    transition: var(--transition);
+    color: var(--text-color);
+}
+
+.mes-option:hover,
+.month-option:hover {
+    border-color: var(--primary-color);
+    background: var(--light-color);
+}
+
+.mes-option.selected,
+.month-option.selected {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(91, 183, 91, 0.2);
+}
+
+.mes-option:disabled,
+.month-option:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   CHECKBOXES PERSONALIZADOS
+   ============================================ */
+
+.checkbox-wrapper,
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-wrapper input[type="checkbox"],
+.checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #3ea13e;
+    flex-shrink: 0;
+}
+
+.checkbox-wrapper input[type="checkbox"]:disabled,
+.checkbox-container input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+.checkbox-wrapper label,
+.checkbox-container label {
+    font-size: 14px;
+    color: var(--text-color);
+    cursor: pointer;
+    margin: 0 !important;
+    text-transform: none !important;
+    font-weight: 500 !important;
+}
+
+/* ============================================
+   SECCIONES DEL FORMULARIO
+   ============================================ */
+
+.form-section {
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--light-color);
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.section-header,
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.section-header i,
+.section-title i {
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+/* ============================================
+   INFORMACIÓN DEL EMPLEADO / USUARIO
+   ============================================ */
+
+.employee-info,
+.info-block,
+.user-info {
+    background: var(--light-color);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-lg);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.employee-info-item,
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-info-item label,
+.info-item label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.employee-info-item span,
+.info-item span {
+    font-size: 14px;
+    color: var(--dark-color);
+    font-weight: 500;
+}
+
+/* ============================================
+   TABLA / CONTENEDOR DE ITEMS
+   ============================================ */
+
+.gastos-table-wrapper,
+.items-wrapper,
+.table-wrapper {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-top: var(--spacing-md);
+}
+
+.gastos-table-header,
+.table-header,
+.items-header {
+    background: var(--light-color);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.gastos-item,
+.table-item,
+.item-row {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid #f0f0f0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.gastos-item:last-child,
+.table-item:last-child,
+.item-row:last-child {
+    border-bottom: none;
+}
+
+.gastos-item.add-new,
+.item-row.add-new {
+    background: #f8fdf8;
+}
+
+.gastos-item label,
+.table-item label,
+.item-row label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: var(--spacing-xs);
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.gastos-item input,
+.table-item input,
+.item-row input {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: white;
+    font-size: 14px;
+    color: var(--text-color);
+    width: 100%;
+    transition: var(--transition);
+}
+
+.gastos-item input:focus,
+.table-item input:focus,
+.item-row input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(91, 183, 91, 0.1);
+}
+
+.gastos-item-actions,
+.item-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* ============================================
+   BOTONES DE ACCIÓN EN ITEMS
+   ============================================ */
+
+.btn-remove-gasto,
+.btn-remove-item,
+.btn-delete {
+    padding: 8px 12px;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: var(--transition);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-remove-gasto:hover,
+.btn-remove-item:hover,
+.btn-delete:hover {
+    background: #c82333;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-add-gasto,
+.btn-add-item,
+.btn-add {
+    padding: 10px 18px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin: var(--spacing-md);
+}
+
+.btn-add-gasto:hover,
+.btn-add-item:hover,
+.btn-add:hover {
+    background: #3d8f3d;
+    box-shadow: 0 2px 6px rgba(91, 183, 91, 0.3);
+}
+
+.btn-add-gasto:active,
+.btn-add-item:active,
+.btn-add:active {
+    transform: translateY(1px);
+}
+
+/* ============================================
+   CONSTRUCTOR DE FÓRMULAS
+   ============================================ */
+
+.formula-container {
+    position: relative;
+}
+
+.formula-builder,
+.builder-container {
+    display: none;
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-lg);
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background: #f8fdf8;
+}
+
+.formula-builder.active,
+.builder-container.active {
+    display: block;
+}
+
+.formula-section-title,
+.builder-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2e7d32;
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.formula-tools,
+.builder-tools {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.formula-btn,
+.builder-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--primary-color);
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--primary-color);
+    transition: var(--transition);
+}
+
+.formula-btn:hover,
+.builder-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.formula-btn:disabled,
+.builder-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.variables-row,
+.builder-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: stretch;
+}
+
+.variables-row select,
+.builder-row select {
+    flex: 1;
+    padding: 10px 35px 10px 12px;
+}
+
+/* ============================================
+   CAJAS DE RESUMEN / ESTADÍSTICAS
+   ============================================ */
+
+.summary-boxes,
+.stats-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.summary-box,
+.stat-box {
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.summary-box.total,
+.stat-box.total {
+    background: #f0f5ff;
+    border-left: 4px solid var(--info-color);
+}
+
+.summary-box.rebaja,
+.stat-box.rebaja {
+    background: #f0fff4;
+    border-left: 4px solid var(--success-color);
+}
+
+.summary-box.warning,
+.stat-box.warning {
+    background: #fff8f0;
+    border-left: 4px solid var(--warning-color);
+}
+
+.summary-box label,
+.stat-box label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+.summary-box .amount,
+.stat-box .amount {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--dark-color);
+}
+
+/* ============================================
+   REDONDEO Y CONFIGURACIÓN ESPECIAL
+   ============================================ */
+
+.redondeo-flex,
+.config-flex {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.redondeo-flex input[type="number"],
+.config-flex input[type="number"] {
+    flex: 1;
+}
+
+/* ============================================
+   BOTONES DE ACCIÓN DEL FORMULARIO
+   ============================================ */
+
+.form-actions,
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    padding-top: var(--spacing-lg);
+    border-top: 2px solid var(--light-color);
+    margin-top: var(--spacing-xl);
+}
+
+.form-actions .btn,
+.form-buttons .btn {
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    text-decoration: none;
+}
+
+.form-actions .btn-primary,
+.form-buttons .btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.form-actions .btn-primary:hover,
+.form-buttons .btn-primary:hover {
+    background: #3d8f3d;
+    box-shadow: 0 2px 6px rgba(91, 183, 91, 0.3);
+}
+
+.form-actions .btn-primary:disabled,
+.form-buttons .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form-actions .btn-default,
+.form-buttons .btn-default {
+    background: #f8f9fa;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.form-actions .btn-default:hover,
+.form-buttons .btn-default:hover {
+    background: white;
+    border-color: var(--text-color);
+}
+
+/* ============================================
+   UTILIDADES
+   ============================================ */
+
+.text-required {
+    color: var(--secondary-color);
+}
+
+.text-help,
+.form-help {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: var(--spacing-xs);
+    display: block;
+}
+
+.form-divider {
+    border-top: 2px solid var(--light-color);
+    margin: var(--spacing-lg) 0;
+}
+
+.form-error {
+    color: var(--secondary-color);
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+.form-success {
+    color: var(--success-color);
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-body {
+        padding: var(--spacing-lg);
+    }
+
+    .form-header {
+        padding: var(--spacing-lg);
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .form-header h1 {
+        font-size: 18px;
+    }
+
+    .employee-info,
+    .info-block,
+    .user-info {
+        grid-template-columns: 1fr;
+    }
+
+    .gastos-table-header,
+    .table-header,
+    .items-header,
+    .gastos-item,
+    .table-item,
+    .item-row {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-boxes,
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions,
+    .form-buttons {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .btn,
+    .form-buttons .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .options-group,
+    .option-buttons,
+    .meses-grid {
+        flex-direction: column;
+    }
+
+    .option-btn,
+    .option-button,
+    .mes-option,
+    .month-option {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .meses-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+
+    .btn-add-gasto,
+    .btn-add-item,
+    .btn-add {
+        margin: var(--spacing-sm);
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-header {
+        padding: var(--spacing-lg) var(--spacing-sm);
+    }
+
+    .form-body {
+        padding: var(--spacing-lg) var(--spacing-sm);
+    }
+
+    .form-header h1 {
+        font-size: 16px;
+    }
+
+    .section-header,
+    .section-title {
+        font-size: 14px;
+    }
+
+    .summary-box .amount,
+    .stat-box .amount {
+        font-size: 24px;
+    }
+
+    .icon-header {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .form-grid,
+    .form-grid-full {
+        gap: var(--spacing-sm);
+    }
+}
+
+/* ============================================
+   ESTADOS Y VARIACIONES
+   ============================================ */
+
+.form-group.has-error input,
+.form-group.has-error textarea,
+.form-group.has-error select {
+    border-color: var(--secondary-color);
+}
+
+.form-group.has-error input:focus,
+.form-group.has-error textarea:focus,
+.form-group.has-error select:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.form-group.has-success input,
+.form-group.has-success textarea,
+.form-group.has-success select {
+    border-color: var(--success-color);
+}
+
+.form-group.has-success input:focus,
+.form-group.has-success textarea:focus,
+.form-group.has-success select:focus {
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
+}
+
+/* ============================================
+   COMPATIBILIDAD CON DIFERENTES TAMAÑOS
+   ============================================ */
+
+.form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.form-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 992px) {
+    .form-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .form-grid-3,
+    .form-grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   FORMULARIO DE COMPARACIÓN / REFORMA
+   ============================================ */
+
+.comparison-container {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.comparison-grid {
+    display: grid;
+    gap: 0;
+}
+
+.comparison-item {
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-lg) var(--spacing-lg);
+    transition: var(--transition);
+}
+
+.comparison-item:hover {
+    background-color: var(--light-color);
+}
+
+.comparison-item:last-child {
+    border-bottom: none;
+}
+
+.field-header {
+    margin-bottom: var(--spacing-sm);
+}
+
+.field-header label {
+    font-size: 13px;
+    color: var(--text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.field-values {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    align-items: start;
+}
+
+.current-value,
+.new-value {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.value-label {
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.value-display {
+    padding: 10px 12px;
+    background: var(--light-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    font-size: 14px;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+.value-input {
+    position: relative;
+}
+
+.value-input input,
+.value-input select,
+.value-input textarea {
+    width: 100% !important;
+    padding: 10px 12px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background: white;
+    font-size: 14px;
+    color: var(--text-color);
+    transition: var(--transition);
+}
+
+.value-input input:focus,
+.value-input select:focus,
+.value-input textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(91, 183, 91, 0.1);
+}
+
+.value-input textarea {
+    resize: vertical;
+    min-height: 38px;
+}
+
+/* Select2 en campos de comparación */
+.value-input .select2-container .select2-selection--single {
+    height: 40px !important;
+    border: 1px solid var(--primary-color);
+}
+
+.value-input .select2-selection__rendered {
+    line-height: 40px !important;
+    height: 40px !important;
+}
+
+/* Ajustes para inputs pequeños del form */
+.value-input input[class*="imp-numbersmall"] {
+    max-width: 150px;
+}
+
+.value-input input[class*="imp-moneda"] {
+    max-width: 200px;
+}
+
+.comparison-frame-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* ============================================
+   RESPONSIVE PARA COMPARACIÓN
+   ============================================ */
+
+@media (max-width: 768px) {
+    .field-values {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .current-value {
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .value-label {
+        font-size: 12px;
+    }
+
+    .comparison-item {
+        padding: var(--spacing-lg) var(--spacing-md);
+    }
+
+    .field-header label {
+        font-size: 14px;
+        display: block;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .comparison-frame-container {
+         flex-direction: column;
+    }
+}

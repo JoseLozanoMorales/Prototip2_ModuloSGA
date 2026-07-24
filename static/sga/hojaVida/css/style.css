@@ -1,0 +1,159 @@
+.miPerfil {
+    padding: 2px 3px;
+    background-color: white;
+    text-align: center!important;
+    width: 100%;
+}
+
+.perfil-img {
+    border: 0.5px solid #e1e1e1;
+    border-radius: 10px;
+    padding: 5px 8px;
+}
+
+.contenedor-perfil {
+    width: 100%;
+    text-align: -webkit-center;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.contenedor-perfil:last-child {
+    margin-bottom: 0!important;
+}
+
+.miPerfil img {
+    width: 250px;
+    min-width: 50px;/* Ancho del contenedor */
+    height: 250px;
+    min-height: 50px;/* Alto del contenedor */
+    border-radius: 50%; /* Hace el contenedor redondo */
+    border: #b9b9b9 0.5px solid;
+    overflow: hidden;   /* Esconde cualquier parte de la imagen que exceda el contenedor */
+}
+
+.miPerfil .perfil-nombre hr {
+    width: 80%;
+    padding: 0;
+    margin: 3px auto;
+    height: 3px;
+    background-color: #e1e1e1;
+}
+
+.contenedor-perfil .nav li {
+    text-align: left;
+}
+
+.formDiv {
+    border: 0.5px solid #e1e1e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.formDiv .titulo {
+    line-height: 1;
+    margin-top: 5px;
+}
+
+.formDiv .titulo .botonForm {
+    margin-top: -10px;
+}
+
+.formDiv:last-child {
+    margin-bottom: 0!important;
+}
+
+
+.formDiv-header {
+    background-color: rgb(253, 208, 131);
+}
+
+
+
+.row-fluid div label {
+    font-weight: bold;
+    text-align: right;
+}
+
+.row-fluid {
+    margin-bottom: 0!important;
+}
+
+.row-fluid  div .fila {
+    width: 100%;
+    display: block;
+}
+
+.border-bottom {
+    border-bottom: 1px solid rgb(234, 234, 234) !important;
+    padding-bottom: 2px;
+}
+
+.padding-bottom {
+    padding-bottom: 5px;
+}
+
+.contenResp {
+    border-bottom: 0.5px solid orange;
+}
+
+.formDiv .titulo {
+    margin-left: 10px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.formDiv hr {
+    /*width: 80%;*/
+    padding: 0;
+    margin: 5px 5px 10px 5px;
+    height: 2px;
+    background-color: #e1e1e1;
+}
+
+.table tbody th {
+    font-weight: normal;
+}
+
+@media screen and (max-width: 767px) {
+    .row-fluid div label {
+        text-align: left;
+    }
+
+    .row-fluid  div .fila {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .row-fluid div .fila .span4 {
+        width: 33%;
+    }
+
+    .row-fluid div .fila .span8 {
+        width: 67%;
+    }
+}
+
+@media screen and (min-width: 768px) and (max-width: 799px){
+    .miPerfil .contenedor-perfil .circulo {
+        width: 110px;
+        height: 110px;
+    }
+}
+
+@media screen and (min-width: 800px) and (max-width: 1020px){
+    .miPerfil .contenedor-perfil .circulo {
+        width: 150px;
+        height: 150px;
+    }
+}
+
+@media screen and (min-width: 1021px) and (max-width: 1300px){
+    .miPerfil .contenedor-perfil .circulo {
+        width: 200px;
+        height: 200px;
+    }
+}
+

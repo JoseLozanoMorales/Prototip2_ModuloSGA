@@ -1,0 +1,34 @@
+input[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    -moz-appearance: auto !important;
+    width: auto !important;
+    height: auto !important;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    position: static !important;
+    cursor: pointer !important;
+    outline: revert !important;
+    transition: none !important;
+    flex-shrink: initial !important;
+    min-width: auto !important;
+}
+
+input[type="checkbox"]::after {
+    /*content: none !important;*/
+    /*display: none !important;*/
+}
+
+input[type="checkbox"]::before {
+   /*content: none !important;*/
+    display: none;
+}
+
+input[type="checkbox"]:checked {
+    background-color: transparent !important;
+}
+
+input[type="checkbox"]:focus {
+    outline: revert !important;
+    box-shadow: revert !important;
+}

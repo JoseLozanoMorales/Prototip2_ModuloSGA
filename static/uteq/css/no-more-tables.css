@@ -1,0 +1,51 @@
+@media only screen and (max-width: 800px) {
+
+    .no-more-tables table,
+    .no-more-tables thead,
+    .no-more-tables tbody,
+    .no-more-tables th,
+    .no-more-tables td,
+    .no-more-tables tr {
+        display: block;
+    }
+
+    .no-more-tables thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    .no-more-tables tr {
+        border: 1px solid #ccc;
+        margin-bottom: 0px;
+        background: #fff;
+    }
+
+    .no-more-tables td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50% !important;
+        text-align: left !important;
+        min-height: 30px;
+    }
+
+    .no-more-tables td:before {
+        content: attr(data-title);
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .no-more-tables .btn-group {
+        width: 100%;
+    }
+
+    .no-more-tables .btn-group .btn {
+        width: 100%;
+    }
+}

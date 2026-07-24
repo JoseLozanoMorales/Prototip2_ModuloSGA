@@ -1,0 +1,37 @@
+.cuadro-estadistica {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-left: 4px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: box-shadow .15s, transform .15s;
+}
+.cuadro-estadistica:hover { box-shadow: 0 3px 8px rgba(0,0,0,.10); transform: translateY(-1px); }
+.cuadro-estadistica .icono-estadistica {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    color: #fff;
+    flex-shrink: 0;
+}
+.cuadro-estadistica .etiqueta-estadistica { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .5px; }
+.cuadro-estadistica .valor-estadistica { font-size: 24px; font-weight: bold; line-height: 1.25; color: #333; }
+.cuadro-estadistica.cuadro-azul { border-left-color: #3a87ad; }
+.cuadro-estadistica.cuadro-azul .icono-estadistica { background: #3a87ad; }
+.cuadro-estadistica.cuadro-morado { border-left-color: #7e57c2; }
+.cuadro-estadistica.cuadro-morado .icono-estadistica { background: #7e57c2; }
+.cuadro-estadistica.cuadro-naranja { border-left-color: #e67e22; }
+.cuadro-estadistica.cuadro-naranja .icono-estadistica { background: #e67e22; }
+.cuadro-estadistica.cuadro-rojo { border-left-color: #c0392b; }
+.cuadro-estadistica.cuadro-rojo .icono-estadistica { background: #c0392b; }
+.cuadro-estadistica.cuadro-verde { border-left-color: #2e7d32; }
+.cuadro-estadistica.cuadro-verde .icono-estadistica { background: #2e7d32; }

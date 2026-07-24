@@ -1,0 +1,115 @@
+.drop-shadow {
+    position:relative;
+    float:left;
+    padding:0.4em;
+    background:#fff;
+    -webkit-box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+    -moz-box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+    box-shadow:0 1px 4px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 0, 0, 0.1) inset;
+}
+
+.drop-shadow:before,
+.drop-shadow:after {
+    content:"";
+    position:absolute;
+    z-index:-2;
+}
+
+.drop-shadow p {
+    font-size:16px;
+    font-weight:bold;
+}
+
+.caja{
+    font-family: "Arial Rounded MT Bold", sans-serif;
+    font-weight: lighter;
+    width: 200px;
+    padding: 10px;
+    position: absolute;
+    z-index: 5;
+    left: 35px;
+    margin-top: 85px;
+    font-size: 11px;
+    height: 10px;
+    color: white;
+    cursor: pointer;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+    animation: float 1s ease-out infinite;
+}
+
+.caja:hover {
+    color: white;
+    box-shadow: 0 10px 12px 0 rgba(0,0,0,0.1),0 17px 200px 0 rgba(193, 193, 193, 0.1);
+    transform: scale(1) translateY(-2px);
+    height: 10px;
+    text-decoration: underline;
+}
+
+@media (max-width: 530px){
+    .caja{
+        left: 25px;
+        margin-top: 120px;
+        font-size: 12px;
+    }
+}
+
+@media (min-width: 579px) and (max-width: 800px){
+    .caja{
+        display: none;
+    }
+}
+@media (min-width: 550px) and (max-width: 650px){
+    .caja{
+        left: 25px;
+        margin-top: 145px;
+        font-size: 12px;
+    }
+
+}
+@media (min-width: 513px) and (max-width: 550px){
+    .caja{
+        left: 25px;
+        margin-top: 140px;
+        font-size: 12px;
+    }
+
+}
+@media (min-width: 469px) and (max-width: 512px){
+    .caja{
+        left: 25px;
+        margin-top: 122px;
+        font-size: 12px;
+    }
+
+}
+@media (min-width: 415px) and (max-width: 468px){
+    .caja{
+        left: 25px;
+        margin-top: 110px;
+        font-size: 12px;
+    }
+
+}
+@media (min-width: 395px) and (max-width: 414px){
+    .caja{
+        left: 25px;
+        margin-top: 100px;
+        font-size: 11px;
+    }
+
+}
+@media (min-width: 370px) and (max-width: 395px){
+    .caja{
+        left: 25px;
+        margin-top: 95px;
+        font-size: 11px;
+    }
+
+}
+@media (min-width: 1px) and (max-width: 370px){
+    .caja{
+        display: none;
+    }
+
+}

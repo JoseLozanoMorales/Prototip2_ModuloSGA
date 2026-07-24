@@ -1,0 +1,113 @@
+
+.text-left {
+    text-align: left!important;
+}
+
+.text-right {
+    text-align: right!important;
+}
+
+.text-center {
+    text-align: center!important;
+}
+
+.text-justify {
+    text-align: justify!important;
+}
+
+.resaltar{
+    padding: 7px;
+    -webkit-box-shadow:0 1px 4px #B6B6B6 inset;
+    -moz-box-shadow:0 1px 4px #B6B6B6 inset;
+    box-shadow:0 1px 4px #B6B6B6 inset;
+    background-color: #F2F2F2;
+    border-radius: 5px;
+}
+
+label{
+    float: left;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.group-label{
+    width: 100%;
+    display: block;
+}
+
+.float-disable {
+    float: none!important;
+}
+
+.content-boton{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+.formulario{
+    padding: 7px 7px 1px 7px;
+    background-color: white;
+    border: 0.5px solid #ececec;
+    border-radius: 5px;
+    -webkit-box-shadow:0 1px 2px #F4F4F4 inset;
+    -moz-box-shadow:0 1px 2px #F4F4F4 inset;
+    box-shadow:0 1px 2px #F4F4F4 inset;
+}
+
+.popover-content{
+    font-weight: normal;
+}
+
+.popover-title{
+    font-weight: bold;
+}
+
+.cke_top{
+    background: #E9E9E9;
+}
+
+.cke_chrome {
+    display: grid!important;
+}
+
+.seleccion{
+    text-align: center!important;
+}
+
+.well{
+    padding: 10px 10px 0px 10px;
+}
+
+.cell_div{
+    padding-top: 5px;
+    box-shadow: 1px 1px #b58900;
+}
+
+.CharAlert {
+    font-style: italic;
+    color: #0f74a8;
+}
+
+.CharAlert.nearLimit  {
+    color: red;
+}
+
+.groupButton {
+    text-align: center;
+}
+
+.groupButton a {
+    margin: 5px 3px 2px 3px;
+}
+
+.divGrupo {
+    min-height: 19px;
+    padding: 10px;
+    /*border: 1px solid #e3e3e3;*/
+}
+
+hr {
+    margin: 0;
+}
+

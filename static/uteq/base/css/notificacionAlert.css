@@ -1,0 +1,268 @@
+:root {
+    --exito: #f5fff7;
+    --error: #fff0f0;
+    --info: rgb(237 252 255);
+    /*--infor: rgba(188, 212, 255, 0.92);*/
+    --infor: rgb(237 252 255);
+    --warning: #fff9ec;
+    --exito-hover: #68aa7c;
+    --error-hover: #962a31;
+    --info-hover: #6ac2dd;
+    --infor-hover: #6ac2dd;
+    --warning-hover: #9b7512;
+
+    --exito-icono: green;
+    --error-icono: red;
+    --warning-icono: #f78d00;
+    --info-icono: #1874ff;
+    --infor-icono: #1874ff;
+
+
+	--exito-color: rgba(0, 128, 0, 0.8);
+	--error-color: rgba(189, 2, 2, 0.84);
+	--warning-color: rgba(200, 115, 1, 0.91);
+	--info-color: rgba(2, 70, 168, 0.87);
+	--infor-color: rgba(2, 70, 168, 0.87);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+/*.contenedor {*/
+/*	width: 90%;*/
+/*	max-width: 1000px;*/
+/*	margin: 80px auto;*/
+/*}*/
+
+.hero .titulo {
+    font-weight: 800;
+    font-size: 100px;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.hero .contenedor-botones {
+    display: flex;
+    gap: 20px;
+}
+
+.contenedor-toast.btn {
+    padding: 10px 20px;
+    font-size: 20px;
+    background: #000;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    border-radius: 5px;
+    transition: 0.3s ease all;
+}
+
+.btn.exito {
+    background: var(--exito);
+}
+
+.btn.error {
+    background: var(--error);
+}
+
+.btn.info {
+    background: var(--info);
+}
+
+.btn.infor {
+    background: var(--infor);
+}
+
+.btn.warning {
+    background: var(--warning);
+}
+
+.toast.exito > .contenido .icono svg {
+    color: var(--exito-icono);
+}
+
+.toast.error > .contenido .icono svg {
+    color: var(--error-icono);
+}
+
+.toast.info > .contenido .icono svg {
+    color: var(--info-icono);
+}
+
+.toast.infor > .contenido .icono svg {
+    color: var(--infor-icono);
+}
+
+.toast.warning > .contenido .icono svg {
+    color: var(--warning-icono);
+}
+
+/* Hover */
+.btn.exito:hover {
+    background: var(--exito-hover);
+}
+
+.btn.error:hover {
+    background: var(--error-hover);
+}
+
+.btn.info:hover {
+    background: var(--info-hover);
+}
+
+.btn.infor:hover {
+    background: var(--infor-hover);
+}
+
+.btn.warning:hover {
+    background: var(--warning-hover);
+}
+
+/* Toast */
+.contenedor-toast {
+    position: fixed;
+    right: 40px;
+    bottom: 40px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+}
+
+.toast {
+    /*background: #ccc;*/
+    display: flex;
+    justify-content: space-between;
+    border-radius: 10px;
+    overflow: hidden;
+    animation-name: apertura;
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+    position: relative;
+    cursor: pointer;
+}
+
+.toast.exito {
+    background: var(--exito);
+}
+
+.toast.error {
+    background: var(--error);
+}
+
+.toast.info {
+    background: var(--info);
+}
+
+.toast.warning {
+    background: var(--warning);
+}
+
+.toast.infor {
+    background: var(--infor);
+}
+
+.toast .contenido {
+    display: grid;
+    grid-template-columns: 30px auto;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+}
+
+.toast .icono {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.toast .btn-cerrar .icono svg {
+    width: 25px;
+}
+
+.toast .titulo {
+    font-size: 14px;
+    font-weight: 600;
+    -webkit-margin-before: 0 !important;
+    -webkit-margin-after: 0 !important;
+    color: #7c7878;
+}
+
+.toast .descripcion {
+    margin: 0;
+    -webkit-margin-before: 0 !important;
+    -webkit-margin-after: 0 !important;
+    font-size: 11px;
+    color: #7c7878;
+}
+
+.toast .btn-cerrar {
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    cursor: pointer;
+    padding: 0 10px;
+    transition: 0.3s ease all;
+}
+
+.toast .btn-cerrar:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.toast .btn-cerrar .icono {
+    /*width: 20px;*/
+    /*height: 20px;*/
+    color: #fff;
+}
+
+
+@keyframes apertura {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.toast.cerrando {
+    animation-name: cierre;
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+
+@keyframes cierre {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(calc(100% + 40px));
+    }
+}
+
+.toast.autoCierre::after {
+    content: '';
+    width: 100%;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    position: absolute;
+    bottom: 0;
+    animation-name: autoCierre;
+    animation-duration: 5s;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+
+@keyframes autoCierre {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}

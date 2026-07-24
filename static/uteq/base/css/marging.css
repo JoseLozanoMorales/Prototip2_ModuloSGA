@@ -1,0 +1,697 @@
+/* Sistema de espaciado con clases de margin
+ *
+ * Usa una variable CSS --spacing como unidad base
+ * Cada clase m-n aplica margin de n unidades (--spacing * n)
+ *
+ * Ejemplo de uso:
+ * <div class="m-2">Este div tiene margin de 2 unidades</div>
+ */
+
+:root {
+  /* Define la unidad base de espaciado (puedes ajustar este valor según tus necesidades) */
+  --spacing: 0.25rem; /* 4px con base en font-size de 16px */
+}
+
+/* Margin en todas las direcciones (m-0 hasta m-32) */
+.m-0 {
+  margin: 0;
+}
+
+.m-1 {
+  margin: calc(var(--spacing) * 1);
+}
+
+.m-2 {
+  margin: calc(var(--spacing) * 2);
+}
+
+.m-3 {
+  margin: calc(var(--spacing) * 3);
+}
+
+.m-4 {
+  margin: calc(var(--spacing) * 4);
+}
+
+.m-5 {
+  margin: calc(var(--spacing) * 5);
+}
+
+.m-6 {
+  margin: calc(var(--spacing) * 6);
+}
+
+.m-8 {
+  margin: calc(var(--spacing) * 8);
+}
+
+.m-10 {
+  margin: calc(var(--spacing) * 10);
+}
+
+.m-12 {
+  margin: calc(var(--spacing) * 12);
+}
+
+.m-16 {
+  margin: calc(var(--spacing) * 16);
+}
+
+.m-20 {
+  margin: calc(var(--spacing) * 20);
+}
+
+.m-24 {
+  margin: calc(var(--spacing) * 24);
+}
+
+.m-32 {
+  margin: calc(var(--spacing) * 32);
+}
+
+/* Margin negativo */
+.m-n1 {
+  margin: calc(var(--spacing) * -1);
+}
+
+.m-n2 {
+  margin: calc(var(--spacing) * -2);
+}
+
+.m-n3 {
+  margin: calc(var(--spacing) * -3);
+}
+
+.m-n4 {
+  margin: calc(var(--spacing) * -4);
+}
+
+.m-n5 {
+  margin: calc(var(--spacing) * -5);
+}
+
+.m-n6 {
+  margin: calc(var(--spacing) * -6);
+}
+
+.m-n8 {
+  margin: calc(var(--spacing) * -8);
+}
+
+.m-n10 {
+  margin: calc(var(--spacing) * -10);
+}
+
+.m-n12 {
+  margin: calc(var(--spacing) * -12);
+}
+
+.m-n16 {
+  margin: calc(var(--spacing) * -16);
+}
+
+.m-n20 {
+  margin: calc(var(--spacing) * -20);
+}
+
+.m-n24 {
+  margin: calc(var(--spacing) * -24);
+}
+
+.m-n32 {
+  margin: calc(var(--spacing) * -32);
+}
+
+/* Margin horizontal (mx-n) = margin-left y margin-right */
+.mx-0 {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.mx-1 {
+  margin-left: calc(var(--spacing) * 1);
+  margin-right: calc(var(--spacing) * 1);
+}
+
+.mx-2 {
+  margin-left: calc(var(--spacing) * 2);
+  margin-right: calc(var(--spacing) * 2);
+}
+
+.mx-3 {
+  margin-left: calc(var(--spacing) * 3);
+  margin-right: calc(var(--spacing) * 3);
+}
+
+.mx-4 {
+  margin-left: calc(var(--spacing) * 4);
+  margin-right: calc(var(--spacing) * 4);
+}
+
+.mx-5 {
+  margin-left: calc(var(--spacing) * 5);
+  margin-right: calc(var(--spacing) * 5);
+}
+
+.mx-6 {
+  margin-left: calc(var(--spacing) * 6);
+  margin-right: calc(var(--spacing) * 6);
+}
+
+.mx-8 {
+  margin-left: calc(var(--spacing) * 8);
+  margin-right: calc(var(--spacing) * 8);
+}
+
+.mx-10 {
+  margin-left: calc(var(--spacing) * 10);
+  margin-right: calc(var(--spacing) * 10);
+}
+
+.mx-12 {
+  margin-left: calc(var(--spacing) * 12);
+  margin-right: calc(var(--spacing) * 12);
+}
+
+.mx-16 {
+  margin-left: calc(var(--spacing) * 16);
+  margin-right: calc(var(--spacing) * 16);
+}
+
+.mx-20 {
+  margin-left: calc(var(--spacing) * 20);
+  margin-right: calc(var(--spacing) * 20);
+}
+
+.mx-24 {
+  margin-left: calc(var(--spacing) * 24);
+  margin-right: calc(var(--spacing) * 24);
+}
+
+.mx-32 {
+  margin-left: calc(var(--spacing) * 32);
+  margin-right: calc(var(--spacing) * 32);
+}
+
+/* Margin horizontal negativo */
+.mx-n1 {
+  margin-left: calc(var(--spacing) * -1);
+  margin-right: calc(var(--spacing) * -1);
+}
+
+.mx-n2 {
+  margin-left: calc(var(--spacing) * -2);
+  margin-right: calc(var(--spacing) * -2);
+}
+
+.mx-n3 {
+  margin-left: calc(var(--spacing) * -3);
+  margin-right: calc(var(--spacing) * -3);
+}
+
+.mx-n4 {
+  margin-left: calc(var(--spacing) * -4);
+  margin-right: calc(var(--spacing) * -4);
+}
+
+.mx-n5 {
+  margin-left: calc(var(--spacing) * -5);
+  margin-right: calc(var(--spacing) * -5);
+}
+
+.mx-n6 {
+  margin-left: calc(var(--spacing) * -6);
+  margin-right: calc(var(--spacing) * -6);
+}
+
+.mx-n8 {
+  margin-left: calc(var(--spacing) * -8);
+  margin-right: calc(var(--spacing) * -8);
+}
+
+/* Margin horizontal automático (para centrar elementos con ancho definido) */
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Margin vertical (my-n) = margin-top y margin-bottom */
+.my-0 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.my-1 {
+  margin-top: calc(var(--spacing) * 1);
+  margin-bottom: calc(var(--spacing) * 1);
+}
+
+.my-2 {
+  margin-top: calc(var(--spacing) * 2);
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+.my-3 {
+  margin-top: calc(var(--spacing) * 3);
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+.my-4 {
+  margin-top: calc(var(--spacing) * 4);
+  margin-bottom: calc(var(--spacing) * 4);
+}
+
+.my-5 {
+  margin-top: calc(var(--spacing) * 5);
+  margin-bottom: calc(var(--spacing) * 5);
+}
+
+.my-6 {
+  margin-top: calc(var(--spacing) * 6);
+  margin-bottom: calc(var(--spacing) * 6);
+}
+
+.my-8 {
+  margin-top: calc(var(--spacing) * 8);
+  margin-bottom: calc(var(--spacing) * 8);
+}
+
+.my-10 {
+  margin-top: calc(var(--spacing) * 10);
+  margin-bottom: calc(var(--spacing) * 10);
+}
+
+.my-12 {
+  margin-top: calc(var(--spacing) * 12);
+  margin-bottom: calc(var(--spacing) * 12);
+}
+
+.my-16 {
+  margin-top: calc(var(--spacing) * 16);
+  margin-bottom: calc(var(--spacing) * 16);
+}
+
+.my-20 {
+  margin-top: calc(var(--spacing) * 20);
+  margin-bottom: calc(var(--spacing) * 20);
+}
+
+.my-24 {
+  margin-top: calc(var(--spacing) * 24);
+  margin-bottom: calc(var(--spacing) * 24);
+}
+
+.my-32 {
+  margin-top: calc(var(--spacing) * 32);
+  margin-bottom: calc(var(--spacing) * 32);
+}
+
+/* Margin vertical negativo */
+.my-n1 {
+  margin-top: calc(var(--spacing) * -1);
+  margin-bottom: calc(var(--spacing) * -1);
+}
+
+.my-n2 {
+  margin-top: calc(var(--spacing) * -2);
+  margin-bottom: calc(var(--spacing) * -2);
+}
+
+.my-n3 {
+  margin-top: calc(var(--spacing) * -3);
+  margin-bottom: calc(var(--spacing) * -3);
+}
+
+.my-n4 {
+  margin-top: calc(var(--spacing) * -4);
+  margin-bottom: calc(var(--spacing) * -4);
+}
+
+.my-n5 {
+  margin-top: calc(var(--spacing) * -5);
+  margin-bottom: calc(var(--spacing) * -5);
+}
+
+.my-n6 {
+  margin-top: calc(var(--spacing) * -6);
+  margin-bottom: calc(var(--spacing) * -6);
+}
+
+.my-n8 {
+  margin-top: calc(var(--spacing) * -8);
+  margin-bottom: calc(var(--spacing) * -8);
+}
+
+/* Margin superior (mt-n) */
+.mt-0 {
+  margin-top: 0;
+}
+
+.mt-1 {
+  margin-top: calc(var(--spacing) * 1);
+}
+
+.mt-2 {
+  margin-top: calc(var(--spacing) * 2);
+}
+
+.mt-3 {
+  margin-top: calc(var(--spacing) * 3);
+}
+
+.mt-4 {
+  margin-top: calc(var(--spacing) * 4);
+}
+
+.mt-5 {
+  margin-top: calc(var(--spacing) * 5);
+}
+
+.mt-6 {
+  margin-top: calc(var(--spacing) * 6);
+}
+
+.mt-8 {
+  margin-top: calc(var(--spacing) * 8);
+}
+
+.mt-10 {
+  margin-top: calc(var(--spacing) * 10);
+}
+
+.mt-12 {
+  margin-top: calc(var(--spacing) * 12);
+}
+
+.mt-16 {
+  margin-top: calc(var(--spacing) * 16);
+}
+
+.mt-20 {
+  margin-top: calc(var(--spacing) * 20);
+}
+
+.mt-24 {
+  margin-top: calc(var(--spacing) * 24);
+}
+
+.mt-32 {
+  margin-top: calc(var(--spacing) * 32);
+}
+
+/* Margin superior negativo */
+.mt-n1 {
+  margin-top: calc(var(--spacing) * -1);
+}
+
+.mt-n2 {
+  margin-top: calc(var(--spacing) * -2);
+}
+
+.mt-n3 {
+  margin-top: calc(var(--spacing) * -3);
+}
+
+.mt-n4 {
+  margin-top: calc(var(--spacing) * -4);
+}
+
+.mt-n5 {
+  margin-top: calc(var(--spacing) * -5);
+}
+
+.mt-n6 {
+  margin-top: calc(var(--spacing) * -6);
+}
+
+.mt-n8 {
+  margin-top: calc(var(--spacing) * -8);
+}
+
+/* Margin derecho (mr-n) */
+.mr-0 {
+  margin-right: 0;
+}
+
+.mr-1 {
+  margin-right: calc(var(--spacing) * 1);
+}
+
+.mr-2 {
+  margin-right: calc(var(--spacing) * 2);
+}
+
+.mr-3 {
+  margin-right: calc(var(--spacing) * 3);
+}
+
+.mr-4 {
+  margin-right: calc(var(--spacing) * 4);
+}
+
+.mr-5 {
+  margin-right: calc(var(--spacing) * 5);
+}
+
+.mr-6 {
+  margin-right: calc(var(--spacing) * 6);
+}
+
+.mr-8 {
+  margin-right: calc(var(--spacing) * 8);
+}
+
+.mr-10 {
+  margin-right: calc(var(--spacing) * 10);
+}
+
+.mr-12 {
+  margin-right: calc(var(--spacing) * 12);
+}
+
+.mr-16 {
+  margin-right: calc(var(--spacing) * 16);
+}
+
+.mr-20 {
+  margin-right: calc(var(--spacing) * 20);
+}
+
+.mr-24 {
+  margin-right: calc(var(--spacing) * 24);
+}
+
+.mr-32 {
+  margin-right: calc(var(--spacing) * 32);
+}
+
+/* Margin derecho negativo */
+.mr-n1 {
+  margin-right: calc(var(--spacing) * -1);
+}
+
+.mr-n2 {
+  margin-right: calc(var(--spacing) * -2);
+}
+
+.mr-n3 {
+  margin-right: calc(var(--spacing) * -3);
+}
+
+.mr-n4 {
+  margin-right: calc(var(--spacing) * -4);
+}
+
+.mr-n5 {
+  margin-right: calc(var(--spacing) * -5);
+}
+
+.mr-n6 {
+  margin-right: calc(var(--spacing) * -6);
+}
+
+.mr-n8 {
+  margin-right: calc(var(--spacing) * -8);
+}
+
+/* Margin automático a la derecha */
+.mr-auto {
+  margin-right: auto;
+}
+
+/* Margin inferior (mb-n) */
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.mb-1 {
+  margin-bottom: calc(var(--spacing) * 1);
+}
+
+.mb-2 {
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+.mb-3 {
+  margin-bottom: calc(var(--spacing) * 3);
+}
+
+.mb-4 {
+  margin-bottom: calc(var(--spacing) * 4);
+}
+
+.mb-5 {
+  margin-bottom: calc(var(--spacing) * 5);
+}
+
+.mb-6 {
+  margin-bottom: calc(var(--spacing) * 6);
+}
+
+.mb-8 {
+  margin-bottom: calc(var(--spacing) * 8);
+}
+
+.mb-10 {
+  margin-bottom: calc(var(--spacing) * 10);
+}
+
+.mb-12 {
+  margin-bottom: calc(var(--spacing) * 12);
+}
+
+.mb-16 {
+  margin-bottom: calc(var(--spacing) * 16);
+}
+
+.mb-20 {
+  margin-bottom: calc(var(--spacing) * 20);
+}
+
+.mb-24 {
+  margin-bottom: calc(var(--spacing) * 24);
+}
+
+.mb-32 {
+  margin-bottom: calc(var(--spacing) * 32);
+}
+
+/* Margin inferior negativo */
+.mb-n1 {
+  margin-bottom: calc(var(--spacing) * -1);
+}
+
+.mb-n2 {
+  margin-bottom: calc(var(--spacing) * -2);
+}
+
+.mb-n3 {
+  margin-bottom: calc(var(--spacing) * -3);
+}
+
+.mb-n4 {
+  margin-bottom: calc(var(--spacing) * -4);
+}
+
+.mb-n5 {
+  margin-bottom: calc(var(--spacing) * -5);
+}
+
+.mb-n6 {
+  margin-bottom: calc(var(--spacing) * -6);
+}
+
+.mb-n8 {
+  margin-bottom: calc(var(--spacing) * -8);
+}
+
+/* Margin izquierdo (ml-n) */
+.ml-0 {
+  margin-left: 0;
+}
+
+.ml-1 {
+  margin-left: calc(var(--spacing) * 1);
+}
+
+.ml-2 {
+  margin-left: calc(var(--spacing) * 2);
+}
+
+.ml-3 {
+  margin-left: calc(var(--spacing) * 3);
+}
+
+.ml-4 {
+  margin-left: calc(var(--spacing) * 4);
+}
+
+.ml-5 {
+  margin-left: calc(var(--spacing) * 5);
+}
+
+.ml-6 {
+  margin-left: calc(var(--spacing) * 6);
+}
+
+.ml-8 {
+  margin-left: calc(var(--spacing) * 8);
+}
+
+.ml-10 {
+  margin-left: calc(var(--spacing) * 10);
+}
+
+.ml-12 {
+  margin-left: calc(var(--spacing) * 12);
+}
+
+.ml-16 {
+  margin-left: calc(var(--spacing) * 16);
+}
+
+.ml-20 {
+  margin-left: calc(var(--spacing) * 20);
+}
+
+.ml-24 {
+  margin-left: calc(var(--spacing) * 24);
+}
+
+.ml-32 {
+  margin-left: calc(var(--spacing) * 32);
+}
+
+/* Margin izquierdo negativo */
+.ml-n1 {
+  margin-left: calc(var(--spacing) * -1);
+}
+
+.ml-n2 {
+  margin-left: calc(var(--spacing) * -2);
+}
+
+.ml-n3 {
+  margin-left: calc(var(--spacing) * -3);
+}
+
+.ml-n4 {
+  margin-left: calc(var(--spacing) * -4);
+}
+
+.ml-n5 {
+  margin-left: calc(var(--spacing) * -5);
+}
+
+.ml-n6 {
+  margin-left: calc(var(--spacing) * -6);
+}
+
+.ml-n8 {
+  margin-left: calc(var(--spacing) * -8);
+}
+
+/* Margin automático a la izquierda */
+.ml-auto {
+  margin-left: auto;
+}

@@ -1,0 +1,13 @@
+#cuerpoModalDetallepolitica {
+    max-height: 56vh; /* Ajusta la altura máxima al 60% de la altura de la ventana */
+    overflow-y: auto; /* Habilita el scroll vertical si el contenido es más largo que la altura máxima */
+    padding: 15px;
+    box-sizing: border-box; /* Asegura que el padding esté incluido en el tamaño total */
+    background-color: #e6e8e8; /* Fondo ligero opcional */
+}
+
+@media (max-width: 768px) {
+    #cuerpoModalDetallepolitica {
+        max-height: 50vh; /* Ajusta la altura para pantallas más pequeñas */
+    }
+}

@@ -1,0 +1,58 @@
+{% load widget_tweaks %}
+    {% for hidden_field in form.hidden_fields %}
+        {{ hidden_field }}
+    {% endfor %}
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% for field in form.visible_fields %}
+        {% if field.field.widget.attrs.separator %}
+            <div style="width: 100%; height: 1px; float: left;"></div>
+        {% endif %}
+        <div id="fieldset_{{ field.name }}" class="control-group cont-{% if field.field.widget.attrs.formwidth %}{{ field.field.widget.attrs.formwidth }}{% else %}100{% endif %}" style="padding: 1%; min-height:45px; float: left; {% if not field.field.widget.attrs.formwidth %} width: 100%{% endif %}">
+            <div class="control-label" style="line-height: 20px; text-align: right; padding-right: 10px; vertical-align: middle">
+                {{ field.label }}
+                {% if field.field.required %}
+                    <span class="required-indicator" title="Campo requerido">
+                        <i class="fa fa-asterisk" style="font-size: 8px; color: red; margin-left: 4px;"></i>
+                    </span>
+                {% endif %}
+            </div>
+            {% if form.is_bound %}
+                {% if field.errors %}
+                    {% render_field field class="form-control is-invalid" %}
+                    {% for error in field.errors %}
+                        <div class="invalid-feedback">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    {% render_field field class="form-control is-valid" %}
+                {% endif %}
+            {% else %}
+                <div class="controls cont-div-{% if field.field.widget.attrs.formwidth %}{{ field.field.widget.attrs.formwidth }}{% else %}100{% endif %}">
+                    {% if field.field.widget.attrs.select2search %}
+                        <select id="id_{{ field.name }}_select2" {% if field.field.widget.attrs.disabled %}disabled=""{% endif %} style="width: 100%" >
+                            <option value="0" selected="selected">---------</option>
+                        </select>
+                        <input type='hidden' name="{{ field.name }}" id="id_{{ field.name }}" value="{{ field.value }}" hidden="hidden" {% if field.field.widget.attrs.descripcion %}descripcion="{{ field.field.widget.attrs.descripcion }}"{% endif %} class="select2hidden">
+                    {% else %}
+                        {% render_field field %}
+                    {% endif %}
+                {% if field.help_text %}
+                    <span class="help-text"
+                       style="margin: 2px 0 0; color: #666; line-height: 1.2;"
+                       alert="{{ field.help_text }}">
+                        <i class="fa fa-info-circle" style="margin-right: 2px;"></i>
+                        {{ field.help_text }}
+                    </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}

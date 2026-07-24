@@ -1,0 +1,359 @@
+/* ── Animación base ── */
+@keyframes reSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Cards ── */
+.re-card {
+    background: #fff;
+    border: 1px solid #dde3ea;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: reSlideIn 0.3s ease-out;
+}
+.re-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 18px;
+    background: #f5f7fa;
+    border-bottom: 1px solid #dde3ea;
+}
+.re-card-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+}
+.re-card-title i { margin-right: 6px; color: #6b7280; }
+.re-card-body { padding: 18px; }
+
+/* ── Tema y badges de tipo ── */
+.re-tema {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+.re-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.re-badge-tipo       { background: #e8f0fe; color: #1a56db; border: 1px solid #c3d3fb; }
+.re-badge-grupal     { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.re-badge-individual { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+
+/* ── Grid de metadatos (filas label/valor) ── */
+.re-meta-grid {
+    border: 1px solid #e8ecf0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 14px;
+}
+.re-meta-row {
+    display: flex;
+    border-bottom: 1px solid #e8ecf0;
+}
+.re-meta-key {
+    width: 38%;
+    flex-shrink: 0;
+    padding: 9px 14px;
+    background: #f8fafc;
+    border-right: 1px solid #e8ecf0;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.re-meta-val {
+    flex: 1;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #1f2937;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* ── Bloque de fechas ── */
+.re-fechas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.re-fecha-item {
+    flex: 1 1 180px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #e8ecf0;
+    background: #fafbfc;
+}
+.re-fecha-item.inicio { border-left: 4px solid #10b981; }
+.re-fecha-item.cierre { border-left: 4px solid #ef4444; }
+.re-fecha-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+}
+.re-fecha-val {
+    font-size: 13px;
+    color: #111827;
+    font-weight: 600;
+}
+
+/* ── Chips de miembros del grupo ── */
+.re-grupo-titulo {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 8px;
+}
+.re-miembro-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.re-miembro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #374151;
+}
+.re-miembro-chip i { color: #6b7280; font-size: 11px; }
+
+/* ── Alerta de grupo sin configurar ── */
+.alert-custom {
+    display: flex;
+    align-items: center;
+    border-left: 4px solid;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+.alert-icon    { font-size: 1.3rem; margin-right: 10px; flex-shrink: 0; }
+.alert-content { flex-grow: 1; }
+.alert-message { margin: 0; font-size: 13px; }
+
+/* ── Band del cronómetro ── */
+.re-cronometro-band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: linear-gradient(135deg, #eff4f7 0%, #e8f0fe 100%);
+    border: 1px solid #c3d3fb;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    animation: reSlideIn 0.3s ease-out;
+}
+.re-cronometro-lbl {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a56db;
+}
+.re-cronometro-lbl i { margin-right: 6px; }
+
+/* ── Panel estado + calificación ── */
+.re-estado-panel {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.re-estado-left  { flex: 1 1 200px; }
+.re-estado-right { flex-shrink: 0; text-align: center; min-width: 110px; }
+
+.re-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.re-status-enviado-calificado { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.re-status-enviado            { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.re-status-calificado         { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+.re-status-sin-entrega        { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.re-status-sin-calificar      { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+.re-fecha-envio {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+.re-obs-block {
+    font-size: 12px;
+    color: #4b5563;
+    background: #f9fafb;
+    border-left: 3px solid #d1d5db;
+    padding: 6px 10px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 6px;
+}
+.re-obs-lbl { font-weight: 700; color: #374151; }
+
+.re-nota-num {
+    font-size: 25px;
+    font-weight: 800;
+    color: #1a56db;
+    line-height: 1;
+}
+.re-nota-max {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 3px;
+}
+.re-nota-penalizacion {
+    font-size: 11px;
+    color: #ef4444;
+    margin-bottom: 4px;
+}
+
+.re-empty {
+    text-align: center;
+    padding: 28px 16px;
+    color: #9ca3af;
+}
+.re-empty i { font-size: 30px; display: block; margin-bottom: 10px; }
+
+/* ── Tarjeta de acciones ── */
+.re-actions-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #dde3ea;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    animation: reSlideIn 0.3s ease-out;
+}
+.re-actions-hint {
+    font-size: 13px;
+    color: #6b7280;
+}
+.re-actions-hint i { margin-right: 4px; }
+.re-actions-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+
+/* ── Tablets (≤ 768px) ── */
+@media (max-width: 768px) {
+    .re-card-body         { padding: 14px; }
+    .re-card-header       { padding: 10px 14px; }
+    .re-nota-num          { font-size: 25px; }
+    .re-fechas            { gap: 8px; }
+    .re-cronometro-band   { padding: 12px 16px; }
+}
+
+/* ── Teléfonos (≤ 480px) ── */
+@media (max-width: 480px) {
+    /* Cards */
+    .re-card              { border-radius: 8px; margin-bottom: 12px; }
+    .re-card-body         { padding: 12px; }
+    .re-card-header       { padding: 9px 12px; flex-wrap: wrap; gap: 6px; }
+    .re-card-header .btn  { font-size: 11px; padding: 3px 8px; }
+    .re-card-title        { font-size: 12px; }
+
+    /* Tema */
+    .re-tema              { font-size: 14px; }
+
+    /* Metadatos: label apilado encima del valor */
+    .re-meta-row          { flex-direction: column; }
+    .re-meta-key {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e8ecf0;
+        padding: 6px 12px;
+    }
+    .re-meta-val          { padding: 8px 12px; }
+
+    /* Fechas: una debajo de la otra */
+    .re-fecha-item        { flex: 1 1 100%; }
+
+    /* Cronómetro: centrado en columna */
+    .re-cronometro-band {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+    }
+
+    /* Estado + nota: nota va primero (más importante) */
+    .re-estado-panel      { flex-direction: column-reverse; gap: 12px; }
+    .re-estado-right {
+        width: 100%;
+        text-align: center;
+        padding: 14px 12px;
+        background: #f8fafc;
+        border: 1px solid #e8ecf0;
+        border-radius: 8px;
+    }
+    .re-nota-num          { font-size: 36px; }
+    .re-estado-left       { width: 100%; }
+
+    /* Empty state */
+    .re-empty             { padding: 20px 12px; }
+
+    /* Acciones: botones a ancho completo */
+    .re-actions-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 14px 12px;
+        gap: 10px;
+    }
+    .re-actions-btns {
+        width: 100%;
+        flex-direction: column;
+    }
+    .re-actions-btns .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Grupo */
+    .re-miembro-chip      { font-size: 11px; padding: 3px 8px; }
+}
+
+/* ── Teléfonos muy pequeños (≤ 360px) ── */
+@media (max-width: 360px) {
+    .re-card-body         { padding: 10px; }
+    .re-meta-key          { font-size: 10px; }
+    .re-meta-val          { font-size: 12px; }
+    .re-nota-num          { font-size: 28px; }
+    .re-cronometro-lbl    { font-size: 12px; }
+    .re-fecha-val         { font-size: 12px; }
+    .re-obs-block         { font-size: 11px; }
+}

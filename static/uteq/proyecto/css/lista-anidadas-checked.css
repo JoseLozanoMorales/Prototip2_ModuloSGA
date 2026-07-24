@@ -1,0 +1,48 @@
+.contenedor-form {
+    padding: 20px;
+}
+
+.contenedor-form-bloque {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background-color: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+}
+
+.contenedor-form-bloque label,
+.sub-items label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.contenedor-form-bloque label > span,
+.sub-items label > span {
+    display: inline-block;
+    width: calc(100% - 30px);
+    margin-right: 10px;
+}
+
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.sub-items {
+    margin-left: 1.5rem;
+    margin-top: 10px;
+    padding-left: 10px;
+    border-left: 0.5px solid #e5e5e5;
+}
+
+.sub-items label {
+    margin-left: -10px;
+}
+
+.sub-items label span{
+    margin-left: 10px;
+}

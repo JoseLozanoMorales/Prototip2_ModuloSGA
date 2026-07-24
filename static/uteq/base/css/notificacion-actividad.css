@@ -1,0 +1,339 @@
+/* Variables CSS para fácil personalización */
+:root {
+    --notification-primary: #2563eb;
+    --notification-hover: #f8fafc;
+    --notification-border: #e2e8f0;
+    --notification-text: #334155;
+    --notification-text-light: #64748b;
+    --notification-badge: #ef4444;
+    --notification-success: #10b981;
+    --notification-warning: #f59e0b;
+    --notification-info: #3b82f6;
+}
+
+/* Animación sutil para la campanita */
+.notification-bell {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+/* Animación de campanita cuando hay notificaciones nuevas */
+@keyframes gentle-ring {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30% { transform: rotate(-10deg); }
+    20%, 40% { transform: rotate(10deg); }
+}
+
+.campanita-icono {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.notification-bell .campanita-icono {
+    animation: gentle-ring 2s ease-in-out infinite;
+}
+
+
+.notify {
+    background-color: rgb(255 255 255 / 29%) !important;
+    padding: 5px 5px 1px 5px;
+    border-radius: 5px;
+}
+
+.has-notifications {
+    padding-right: -5px;
+    margin-right: -0px
+}
+
+.notify-alert {
+    z-index: 100;
+    vertical-align: middle;
+}
+
+#id_numero_notificacion {
+    margin-bottom: 3px
+}
+
+/* ── Encabezado del dropdown — mismo formato que el panel de Aula Virtual ── */
+.notifications-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 16px;
+    background: linear-gradient(135deg, #18669a 0%, #1a5276 100%);
+    opacity: 0.7;
+}
+
+.notifications-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    letter-spacing: normal;
+}
+
+.contenido_notificacion {
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+}
+
+/* Scrollbar personalizado */
+.contenido_notificacion::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notifications-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.contenido_notificacion::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.contenido_notificacion::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Tarjeta de notificación — mismo formato que el panel de
+   notificaciones de Aula Virtual (templates/baseaulavirtual.html)
+   ══════════════════════════════════════════════════════════════ */
+a.av-np-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    text-decoration: none;
+    color: inherit;
+    transition: background .12s;
+}
+a.av-np-item:hover { background: var(--notification-hover); text-decoration: none; color: inherit; }
+a.av-np-item:last-child { border-bottom: none; }
+
+.av-np-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.av-np-item-icon svg { height: 20px !important; }
+
+/* Colores por tipo (notificaciones "tipo 1": tarea/cuestionario/chat/nuevo) */
+.av-np-icon--tarea        { background: #dbeafe; color: #2563eb; }
+.av-np-icon--cuestionario { background: #fef3c7; color: #f59e0b; }
+.av-np-icon--chat         { background: #dcfce7; color: #10b981; }
+.av-np-icon--nuevo        { background: #fee2e2; color: #ef4444; }
+.av-np-icon--default      { background: #dbeafe; color: #2563eb; }
+/* Notificaciones "tipo 2": el color real llega inline vía var(--{tipo}-icono);
+   este es solo el fondo de respaldo cuando esa variable no está definida. */
+.av-np-icon--dinamico { background: #f1f5f9; }
+
+.av-np-item-body { flex: 1; min-width: 0; }
+.av-np-item-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+.av-np-item-warn {
+    font-size: 10.5px;
+    color: #d97706;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 3px;
+}
+.av-np-item-meta {
+    font-size: 10px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.av-np-item-meta .fa { font-size: 9px; }
+.av-np-item-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fef9c3;
+    color: #92400e;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+/* Tablets y dispositivos medianos (768px - 991px) */
+@media (max-width: 991px) {
+    .dropdown-menu.custom-dropdown {
+        width: 350px !important;
+        left: -100px !important;
+    }
+}
+
+/* Dispositivos móviles grandes (576px - 767px) */
+@media (max-width: 767px) {
+    .dropdown-menu.custom-dropdown {
+        width: 320px !important;
+        left: -80px !important;
+    }
+
+    .notifications-title {
+        font-size: 12px;
+    }
+
+    .av-np-item-title {
+        font-size: 11px;
+    }
+
+    .av-np-item-meta {
+        font-size: 9px;
+    }
+}
+
+/* Dispositivos móviles pequeños (480px - 575px) */
+@media (max-width: 575px) {
+    .dropdown-menu.custom-dropdown {
+        width: 300px !important;
+        padding: 2px !important;
+    }
+
+    .notifications-header {
+        padding: 8px 10px;
+    }
+
+    .notifications-title {
+        font-size: 12px;
+        margin: 5px 0;
+    }
+
+    a.av-np-item {
+        padding: 8px 10px;
+    }
+
+    .av-np-item-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+
+    .av-np-item-title {
+        font-size: 11px;
+        margin-bottom: 3px;
+    }
+
+    .av-np-item-meta {
+        font-size: 9px;
+    }
+}
+
+/* iPhone SE y dispositivos muy pequeños (375px - 479px) */
+@media (max-width: 479px) {
+    .dropdown-menu.custom-dropdown {
+        width: calc(100vw - 20px) !important;
+        max-width: 360px !important;
+        left: 200 !important;
+        right: auto !important;
+        margin: 0 10px;
+    }
+
+    .notifications-header {
+        padding: 10px 12px;
+    }
+
+    .notifications-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    #contenido_notificacion {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    a.av-np-item {
+        padding: 10px 8px;
+    }
+
+    .av-np-item-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 12px;
+        margin-right: 4px;
+    }
+
+    .ver_totas_notificaciones {
+        margin: 5px !important;
+        padding: 8px !important;
+    }
+
+    .ver_totas_notificaciones .text-center {
+        font-size: 12px !important;
+    }
+}
+
+/* Dispositivos extra pequeños (< 375px) */
+@media (max-width: 374px) {
+    .dropdown-menu.custom-dropdown {
+        width: calc(100vw - 10px) !important;
+        max-width: 340px !important;
+        margin: 0 5px;
+        transform: translateX(5%) !important;
+    }
+
+    .notifications-title {
+        font-size: 12px;
+    }
+
+    .av-np-item-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+        margin-right: 6px;
+    }
+
+    .av-np-item-title {
+        font-size: 10px;
+    }
+
+    a.av-np-item {
+        padding: 8px 6px;
+    }
+}
+
+/* Estilos adicionales para mejorar la experiencia móvil */
+@media (max-width: 479px) {
+    #contenido_notificacion {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    a.av-np-item:active {
+        background-color: #f5f5f5;
+    }
+}
+
+/* Orientación horizontal para móviles */
+@media (max-height: 500px) and (orientation: landscape) {
+    #contenido_notificacion {
+        max-height: 250px;
+    }
+
+    .dropdown-menu.custom-dropdown {
+        max-height: 350px;
+    }
+}

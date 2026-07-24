@@ -1,0 +1,84 @@
+.boton {
+    padding: 0px 2px 0px 2px;
+}
+
+.boton i {
+    font-size: 18px;
+}
+
+.divContenedor {
+    width: 100%;
+    padding: 3px;
+    border-radius: 5px;
+    border: 0.5px solid #0e90d2;
+    margin-bottom: 5px;
+}
+
+.divCabecera {
+    padding: 2px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.separador {
+    background-color: #d9d9d9;
+    height: 2px;
+    padding: 0;
+    margin-top: 1px;
+    margin-bottom: 5px;
+}
+
+.divBody {
+    padding: 3px;
+    text-align: center;
+}
+
+.divBody .responsable {
+    font-size: 11px;
+}
+
+.divBody .responsable i {
+    font-size: 15px;
+}
+
+.divBody .departamento {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.divDescripcion {
+    width: 100%;
+    text-align: justify;
+}
+
+.divFooter {
+    width: 100%;
+    text-align: center;
+}
+
+td {
+    text-align: justify;
+    padding: 3px 6px!important;
+}
+
+td p {
+    margin: 0!important;
+}
+
+.purple {
+    background-color: purple;
+}
+
+.lightblue {
+    background-color: #81BEF7;
+}
+
+.tipogeneracion {
+    background-color: #094a1d;
+}
+
+#tablaDatosGenerales tbody tr td {
+    min-height: 100px!important;
+    max-height: 250px!important;
+    overflow: auto!important;
+}

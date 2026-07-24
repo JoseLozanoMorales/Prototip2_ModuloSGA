@@ -1,0 +1,239 @@
+.grupo{
+    position: relative;
+    padding: 2px;
+    width: 150px;
+    float: left;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    vertical-align: baseline;
+    border: rgba(0, 0, 0, 0.25) solid 1px;
+    margin: 2px;
+}
+.content-semana {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    width: 100%;
+}
+
+.semana-titulo {
+    display: flex;
+    flex-direction: row;
+}
+
+.semana-titulo h5 {
+    background-color: #f5f5f5;
+    padding: 5px;
+    border: 0.5px solid #e8e8e8;
+    border-top-right-radius: 10px;
+    border-bottom: 1px solid #0e90d2;
+}
+
+.semana-detalle {
+    padding: 5px;
+    border: 0.5px solid #e8e8e8;
+}
+
+.practica-icono {
+    padding: 2px;
+    width: 50px;
+}
+
+.practica-detalle {
+    width: 100%;
+}
+
+.practica-titulo {
+    display: flex;
+    flex-direction: row;
+}
+
+.practica-titulo .titulo {
+    background-color: #c2c2c2;
+    color: white;
+    padding: 2px;
+    width: 45px;
+}
+
+.practica-titulo .titulo-enunciado {
+    padding: 2px 2px 2px 5px;
+    width: 100%;
+}
+
+.practica-indicador{
+    padding-top: 5px;
+    padding-bottom: 2px;
+}
+
+.practica-acciones {
+    width: 200px;
+    text-align: center;
+    display: contents;
+}
+
+.pointer{
+    cursor: pointer;
+}
+
+.card{
+    box-shadow: 0px 2px 1px rgb(0 0 0 / 5%);
+    margin-bottom: 1.875rem;
+    border-radius: 0;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+}
+
+.card-block {
+    padding: 1.3rem;
+}
+.media-body {
+    width: 10000px;
+}
+.media, .media-body {
+    overflow: hidden;
+}
+
+.media-right {
+    padding-left: 10px;
+}
+
+.media-middle {
+    vertical-align: middle;
+}
+
+.media-left, .media-right, .media-body {
+    display: table-cell;
+    vertical-align: top;
+}
+
+.text-orange {
+    color: #FF5722;
+}
+.text-cyan {
+    color: #00BCD4;
+}
+.text-firebrick {
+    color: #B22222;
+}
+
+.text-forestgreen {
+    color: #228B22;
+}
+.text-whitesmoke {
+    color: #F5F5F5;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+.text-xs-left {
+    text-align: left !important;
+}
+.font-large-2{
+    font-size: 3rem;
+}
+.float-xs-right {
+    float: right !important;
+}
+
+.semana-titulo div:first-child{
+    width: 60%;
+}
+
+.semana-titulo div:last-child{
+    width: 40%;
+    align-self: flex-end;
+}
+
+.semana-titulo div:last-child a {
+    border: 0.5px solid #e5e5e5;
+    padding: 2px 5px;
+    vertical-align: center;
+}
+
+.semana-titulo div a:first-child {
+    margin-left: 5px;
+}
+
+.semana-titulo div:last-child a:hover{
+    background-color: #e9ebec;
+}
+
+.practica {
+    padding: 10px 5px;
+    border: 0.5px solid #e8e8e8;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 10px;
+}
+
+.practica:last-child {
+    margin-bottom: 0;
+}
+
+.practica-detalle {
+    width: 100%;
+}
+
+.practica-detalle > p {
+    margin-top: 2px;
+}
+
+.practica-titulo {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1px solid #0e90d2;
+}
+
+.practica-indicador{
+    padding-top: 5px;
+    padding-bottom: 2px;
+}
+
+.practica-acciones a {
+    float: left;
+    width: 30px;
+    height: 25px;
+    padding: 5px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.practica-acciones a:hover{
+    box-shadow: 0 0 7px #05b9b9 inset;
+}
+
+.practica-acciones a i {
+    font-size: 18px;
+}
+
+.pointer{
+    cursor: pointer;
+}
+
+@media screen and (max-width: 700px){
+    .semana-titulo div:first-child{
+        width: 80%;
+    }
+
+    .semana-titulo div:last-child{
+        width: 20%;
+        align-self: flex-end;
+    }
+
+}
+
+@media screen and (min-width: 600px) and (max-width: 1300px){
+    .icono {
+        display: none;
+    }
+}
+
+@media screen and (min-width: 1300px) and (max-width: 1450px){
+    .icono {
+        font-size: 30px;
+    }
+}

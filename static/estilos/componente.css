@@ -1,0 +1,142 @@
+.grupo-componete {
+    display: flex;
+    flex-direction: row
+}
+
+.componente {
+    padding: 3px;
+    /*height: 79px;*/
+    margin: 0 2px 0 2px;
+    /*width: 150px!important;*/
+    border-left: 1px solid lightgrey;
+    border-right: 1px solid lightgrey;
+    border-top: 1px solid lightgrey;
+    box-shadow: 2px 2px 10px rgba(128, 128, 128, 0.31);
+    transition: 1.5s ease;
+    -moz-transition: 1.5s ease; /* Firefox */
+    -webkit-transition: 1.5s ease; /* Chrome - Safari */
+    -o-transition: 1.5s ease; /* Opera */
+}
+
+.componente .titulo {
+    color: grey;
+    text-align: left;
+}
+
+.componente .detalle-info {
+    display: flex;
+    flex-direction: row;
+    /*padding-top: 5px;*/
+}
+
+.detalle-info .icono-fa {
+    width: 20%;
+    /*font-size: 18px;*/
+    align-self: center;
+}
+
+.detalle-info .valor {
+    width: 80%;
+    text-align: center;
+    align-self: center;
+}
+
+.detalle-info .grafico {
+    vertical-align: middle;
+    vertical-align: middle;
+}
+
+.componente-hover:hover{
+    transform : scale(1.1);
+    -moz-transform : scale(1.1); /* Firefox */
+    -webkit-transform : scale(1.1); /* Chrome - Safari */
+    -o-transform : scale(1.1); /* Opera */
+    -ms-transform : scale(1.1); /* IE9 */
+}
+
+.padding-grande {
+    padding: 10px;
+}
+
+.padding-medio {
+    padding: 8px 5px 8px 5px;
+}
+
+.padding-medio {
+    padding: 8px 5px 8px 5px;
+}
+
+.componente-grande {
+    height: 120px;
+    width: 100%;
+}
+
+.componente-mediano {
+    height: 100px;
+    width: 100%;
+}
+
+.componente-small {
+    height: 79px;
+    width: 150px!important;
+}
+
+.titulo-grande{
+    font-size: 16px;
+}
+
+.titulo-medio{
+    font-size: 14px;
+}
+
+.titulo-small{
+    font-size: 11px;
+}
+
+.icono-fa-grande {
+    font-size: 32px;
+}
+
+.icono-fa-medio {
+    font-size: 25px;
+}
+
+.icono-fa-small {
+    font-size: 18px;
+}
+
+.valor-grade {
+    font-size: 32px;
+}
+
+.valor-medio {
+    font-size: 25px;
+}
+
+.valor-small {
+    font-size: 18px;
+}
+
+.grafico-grande {
+    width: 50%!important;
+}
+
+.grafico-medio {
+    width: 35%!important;
+}
+
+.grafico-small {
+    width: 25%!important;
+}
+
+.fa-grande {
+    font-size: 60px;
+}
+
+.fa-medio {
+    width: 35%!important;
+}
+
+.fa-small {
+    width: 25%!important;
+}

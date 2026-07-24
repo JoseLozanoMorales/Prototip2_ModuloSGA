@@ -1,0 +1,839 @@
+{% extends "basebs.html" %}
+{% load sga_extras %}
+{% load humanize %}
+{% block heading %}
+    <script type="text/javascript" src='/static/js/jquery.validationEngine.js?v=1.0.0'></script>
+    <script type="text/javascript" src='/static/js/jquery.validationEngine-es.js?v=1.0.0'></script>
+    <link type='text/css' rel='stylesheet' href="/static/css/validationEngine.jquery.css?v=1.0.0"/>
+
+    <script type="text/javascript" src='/static/js/select2.js?v=1.0.0'></script>
+    <link type='text/css' rel='stylesheet' href="/static/css/select2.css?v=1.0.0"/>
+    <script type="text/javascript" src="/static/js/bootstrap-filestyle.min.js?v=1.0.1"></script>
+
+    <script src="/static/ckeditor/ckeditor-init.js?v=1.0.0" data-ckeditor-basepath="/static/ckeditor/ckeditor/"
+            id="ckeditor-init-script"></script>
+    <script type="text/javascript" src="/static/ckeditor/ckeditor/ckeditor.js?v=1.0.0"></script>
+    <script type="text/javascript" src='/static/js/select2.js?v=1.0.0'></script>
+    <link type='text/css' rel='stylesheet' href="/static/css/select2.css?v=1.0.0"/>
+    <link type='text/css' rel='stylesheet' href="/static/uteq/base/form/css/formbase.css?v=2.1"/>
+    <link type='text/css' rel='stylesheet' href="/static/uteq/base/form/css/formulario-tab.css?v=1"/>
+    <link type='text/css' rel='stylesheet' href="/static/css/nuevoTab.css?v=1"/>
+
+    <script type="text/javascript" src="/static/uteq/base/form/js/adicionar-lista-items-formdata.js"></script>
+
+    <style>
+        .ckeditor-error {
+            border: 2px solid #e74c3c !important;
+            border-radius: 4px;
+        }
+
+        .ckeditor-error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .ckeditor-field-container {
+            position: relative;
+        }
+
+        .menu-buttons {
+            transition: all 0.3s ease;
+        }
+
+        .menu-buttons.floating {
+            position: fixed;
+            top: 70px;
+            left: 24px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        /* Desactivar sticky en móviles */
+        @media (max-width: 767px) {
+            .menu-buttons.floating {
+                position: relative !important;
+                top: auto !important;
+                left: auto !important;
+                width: auto !important;
+            }
+        }
+    </style>
+    {% block pluguin %}{% endblock %}
+{% endblock %}
+{% block atras %}/{% endblock %}
+{% block canvas %}
+    <div class="form-container">
+        {% if title %}
+            <div class="form-header">
+                <h3><i class="fas fa-clipboard-list"></i> {{ title }}</h3>
+                <p>{{ subtitle }}</p>
+            </div>
+        {% endif %}
+        <div class="tabs">
+            <div class="tab-buttons" style="min-width: 212px !important;">
+                <div class="menu-buttons">
+                    {% for item in lista %}
+                        <button type="button"
+        class="tab-button {% if item.2 %}active{% endif %}"
+        data-tab="{{ item.0 }}"
+        data-step="{{ forloop.counter }}">
+
+    {% if '.html' in item.4 %}
+        {% include item.4 %}
+    {% else %}
+        <i class="fa fa-{{ item.4 }}"></i>
+    {% endif %}
+
+    {{ item.1 }}
+</button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-content">
+                {% for item in lista %}
+                    <div id="{{ item.0 }}" class="tab-content {% if item.2 %}active{% endif %}">
+                        <form id="form_{{ item.0 }}">
+                            {% block data_extra %}{% endblock %}
+                            {% if item.7.save_obligatorio %}
+                                <input type="hidden" name="form_id" value="{{ item.0 }}">
+                            {% endif %}
+                            <div class="form-content-header" style="border-bottom: 1px solid #ededed; padding-bottom: 15px">
+                                <h5>{{ item.1 }}</h5>
+                            </div>
+                            <div class="form-content-body">
+                                {% if not item.3|es_form %}
+                                    {% include 'formbase.html' with form=item.3 %}
+                                {% else %}
+                                    {% include item.3 %}
+                                {% endif %}
+                                <div class="form-actions" style="margin-top: 20px">
+                                    {% if item.5 %}
+                                        <button type="button"
+                                                class="btn btn-info btn-prev"
+                                                data-prev-tab="{{ item.5 }}">
+                                            <i class="fa fa-chevron-left"></i> Anterior
+                                        </button>
+                                    {% endif %}
+                                    {% if item.6 or item.7.save_obligatorio %}
+                                        <button type="button"
+                                                class="btn btn-success {% if item.7.save_obligatorio %}btn-save{% else %}btn-next{% endif %}"
+                                                data-next-tab="{{ item.6 }}">
+                                            <i class="fa fa-chevron-right"></i>{% if item.7.save_obligatorio %} Guardar
+                                            {%  if not forloop.last %} y
+                                                continuar{% endif %}{% else %}Siguiente{% endif %}
+                                        </button>
+                                    {% endif %}
+                                    {% if forloop.last and not item.7.save_obligatorio %}
+                                        <input type="hidden" name="action" value="{{ action }}">
+                                        <button type="button"
+                                                id="formbuttonsave"
+                                                class="btn btn-success">
+                                            <i class="fa fa-save"></i> Guardar todo
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                {% endfor %}
+                <div class="tab-indicator">
+                    {% for item in lista %}
+                        <div class="indicator {% if item.2 %}active{% endif %}" data-tab="{{ item.0 }}"></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        class TabFormManager {
+            constructor() {
+                this.activeTab = document.querySelector('.tab-content.active')?.id || null;
+                this.tabButtons = document.querySelectorAll('.tab-button');
+                this.tabContents = document.querySelectorAll('.tab-content');
+                this.indicators = document.querySelectorAll('.indicator');
+                this.ckeditorInstances = {};
+
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.initializeComponents();
+                this.initializeCKEditor();
+            }
+
+            setupEventListeners() {
+                // Event listeners para los botones de tabs
+                this.tabButtons.forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const tabName = button.dataset.tab;
+                        this.openTab(tabName);
+                    });
+                });
+
+                // Event listeners para navegación
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('.btn-next')) {
+                        const nextTab = e.target.dataset.nextTab;
+                        this.nextTab(nextTab);
+                    }
+
+                    if (e.target.matches('.btn-prev')) {
+                        const prevTab = e.target.dataset.prevTab;
+                        this.prevTab(prevTab);
+                    }
+                });
+
+                // evento para guardar individualmente for formulario
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('.btn-save')) {
+                        const sendForm = e.target.dataset.nextTab;
+                        this.sendForm(sendForm);
+                    }
+
+                    if (e.target.matches('.btn-prev')) {
+                        const prevTab = e.target.dataset.prevTab;
+                        this.prevTab(prevTab);
+                    }
+                })
+
+                // Event listener para guardar
+                const saveButton = document.getElementById('formbuttonsave');
+                if (saveButton) {
+                    saveButton.addEventListener('click', () => {
+                        this.saveAllForms();
+                    });
+                }
+            }
+
+            initializeComponents() {
+                this.initializeDatepickers();
+                this.initializeSelect2();
+                this.initializeNumericValidation();
+            }
+
+            initializeCKEditor() {
+                // Buscar todos los textarea con clase ckeditor-field
+                const ckeditorFields = document.querySelectorAll('textarea.ckeditor-field, textarea[data-ckeditor="true"]');
+
+                ckeditorFields.forEach(textarea => {
+                    if (typeof CKEDITOR !== 'undefined') {
+                        const fieldId = textarea.id || textarea.name;
+
+                        // Verificar si ya existe una instancia
+                        if (CKEDITOR.instances[fieldId]) {
+                            this.ckeditorInstances[fieldId] = CKEDITOR.instances[fieldId];
+                            return;
+                        }
+
+                        try {
+                            const editor = CKEDITOR.replace(textarea, {
+                                height: 200,
+                                enterMode: CKEDITOR.ENTER_BR, // Cambia la tecla Enter para insertar <br> en lugar de un párrafo
+                                toolbar: [
+                                    {name: 'basicstyles', items: ['Bold', 'Italic', 'Underline']},
+                                    {
+                                        name: 'paragraph',
+                                        items: ['NumberedList', 'BulletedList', 'Outdent', 'Indent', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
+                                    },
+                                    {name: 'insert', items: ['Image', 'Table', 'HorizontalRule']}
+                                ],
+                            });
+
+                            // Guardar referencia del editor
+                            {#this.ckeditorInstances[textarea.id || textarea.name] = editor;#}
+                            this.ckeditorInstances[fieldId] = editor;
+
+                            // Sincronizar contenido con el textarea
+                            editor.on('change', () => {
+                                editor.updateElement();
+                                this.clearCKEditorError(textarea);
+                            });
+
+                            editor.on('blur', () => {
+                                editor.updateElement();
+                            });
+
+                        } catch (error) {
+                            // Si falla, intentar usar la instancia existente
+                            if (CKEDITOR.instances[fieldId]) {
+                                this.ckeditorInstances[fieldId] = CKEDITOR.instances[fieldId];
+                            }
+                        }
+                    }
+                });
+            }
+
+            initializeDatepickers() {
+                const elements = document.querySelectorAll('.selectorfecha');
+                if (elements.length === 0) return;
+
+                try {
+                    $(elements).datepicker({
+                        format: "dd-mm-yyyy",
+                        autoclose: true,
+                        todayHighlight: true
+                    }).on('changeDate', function () {
+                        $(this).datepicker('hide');
+                    });
+                } catch (error) {
+                    abrirnotificacionmodal('Error inicializando datepickers:', error);
+                }
+            }
+
+            initializeSelect2() {
+                const selects = document.querySelectorAll('select');
+                if (selects.length === 0) return;
+
+                try {
+                    $(selects).select2({
+                        minimumResultsForSearch: 5,
+                        width: '100%'
+                    });
+                } catch (error) {
+                    abrirnotificacionmodal('Error inicializando select2:', error);
+                }
+            }
+
+            initializeNumericValidation() {
+                // Usar delegación de eventos en lugar de agregar listeners individuales
+                document.addEventListener('blur', (e) => {
+                    if (e.target.matches('.imp-numbersmall')) {
+                        const target = e.target;
+                        const numDecimal = target.getAttribute('decimal') || '0';
+                        const valorMaximo = target.getAttribute('valor_max') || '10000';
+                        const valorMinimo = target.getAttribute('valor_min') || '0';
+                        if (typeof numerico === 'function') {
+                            numerico($(target), valorMinimo, valorMaximo, numDecimal);
+                        } else {
+                            abrirnotificacionmodal('Función numerico() no encontrada');
+                        }
+                    }
+                }, true); // true para capturar el evento en fase de captura
+            }
+
+            openTab(tabName) {
+                // Desactivar todos los tabs
+                this.tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                this.tabButtons.forEach(button => {
+                    button.classList.remove('active');
+                });
+
+                // Activar el tab específico
+                const targetTab = document.getElementById(tabName);
+                const targetButton = document.querySelector(`[data-tab="${tabName}"]`);
+
+                if (targetTab && targetButton) {
+                    targetTab.classList.add('active');
+                    targetButton.classList.add('active');
+                    this.activeTab = tabName;
+                    this.updateIndicators(tabName);
+                }
+            }
+
+            async nextTab(tabName) {
+                const activeTabContent = document.querySelector('.tab-content.active');
+                if (!activeTabContent) {
+                    abrirnotificacionmodal('No se encontró tab activo');
+                    return false;
+                }
+
+                const currentForm = activeTabContent.querySelector('form');
+                if (!currentForm) {
+                    abrirnotificacionmodal('No se encontró formulario en el tab activo');
+                    return false;
+                }
+
+                // Validar el formulario actual
+                const isValid = await this.validateForm(currentForm);
+
+                if (!isValid) {
+                    {#abrirnotificacionmodal('Formulario inválido, no se puede avanzar');#}
+                    return false;
+                }
+
+                this.openTab(tabName);
+                return true;
+            }
+
+            prevTab(tabName) {
+                this.openTab(tabName);
+            }
+
+            getCsrfToken(form) {
+                // Método 1: Buscar en el formulario actual
+                let token = form?.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+                // Método 2: Buscar en cualquier formulario
+                if (!token) {
+                    token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                }
+
+                // Método 3: Buscar en meta tag
+                if (!token) {
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    token = metaTag?.getAttribute('content');
+                }
+
+                // Método 4: Variable global
+                if (!token && window.csrfToken) {
+                    token = window.csrfToken;
+                }
+
+                return token;
+            }
+
+            async sendForm(tabName) {
+                const activeTabContent = document.querySelector('.tab-content.active');
+                if (!activeTabContent) {
+                    abrirnotificacionmodal('No se encontró tab activo');
+                    return false;
+                }
+
+                const currentForm = activeTabContent.querySelector('form');
+                if (!currentForm) {
+                    abrirnotificacionmodal('No se encontró formulario en el tab activo');
+                    return false;
+                }
+
+                // Validar el formulario actual
+                const isValid = await this.validateForm(currentForm);
+                if (!isValid) {
+                    return false;
+                }
+
+                // Guardar solo el formulario actual
+                const saveResult = await this.saveFrom(currentForm);
+
+                {#if (saveResult && tabName) {#}
+                if (saveResult.result === 'ok') {
+                    this.openTab(tabName);
+                } else if (tabName) {
+                    // TEMPORAL: Cambiar tab incluso si hay error
+                    console.warn('Cambiando tab a pesar del error (modo desarrollo)');
+                    this.openTab(tabName);
+                }
+
+                return saveResult;
+
+            }
+
+            async validateForm(form) {
+                let isValid = true;
+
+                // Validar CKEditor primero
+                const ckeditorValid = this.validateCKEditorFields(form);
+                if (!ckeditorValid) {
+                    isValid = false;
+                }
+
+                // Validación HTML5
+                if (!form.checkValidity()) {
+                    isValid = false;
+                    form.reportValidity();
+                }
+
+                // Validación jQuery Validation Engine
+                if (typeof $.fn.validationEngine !== 'undefined') {
+                    const validationResult = $(form).validationEngine('validate');
+                    if (!validationResult) {
+                        isValid = false;
+                    }
+                }
+
+                // Validaciones personalizadas
+                if (typeof validaciones_personalizadas === 'function') {
+                    if (!validaciones_personalizadas(form, 0)) {
+                        isValid = false;
+                    }
+                }
+
+                return isValid;
+            }
+
+            validateCKEditorFields(form) {
+                let isValid = true;
+
+                // Buscar todos los campos CKEditor en el formulario
+                const ckeditorFields = form.querySelectorAll('textarea.ckeditor-field, textarea[data-ckeditor="true"]');
+
+                ckeditorFields.forEach(textarea => {
+                    const isRequired = textarea.hasAttribute('required') ||
+                        textarea.hasAttribute('data-required') ||
+                        textarea.getAttribute('data-required') === 'true';
+
+                    if (isRequired) {
+                        // Obtener la instancia del editor
+                        {#const editorInstance = this.ckeditorInstances[textarea.id || textarea.name];#}
+                        const fieldId = textarea.id || textarea.name;
+                        let content = '';
+
+                        // Intentar obtener contenido del editor
+                        let editorInstance = this.ckeditorInstances[fieldId];
+
+                        // Si no tenemos la instancia, buscarla en CKEDITOR.instances
+                        if (!editorInstance && typeof CKEDITOR !== 'undefined' && CKEDITOR.instances[fieldId]) {
+                            editorInstance = CKEDITOR.instances[fieldId];
+                            this.ckeditorInstances[fieldId] = editorInstance;
+                        }
+
+                        if (editorInstance) {
+                            try {
+                                // Actualizar el textarea antes de obtener datos
+                                editorInstance.updateElement();
+                                content = editorInstance.getData().trim();
+                            } catch (error) {
+                                abrirnotificacionmodal('Error obteniendo datos de CKEditor:', error);
+                                content = textarea.value.trim();
+                            }
+                        } else {
+                            content = textarea.value.trim();
+                        }
+
+                        // Remover tags HTML para verificar contenido real
+                        const textContent = content.replace(/<[^>]*>/g, '').trim();
+
+                        if (!textContent || textContent.length === 0) {
+                            this.showCKEditorError(textarea, 'Este campo es obligatorio');
+                            isValid = false;
+                            {#abrirnotificacionmodal(`Campo CKEditor vacío: ${fieldId}`);#}
+                        } else {
+                            this.clearCKEditorError(textarea);
+                        }
+                    }
+                });
+
+                return isValid;
+            }
+
+            showCKEditorError(textarea, message) {
+                // Buscar el contenedor del CKEditor
+                const ckeditorContainer = textarea.parentElement.querySelector('.cke');
+                if (ckeditorContainer) {
+                    ckeditorContainer.classList.add('ckeditor-error');
+                }
+
+                // Remover mensaje de error anterior
+                this.clearCKEditorError(textarea);
+
+                // Crear mensaje de error
+                const errorMessage = document.createElement('span');
+                errorMessage.className = 'ckeditor-error-message';
+                errorMessage.textContent = message;
+
+                // Insertar mensaje después del contenedor CKEditor
+                const insertAfter = ckeditorContainer || textarea;
+                insertAfter.parentNode.insertBefore(errorMessage, insertAfter.nextSibling);
+            }
+
+            clearCKEditorError(textarea) {
+                // Remover clase de error del contenedor
+                const ckeditorContainer = textarea.parentElement.querySelector('.cke');
+                if (ckeditorContainer) {
+                    ckeditorContainer.classList.remove('ckeditor-error');
+                }
+
+                // Remover mensaje de error
+                const errorMessage = textarea.parentElement.querySelector('.ckeditor-error-message');
+                if (errorMessage) {
+                    errorMessage.remove();
+                }
+            }
+
+            updateIndicators(activeTabName) {
+                this.indicators.forEach(indicator => {
+                    indicator.classList.remove('active');
+                    if (indicator.dataset.tab === activeTabName) {
+                        indicator.classList.add('active');
+                    }
+                });
+            }
+
+            async saveFrom(form) {
+                try {
+                    // Actualizar instancias de CKEditor del formulario actual
+                    this.updateCKEditorInstancesForForm(form);
+
+                    // Crear FormData solo con los datos del formulario actual
+                    const formData = new FormData(form);
+
+                    // Agregar token CSRF si existe
+                    const csrfToken = this.getCsrfToken(form);
+                    if (csrfToken) {
+                        formData.append('csrfmiddlewaretoken', csrfToken);
+                    }
+
+                    // Agregar identificador del formulario específico
+                    formData.append('action', '{{ action }}');
+                    {% block agregarformdataform %}
+
+                    {% endblock %}
+
+                    // Llamar función adicional si existe (para listas dinámicas, etc.)
+                    {% block validaciones_adicionales_form %}{% endblock %}
+                    if (typeof agregarListaItemsAFormData === 'function') {
+                        agregarListaItemsAFormData(formData);
+                    }
+                    // Enviar datos del formulario individual
+                    const response = await fetch('{{ request.path }}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': csrfToken || ''
+                        }
+                    });
+
+                    const data = await response.json();
+                    abrirnotificacionmodal('Respuesta del servidor:', data); // DEBUG
+
+                    // Manejar respuesta
+                    if (data.result === 'ok') {
+                        if (typeof abrirnotificacionmodal === 'function') {
+                            abrirnotificacionmodal(data.mensaje || 'Formulario guardado correctamente');
+                        }
+                        localStorage.setItem('propuesta_id', data.propuesta_id)
+
+                        form.classList.add('form-saved');
+                        return true;
+                    } else {
+                        // Mostrar errores específicos del formulario
+                        if (data.errores) {
+                            abrirnotificacionmodal(form, data.errores);
+                        }
+
+                        if (typeof abrirnotificacionmodal === 'function') {
+                            abrirnotificacionmodal(data.mensaje || 'Error al guardar el formulario');
+                        }
+                        return false;
+                    }
+                } catch (error) {
+                    alert(error)
+                    // Mostrar mensaje de error más específico
+                    let errorMessage = 'Error de conexión con el servidor';
+
+                    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                        errorMessage = 'Error de conexión. Verifique su conexión a internet o contacte al administrador.';
+                    } else if (error.message.includes('Respuesta inválida')) {
+                        errorMessage = 'Error del servidor. Contacte al administrador.';
+                    }
+
+                    if (typeof abrirnotificacionmodal === 'function') {
+                        abrirnotificacionmodal(errorMessage);
+                    }
+                    console.log('ya paso aqui')
+
+                    return false;
+                }
+            }
+
+
+            async saveAllForms() {
+
+                const forms = document.querySelectorAll('form[id^="form_"]');
+                let allValid = true;
+
+                // Actualizar contenido de todos los CKEditor antes de validar
+                this.updateAllCKEditorInstances();
+
+                // Validar todos los formularios
+                for (const form of forms) {
+                    const isValid = await this.validateForm(form);
+                    if (!isValid) {
+                        allValid = false;
+                        // Abrir el tab del formulario con errores
+                        const tabId = form.id.replace('form_', '');
+                        this.openTab(tabId);
+                        break;
+                    }
+                }
+
+                if (allValid) {
+                    // Aquí puedes agregar la lógica para guardar
+                    this.submitAllForms();
+                }
+            }
+
+            updateCKEditorInstancesForForm(form) {
+                // Buscar campos CKEditor solo en el formulario específico
+                const ckeditorFields = form.querySelectorAll('textarea.ckeditor-field, textarea[data-ckeditor="true"]');
+
+                ckeditorFields.forEach(textarea => {
+                    const fieldId = textarea.id || textarea.name;
+
+                    if (fieldId) {
+                        // Buscar en nuestras instancias locales
+                        let editor = this.ckeditorInstances[fieldId];
+
+                        // Si no está en local, buscar en instancias globales
+                        if (!editor && typeof CKEDITOR !== 'undefined' && CKEDITOR.instances[fieldId]) {
+                            editor = CKEDITOR.instances[fieldId];
+                            this.ckeditorInstances[fieldId] = editor; // Sincronizar
+                        }
+
+                        // Actualizar si encontramos el editor
+                        if (editor && typeof editor.updateElement === 'function') {
+                            try {
+                                editor.updateElement();
+                            } catch (error) {
+                                abrirnotificacionmodal(`Error actualizando CKEditor ${fieldId}:`, error);
+                            }
+                        } else {
+                            abrirnotificacionmodal(`No se encontró editor CKEditor para: ${fieldId}`);
+                        }
+                    }
+                });
+            }
+
+
+            updateAllCKEditorInstances() {
+                // Actualizar todas las instancias conocidas
+                Object.values(this.ckeditorInstances).forEach(editor => {
+                    if (editor && typeof editor.updateElement === 'function') {
+                        try {
+                            editor.updateElement();
+                        } catch (error) {
+                            abrirnotificacionmodal('Error actualizando CKEditor:', error);
+                        }
+                    }
+                });
+
+                // También verificar instancias globales de CKEDITOR
+                if (typeof CKEDITOR !== 'undefined') {
+                    Object.values(CKEDITOR.instances).forEach(editor => {
+                        if (editor && typeof editor.updateElement === 'function') {
+                            try {
+                                editor.updateElement();
+                            } catch (error) {
+                                abrirnotificacionmodal('Error actualizando instancia global CKEditor:', error);
+                            }
+                        }
+                    });
+                }
+            }
+
+            submitAllForms() {
+                const forms = document.querySelectorAll('form[id^="form_"]');
+                const formData = new FormData();
+
+                // Asegurar que los datos de CKEditor estén actualizados
+                this.updateAllCKEditorInstances();
+
+                forms.forEach(form => {
+                    const formElements = new FormData(form);
+                    for (let [key, value] of formElements.entries()) {
+                        formData.append(key, value);
+                    }
+                });
+
+                {% block validaciones_adicionales %}{% endblock %}
+                agregarListaItemsAFormData(formData)
+                // Aquí puedes enviar los datos
+                fetch('{{ request.path }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Manejar respuesta exitosa
+                        if (data.result === 'ok') {
+                            {% block formdestination_javascript %}location.href
+                                = "{% block formdestination %}{{ request.path }}{% endblock %}";{% endblock %}
+                        } else {
+                            abrirnotificacionmodal(data.mensaje);
+                        }
+                    })
+                    .catch(error => {
+                        abrirnotificacionmodal(`Error guardando datos: ${error}  ${response}`)
+                        // Manejar error
+                    });
+            }
+        }
+
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            new TabFormManager();
+        });
+
+        // Funciones globales para compatibilidad hacia atrás
+        function navegacion_manual_tab(tab_id) {
+            if (window.tabManager) {
+                window.tabManager.openTab(tab_id);
+            }
+        }
+
+        function openTab(evt, tabName) {
+            if (window.tabManager) {
+                window.tabManager.openTab(tabName);
+            }
+        }
+
+        function nextTab(tabName) {
+            if (window.tabManager) {
+                return window.tabManager.nextTab(tabName);
+            }
+        }
+
+        function prevTab(tabName) {
+            if (window.tabManager) {
+                window.tabManager.prevTab(tabName);
+            }
+        }
+
+        function isTabActivo(elemento) {
+            const tabContent = $(elemento).closest('.tab-content');
+            if (!tabContent.length || !tabContent.hasClass('active')) {
+                return false; // usar return en lugar de return false para continuar el each
+            }
+            return true;
+        }
+
+        // Exponer el manager globalmente si es necesario
+        document.addEventListener('DOMContentLoaded', () => {
+            window.tabManager = new TabFormManager();
+        });
+
+        window.addEventListener('scroll', function() {
+            // No ejecutar en pantallas pequeñas
+            if (window.innerWidth < 768) {
+                return;
+            }
+
+            const menuButtons = document.querySelector('.menu-buttons');
+            const tabButtons = document.querySelector('.tab-buttons');
+            const offsetTop = tabButtons.offsetTop;
+            const rect = menuButtons.getBoundingClientRect();
+            const parentRect = tabButtons.getBoundingClientRect();
+
+            if (window.scrollY > offsetTop + 130) {
+                menuButtons.classList.add('floating');
+                menuButtons.style.width = rect.width + 'px';
+                menuButtons.style.left = parentRect.left + 6 + 'px';
+            } else {
+                menuButtons.classList.remove('floating');
+                menuButtons.style.width = '';
+                menuButtons.style.left = '';
+            }
+        });
+
+        // Limpiar al redimensionar
+        window.addEventListener('resize', function() {
+            const menuButtons = document.querySelector('.menu-buttons');
+            if (window.innerWidth < 768) {
+                menuButtons.classList.remove('floating');
+                menuButtons.style.width = '';
+                menuButtons.style.left = '';
+            }
+        });
+    </script>
+    {% block javascript %}
+    {% endblock %}
+{% endblock %}

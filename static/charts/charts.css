@@ -1,0 +1,774 @@
+/* ── Layout de filas de gráficas ───────────────────────────────── */
+.charts-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+/* Columnas proporcionales dentro de .charts-row */
+.chart-col-full       { flex: 1 1 100%;                 min-width: 280px; }
+.chart-col-half       { flex: 1 1 calc(50% - 8px);       min-width: 280px; }
+.chart-col-third      { flex: 1 1 calc(33.33% - 11px);   min-width: 240px; }
+.chart-col-two-thirds { flex: 1 1 calc(66.66% - 8px);    min-width: 300px; }
+.chart-col-quarter    { flex: 1 1 calc(25% - 12px);       min-width: 200px; }
+.chart-col-three-quarters { flex: 1 1 calc(75% - 8px);   min-width: 300px; }
+
+/* ── Card individual ───────────────────────────────────────────── */
+.chart-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;  /* permite que el card se encoja dentro de flex row */
+    width: 100%;
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 8px;
+}
+
+.chart-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex: 1;
+}
+
+.chart-card-subtitle {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: -8px;
+    margin-bottom: 10px;
+}
+
+/* ── Canvas y estados ──────────────────────────────────────────── */
+.chart-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    min-width: 0;  /* permite que el flex child se encoja por debajo del contenido */
+}
+
+.chart-spin {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.chart-nodata {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 12px;
+    text-align: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 6px;
+}
+
+.chart-nodata .fa {
+    font-size: 28px;
+    opacity: 0.3;
+    display: block;
+}
+
+/* ── Skeleton loader ───────────────────────────────────────────── */
+.chart-skeleton {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    padding: 12px 16px 28px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.chart-skeleton-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    flex: 1;
+    padding: 0 8px;
+}
+
+.skeleton-bar {
+    flex: 1;
+    max-width: 48px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    border-radius: 4px 4px 0 0;
+    min-height: 8px;
+}
+
+.skeleton-bar:nth-child(1) { animation-delay: 0s; }
+.skeleton-bar:nth-child(2) { animation-delay: 0.1s; }
+.skeleton-bar:nth-child(3) { animation-delay: 0.2s; }
+.skeleton-bar:nth-child(4) { animation-delay: 0.05s; }
+.skeleton-bar:nth-child(5) { animation-delay: 0.15s; }
+.skeleton-bar:nth-child(6) { animation-delay: 0.25s; }
+.skeleton-bar:nth-child(7) { animation-delay: 0.08s; }
+
+@keyframes skeletonShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.chart-skeleton-label {
+    font-size: 11px;
+    color: #9ca3af;
+    text-align: center;
+    width: 100%;
+    margin: 6px 0 0;
+    letter-spacing: 0.02em;
+}
+
+/* ── Página contenedora: filtros y header ──────────────────────── */
+.charts-page-filters {
+    margin-bottom: 16px;
+}
+
+/* ── KPI cards ─────────────────────────────────────────────────── */
+.kpi-grid {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    flex: 1 1 160px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    min-width: 140px;
+}
+
+.kpi-card-accent {
+    border-left: 3px solid #2563eb;
+}
+
+.kpi-trend-up {
+    border-left-color: #16a34a;
+}
+
+.kpi-trend-down {
+    border-left-color: #dc2626;
+}
+
+.kpi-trend-icon {
+    font-size: 13px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.kpi-trend-up .kpi-value    { color: #16a34a; }
+.kpi-trend-up .kpi-trend-icon { color: #16a34a; }
+
+.kpi-trend-down .kpi-value    { color: #dc2626; }
+.kpi-trend-down .kpi-trend-icon { color: #dc2626; }
+
+.kpi-label {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kpi-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.1;
+}
+
+.kpi-value-sm {
+    font-size: 16px;
+}
+
+.kpi-sub {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* ── Semáforos (indicador de 3 estados: aprobado / pendiente / rechazado) ── */
+.semaforos-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.semaforo-item {
+    flex: 1 1 220px;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 16px;
+}
+
+.semaforo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 5px;
+    background: #1f2937;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.semaforo-luz {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #4b5563;
+    opacity: 0.35;
+}
+
+.semaforo[data-estado="rojo"] .semaforo-luz-rojo {
+    background: #dc2626;
+    opacity: 1;
+    box-shadow: 0 0 8px 2px rgba(220, 38, 38, .7);
+}
+
+.semaforo[data-estado="amarillo"] .semaforo-luz-amarillo {
+    background: #f59e0b;
+    opacity: 1;
+    box-shadow: 0 0 8px 2px rgba(245, 158, 11, .7);
+}
+
+.semaforo[data-estado="verde"] .semaforo-luz-verde {
+    background: #16a34a;
+    opacity: 1;
+    box-shadow: 0 0 8px 2px rgba(22, 163, 74, .7);
+}
+
+.semaforo-item-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 3px;
+}
+
+.semaforo-item-valor {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* ── Separadores de sección del dashboard ──────────────────────── */
+.charts-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 48px;
+    margin-bottom: 20px;
+    padding-top: 32px;
+    padding-bottom: 12px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.charts-section-header:first-child {
+    margin-top: 16px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.charts-section-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.charts-section-badge {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.charts-section-badge--info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.charts-section-badge--warning {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+/* ── Sistema de tabs para dashboard ────────────────────────────── */
+.chart-tabs {
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-tab-nav {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.chart-tab-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.chart-tab-btn:hover {
+    color: #1e293b;
+}
+
+.chart-tab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+
+.chart-tab-panel {
+    display: none;
+}
+
+.chart-tab-panel.active {
+    display: block;
+}
+
+/* ── Leyenda manual de colores ─────────────────────────────────── */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.chart-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* ── Botón exportar widget individual ──────────────────────────── */
+.chart-export-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    background: #f8fafc;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chart-export-btn:hover {
+    background: #5bb75b;
+    border-color: #5bb75b;
+    color: #fff;
+}
+
+/* ── FAB flotante ───────────────────────────────────────────────── */
+.chart-fab-container {
+    position: fixed;
+    bottom: 70px;
+    left: 28px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.chart-fab-main {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #5bb75b;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.2s;
+    flex-shrink: 0;
+}
+
+.chart-fab-main:hover  { background: #4a9d4a; }
+.chart-fab-main.active { background: #2c3e50; transform: rotate(90deg); }
+
+.chart-fab-menu {
+    display: none;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.13);
+    padding: 14px 16px;
+    min-width: 240px;
+    max-width: 280px;
+    gap: 14px;
+}
+
+.chart-fab-menu.open { display: flex; }
+
+.chart-fab-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chart-fab-section-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.chart-fab-palettes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Paleta dentro del FAB — botón más ancho con label de texto */
+.chart-fab-palettes .chart-palette-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+    padding: 5px 8px;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.chart-fab-palettes .chart-palette-btn:hover  { border-color: #5bb75b; background: #f0fdf4; }
+.chart-fab-palettes .chart-palette-btn.active { border-color: #5bb75b; background: #f0fdf4; }
+.chart-fab-palettes .chart-palette-btn:hover  { transform: none; }
+
+.palette-btn-label {
+    font-size: 11px;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.chart-fab-action {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #374151;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    width: 100%;
+    text-align: left;
+}
+
+.chart-fab-action:hover {
+    background: #5bb75b;
+    border-color: #5bb75b;
+    color: #fff;
+}
+
+/* ── Skeleton: barras horizontales (barH) ──────────────────────── */
+.chart-skeleton-barh {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 16px 32px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    gap: 0;
+}
+
+.chart-skeleton-hbars {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    flex: 1;
+    padding: 4px 0;
+}
+
+.skeleton-hbar {
+    height: 14px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    min-width: 20px;
+}
+
+.skeleton-hbar:nth-child(1) { animation-delay: 0s; }
+.skeleton-hbar:nth-child(2) { animation-delay: 0.12s; }
+.skeleton-hbar:nth-child(3) { animation-delay: 0.06s; }
+.skeleton-hbar:nth-child(4) { animation-delay: 0.18s; }
+.skeleton-hbar:nth-child(5) { animation-delay: 0.09s; }
+.skeleton-hbar:nth-child(6) { animation-delay: 0.15s; }
+
+/* ── Skeleton: líneas / área ───────────────────────────────────── */
+.chart-skeleton-line {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    padding: 12px 12px 28px;
+    background: #f9fafb;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sk-line-svg {
+    flex: 1;
+    width: 100%;
+    height: calc(100% - 36px);
+    position: absolute;
+    top: 12px;
+    left: 0;
+}
+
+.sk-line-stroke {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sk-line-1 {
+    stroke: #d1d5db;
+    animation: skLineShimmer 1.6s ease-in-out infinite;
+}
+
+.sk-line-2 {
+    stroke: #e5e7eb;
+    animation: skLineShimmer 1.6s ease-in-out infinite 0.4s;
+}
+
+@keyframes skLineShimmer {
+    0%, 100% { opacity: 0.5; }
+    50%       { opacity: 1; }
+}
+
+.sk-line-dots {
+    display: flex;
+    justify-content: space-around;
+    position: absolute;
+    bottom: 28px;
+    left: 12px;
+    right: 12px;
+}
+
+.sk-line-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d1d5db;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    background-size: 200% 100%;
+}
+
+.sk-line-dot:nth-child(2) { animation-delay: 0.2s; }
+.sk-line-dot:nth-child(3) { animation-delay: 0.1s; }
+.sk-line-dot:nth-child(4) { animation-delay: 0.3s; }
+.sk-line-dot:nth-child(5) { animation-delay: 0.15s; }
+
+/* ── Skeleton: pie / doughnut ──────────────────────────────────── */
+.chart-skeleton-pie {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px 28px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.sk-pie-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex: 1;
+    width: 100%;
+}
+
+.sk-pie-circle {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    animation: skPiePulse 1.6s ease-in-out infinite;
+    background: conic-gradient(
+        #d1d5db 0deg 130deg,
+        #e5e7eb 130deg 230deg,
+        #c9cdd4 230deg 360deg
+    );
+}
+
+.sk-pie-hole {
+    position: absolute;
+    inset: 27%;
+    background: #f9fafb;
+    border-radius: 50%;
+}
+
+@keyframes skPiePulse {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 1; }
+}
+
+.sk-pie-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    max-width: 120px;
+}
+
+.sk-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.sk-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.sk-legend-label {
+    height: 10px;
+    width: 80%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+
+.sk-legend-item:nth-child(2) .sk-legend-dot,
+.sk-legend-item:nth-child(2) .sk-legend-label { animation-delay: 0.15s; }
+
+.sk-legend-item:nth-child(3) .sk-legend-dot,
+.sk-legend-item:nth-child(3) .sk-legend-label { animation-delay: 0.3s; }
+
+/* ── Botones de paleta (base — usados dentro del FAB) ───────────── */
+.chart-palette-btn .palette-dots {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.chart-palette-btn .palette-dots span {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .chart-col-two-thirds,
+    .chart-col-three-quarters { flex: 1 1 100%; }
+}
+
+@media (max-width: 680px) {
+    .chart-col-half,
+    .chart-col-third,
+    .chart-col-quarter { flex: 1 1 100%; }
+
+    .kpi-card { flex: 1 1 calc(50% - 6px); min-width: 120px; }
+}
+
+@media (max-width: 400px) {
+    .kpi-card { flex: 1 1 100%; }
+}

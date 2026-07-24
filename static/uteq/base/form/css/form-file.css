@@ -1,0 +1,147 @@
+/* Estilos para campo de archivo compatibles con Bootstrap 2 */
+.custom-file-input {
+  position: relative;
+  display: block;
+  margin-bottom: 9px; /* Bootstrap 2 usaba 9px para márgenes */
+  *zoom: 1; /* Hack para IE7 */
+}
+
+.custom-file-input:before,
+.custom-file-input:after {
+  display: table;
+  content: "";
+  line-height: 0;
+}
+
+.custom-file-input:after {
+  clear: both;
+}
+
+/* Ocultar el input nativo pero mantenerlo accesible */
+.custom-file-input input[type="file"] {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  filter: alpha(opacity=0); /* Para IE8 */
+  overflow: hidden;
+  z-index: -1;
+}
+
+/* Estilo del botón principal - compatible con Bootstrap 2 */
+.custom-file-button {
+  display: block;
+  background-color: #f5f5f5;
+  *background-color: #e6e6e6; /* IE7 */
+  background-image: -ms-linear-gradient(top, #ffffff, #e6e6e6); /* IE9 */
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#ffffff), to(#e6e6e6)); /* Safari 4+ */
+  background-image: -webkit-linear-gradient(top, #ffffff, #e6e6e6); /* Chrome 10+, Safari 5.1+ */
+  background-image: -o-linear-gradient(top, #ffffff, #e6e6e6); /* Opera 11.10+ */
+  background-image: -moz-linear-gradient(top, #ffffff, #e6e6e6); /* Firefox 3.6+ */
+  background-image: linear-gradient(top, #ffffff, #e6e6e6);
+  background-repeat: repeat-x;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#e6e6e6', GradientType=0); /* IE6-9 */
+  border: 1px solid #cccccc;
+  *border: 0; /* IE7 */
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  border-color: #e6e6e6 #e6e6e6 #bfbfbf;
+  border-bottom-color: #b3b3b3;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  -webkit-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  *margin-left: .3em; /* IE7 */
+  padding: 4px 10px;
+  line-height: 20px;
+  text-align: left;
+}
+
+/* Estilos para el hover del botón */
+.custom-file-button:hover {
+  background-color: #e6e6e6;
+  *background-color: #d9d9d9; /* IE7 */
+  background-position: 0 -15px;
+  -webkit-transition: background-position 0.1s linear;
+  -moz-transition: background-position 0.1s linear;
+  -ms-transition: background-position 0.1s linear;
+  -o-transition: background-position 0.1s linear;
+  transition: background-position 0.1s linear;
+  text-decoration: none;
+}
+
+/* Estilo para el texto del archivo */
+.custom-file-text {
+  display: inline-block;
+  color: #333333;
+  font-size: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Estilo tipo botón para el texto */
+.custom-file-text:before {
+  content: "Examinar...";
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 10px;
+  color: #ffffff;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  background-color: #006dcc;
+  *background-color: #0044cc; /* IE7 */
+  background-image: -ms-linear-gradient(top, #0088cc, #0044cc); /* IE9 */
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088cc), to(#0044cc)); /* Safari 4+ */
+  background-image: -webkit-linear-gradient(top, #0088cc, #0044cc); /* Chrome 10+, Safari 5.1+ */
+  background-image: -o-linear-gradient(top, #0088cc, #0044cc); /* Opera 11.10+ */
+  background-image: -moz-linear-gradient(top, #0088cc, #0044cc); /* Firefox 3.6+ */
+  background-image: linear-gradient(top, #0088cc, #0044cc);
+  background-repeat: repeat-x;
+  border-color: #0044cc #0044cc #002a80;
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#0088cc', endColorstr='#0044cc', GradientType=0); /* IE6-9 */
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+}
+
+/* Texto de ayuda */
+.file-help-text {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 18px;
+  color: #999999;
+}
+
+/* Estado seleccionado - colores de éxito de Bootstrap 2 */
+.file-selected .custom-file-button {
+  background-color: #dff0d8;
+  border-color: #d6e9c6;
+}
+
+.file-selected .custom-file-text {
+  color: #468847;
+}
+
+/* Estados de error - colores de error de Bootstrap 2 */
+.has-error .custom-file-button,
+.is-invalid .custom-file-button {
+  background-color: #f2dede;
+  border-color: #eed3d7;
+}
+
+.has-error .custom-file-text,
+.is-invalid .custom-file-text {
+  color: #b94a48;
+}
+
+.invalid-feedback {
+  display: block;
+  color: #b94a48;
+  margin-top: 5px;
+}
