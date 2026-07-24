@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'widget_tweaks',
-    'sga.apps.SgaConfig'
+    'sga.apps.SgaConfig',
+    'sga.documentos.apps.DocumentosConfig',
 ]
 
 MIDDLEWARE = [
@@ -81,7 +82,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'uteq',                      # Or path to database file if using sqlite3.
         'USER': 'postgres',                      # Not used with sqlite3.
-        'PASSWORD': 'PPP123',                  # Not used with sqlite3.
+        'PASSWORD': 'pass123',                  # Not used with sqlite3.
         'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '5432',                      # Set to empty string for default. Not used with sqlite3.
     },
@@ -127,6 +128,19 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Configuracion requerida por el modulo de gestion de documentos legales.
+FLASK_PDF_DIR = BASE_DIR / 'Prototipo_Version_Django' / 'media' / 'documentos'
+IA_DOCUMENTOS_BASE_URL = 'http://16.58.71.138:8000'
+IA_DOCUMENTOS_ANALIZAR_PATH = '/api/integracion/documentos/analizar/'
+IA_DOCUMENTOS_TIMEOUT = 120
+IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO = 80
+IA_CHROMA_BASE_URL = 'http://16.58.71.138:8000'
+IA_CHROMA_GUARDAR_PATH = '/api/integracion/documentos/guardar-chroma/'
+IA_CHROMA_QUITAR_VIGENCIA_PATH = '/api/integracion/documentos/quitar-vigencia/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -1,0 +1,121 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Documentos legales{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css.css' %}?v=20260717-1">
+</head>
+<body>
+    <header class="topbar">
+        <h1>Documentos legales</h1>
+        <a class="back" href="{% url 'documentos:lista' %}">← Atrás</a>
+    </header>
+
+    {% if messages %}
+            <div class="flash">
+                {% for mensaje in messages %}<p>{{ mensaje }}</p>{% endfor %}
+            </div>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+<div id="bety-iframe-container">
+    <iframe
+        id="bety-chat-iframe"
+        src="http://16.58.71.138:8000/chatbot/"
+        title="Chatbot Bety IA"
+        loading="lazy"
+    ></iframe>
+</div>
+
+<style>
+    #bety-iframe-container {
+        position: fixed;
+        right: 15px;
+        bottom: 15px;
+        width: 112px;
+        height: 112px;
+        overflow: hidden;
+        z-index: 9999;
+        transition: width 0.2s ease, height 0.2s ease;
+        background: transparent;
+    }
+
+    #bety-iframe-container.abierto {
+        width: min(410px, calc(100vw - 30px));
+        height: min(550px, calc(100vh - 30px));
+    }
+
+    #bety-chat-iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: transparent;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('bety-iframe-container');
+        const iframe = document.getElementById('bety-chat-iframe');
+        const origenPermitido = 'http://16.58.71.138:8000';
+
+        /*
+         * MODO WEB:
+         * No envia datos SGA. Bety entra al flujo web.
+         */
+        const usuarioSga = null;
+        // const usuarioSga = JSON.parse('{{ usuario_json|escapejs }}');
+        /*
+         * MODO SGA:
+         * Para activar SGA, comenta la linea de arriba y descomenta esta.
+         */
+
+        if (!container || !iframe) {
+            return;
+        }
+
+        function enviarContextoSga() {
+            if (!usuarioSga) {
+                return;
+            }
+
+            iframe.contentWindow.postMessage(
+                {
+                    tipo: 'BETY_SGA_CONTEXT',
+                    usuario: usuarioSga
+                },
+                origenPermitido
+            );
+        }
+
+        iframe.addEventListener('load', enviarContextoSga);
+
+        window.addEventListener('message', function (event) {
+            if (event.origin !== origenPermitido) {
+                return;
+            }
+
+            if (!event.data || !event.data.tipo) {
+                return;
+            }
+
+            if (event.data.tipo === 'BETY_CHAT_ABIERTO') {
+                container.classList.add('abierto');
+                enviarContextoSga();
+            }
+
+            if (event.data.tipo === 'BETY_CHAT_CERRADO') {
+                container.classList.remove('abierto');
+            }
+        });
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
+

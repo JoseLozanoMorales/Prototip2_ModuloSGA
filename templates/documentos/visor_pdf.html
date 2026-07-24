@@ -1,0 +1,72 @@
+{% extends "basebs.html" %}
+{% load static %}
+
+{% block pagetitle %}Visor PDF - documentos legales{% endblock %}
+
+{% block heading %}
+    <link href="{% static 'css/documentos_legales.css' %}" rel="stylesheet" type="text/css"/>
+{% endblock %}
+
+{% block canvas %}
+<div class="documentos-legales">
+    <div class="row-fluid documentos-header">
+        <div class="span8">
+            <div class="documentos-title">
+                <div class="icon-header">
+                    <i class="fa fa-file-pdf-o"></i>
+                </div>
+                <div>
+                    <h1>{{ documento.titulo|default:"Documento legal" }}</h1>
+                    <p>Consulta de versi&oacute;n y vista previa del archivo PDF.</p>
+                </div>
+            </div>
+        </div>
+        <div class="span4 documentos-actions">
+            <a href="{% url 'documentos:lista' %}" class="btn">
+                <i class="fa fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="documentos-panel">
+        <form method="get" class="version-bar">
+            <label>
+                <strong>Versi&oacute;n del documento</strong>
+                <select name="version" class="auto-submit-select">
+                    {% for v in versiones %}
+                        <option value="{{ v.id_version }}" {% if v.id_version == version_actual.id_version %}selected{% endif %}>
+                            Versi&oacute;n {{ v.numero_version }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div>
+                <strong>Fecha de aprobaci&oacute;n</strong>
+                <span>{{ version_actual.fecha_aprobacion|date:"d/m/Y"|default:"Sin fecha" }}</span>
+            </div>
+
+            <div>
+                <strong>Fecha de subida</strong>
+                <span>{{ version_actual.fecha_subida|date:"d/m/Y H:i"|default:"Sin fecha" }}</span>
+            </div>
+
+            <div>
+                <strong>Vigencia</strong>
+                <span>{% if version_actual.estado == "VIGENTE" %}Vigente{% else %}No vigente{% endif %}</span>
+            </div>
+        </form>
+
+        <div class="document-description">
+            <strong>Descripci&oacute;n del documento</strong>
+            <p>{{ documento.descripcion|default:"Sin descripci&oacute;n registrada." }}</p>
+        </div>
+
+        <iframe class="pdf-frame" src="{% url 'documentos:pdf' id_documento=id_documento id_version=version_actual.id_version %}" title="{{ documento.titulo }}"></iframe>
+    </div>
+</div>
+{% endblock %}
+
+{% block moreblock %}
+    <script src="{% static 'js/visor_pdf.js' %}"></script>
+{% endblock %}

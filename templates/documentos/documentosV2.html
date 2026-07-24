@@ -1,0 +1,385 @@
+{% extends "basebs.html" %}
+{% load static %}
+
+{% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
+
+{% block heading %}
+    <link href="{% static 'css/documentos_legales.css' %}" rel="stylesheet" type="text/css"/>
+{% endblock %}
+
+{% block canvas %}
+<div class="documentos-legales">
+    <div class="row-fluid documentos-header">
+        <div class="span8">
+            <div class="documentos-title">
+                <div class="icon-header">
+                    <i class="fa fa-file-text-o"></i>
+                </div>
+                <div>
+                    <h1>Gesti&oacute;n de documentos legales</h1>
+                    <p>Administraci&oacute;n, consulta y control de versiones de documentos normativos.</p>
+                </div>
+            </div>
+        </div>
+        {% if usuario.rol_modulo == 'EDITOR' %}
+            <div class="span4 documentos-actions">
+                <a href="{% url 'documentos:papelera' %}" class="btn">
+                    <i class="fa fa-trash"></i> Papelera
+                </a>
+                <a href="#modal-crear" class="btn btn-success">
+                    <i class="fa fa-plus"></i> Crear
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="row-fluid documentos-filters">
+        <div class="span12">
+            {% if error_base_datos %}
+                <div class="alert alert-warning">
+                    <strong>No se pudo consultar la base documental.</strong> {{ error_base_datos }}
+                </div>
+            {% endif %}
+            <form method="get" class="form-inline documentos-search">
+                <div class="input-prepend">
+                    <span class="add-on"><i class="fa fa-search"></i></span>
+                    <input type="text" name="q" value="{{ busqueda }}" placeholder="Buscar por t&iacute;tulo o palabras clave">
+                </div>
+                <button type="submit" class="btn btn-primary">Buscar</button>
+                {% if busqueda or anio %}
+                    <a href="{% url 'documentos:lista' %}" class="btn btn-link">Limpiar</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="documentos-table-box">
+                <table class="table table-striped table-bordered documentos-table">
+                    <thead>
+                    <tr>
+                        <th class="filter-cell">
+                            <form method="get">
+                                <input type="hidden" name="q" value="{{ busqueda }}">
+                                <select name="anio" class="auto-submit-select">
+                                    <option value="">Seleccione un a&ntilde;o</option>
+                                    {% for anio_disponible in anios_disponibles %}
+                                        <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </th>
+                        <th>T&iacute;tulo</th>
+                        <th>Descripci&oacute;n</th>
+                        <th>A&ntilde;o</th>
+                        {% if usuario.rol_modulo == 'EDITOR' %}
+                            <th class="actions-column">Acciones</th>
+                        {% else %}
+                            <th class="actions-column">Descarga</th>
+                        {% endif %}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for doc in documentos %}
+                        <tr>
+                            <td></td>
+                            <td class="title-cell">{{ doc.titulo }}</td>
+                            <td class="description-cell">
+                                {% with descripcion=doc.descripcion|default:'' %}
+                                    {% if descripcion %}
+                                        <span>{{ descripcion|truncatechars:140 }}</span>
+                                        {% if descripcion|length > 140 %}
+                                            <a class="description-more" href="#modal-descripcion-{{ doc.id_documento }}">Ver m&aacute;s</a>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="muted">Sin descripci&oacute;n</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td>{{ doc.anio|default:'-' }}</td>
+                            {% if usuario.rol_modulo == 'EDITOR' %}
+                                <td class="actions-cell">
+                                    <details class="menu-actions">
+                                        <summary><i class="fa fa-ellipsis-v"></i></summary>
+                                        <div class="menu-box">
+                                            <a href="#modal-editar-{{ doc.id_documento }}"><i class="fa fa-pencil"></i> Editar</a>
+                                            <a href="#modal-version-{{ doc.id_documento }}"><i class="fa fa-files-o"></i> Agregar nueva versi&oacute;n</a>
+                                            <a href="#modal-eliminar-{{ doc.id_documento }}"><i class="fa fa-trash"></i> Eliminar</a>
+                                            <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-download"></i> Descargar</a>
+                                        </div>
+                                    </details>
+                                </td>
+                            {% else %}
+                                <td class="download-cell">
+                                    <a class="btn btn-success btn-mini" href="{% url 'documentos:visor' id_documento=doc.id_documento %}">
+                                        <i class="fa fa-download"></i> Descargar
+                                    </a>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center empty">No hay documentos legales para mostrar.</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% for doc in documentos %}
+        <div id="modal-descripcion-{{ doc.id_documento }}" class="modal-layer">
+            <div class="modal-card modal-medium">
+                <div class="modal-header"><h2>Descripci&oacute;n del documento</h2></div>
+                <div class="description-modal-body">
+                    <h3>{{ doc.titulo }}</h3>
+                    <p>{{ doc.descripcion|default:"Sin descripci&oacute;n registrada." }}</p>
+                </div>
+                <div class="modal-footer"><a href="#" class="btn">Cerrar</a></div>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if usuario.rol_modulo == 'EDITOR' %}
+        <div id="modal-crear" class="modal-layer">
+            <div class="modal-card modal-large">
+                <div class="modal-header"><h2>Crear nuevo documento legal</h2></div>
+                <form action="{% url 'documentos:crear' %}" method="post" enctype="multipart/form-data" class="document-form">
+                    {% csrf_token %}
+                    <div class="form-row two-columns">
+                        <label>
+                            <strong>T&iacute;tulo del documento</strong>
+                            <input type="text" name="titulo" placeholder="Nombre del documento" required>
+                        </label>
+                        <label>
+                            <strong>Fecha de aprobaci&oacute;n</strong>
+                            <input type="date" name="fecha_aprobacion" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>
+                            <strong>Descripci&oacute;n</strong>
+                            <textarea name="descripcion" placeholder="Ingrese la descripci&oacute;n"></textarea>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>
+                            <strong>Palabras clave</strong>
+                            <textarea name="palabras_clave" placeholder="Ejemplo: reglamento, estudiantes, matr&iacute;cula"></textarea>
+                        </label>
+                    </div>
+                    <div class="upload-row">
+                        <span>Seleccione archivo PDF</span>
+                        <label class="btn btn-success file-button">
+                            <i class="fa fa-upload"></i> Cargar archivo
+                            <input type="file" name="archivo" accept="application/pdf" required>
+                        </label>
+                        <small>Tama&ntilde;o m&aacute;ximo recomendado 4MB, en formato PDF.</small>
+                        <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
+                    </div>
+                    <div class="form-row access-row">
+                        <label><strong>Perfiles</strong><select class="access-picker" data-target="crear-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Estudiante</option><option value="2">Docente</option><option value="3">Coordinador</option></select></label>
+                        <label><strong>Grupos</strong><select class="access-picker" data-target="crear-grupos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="10">Computaci&oacute;n</option><option value="20">Empresariales</option><option value="30">Derecho</option></select></label>
+                        <label><strong>Tipo de periodo</strong><select class="access-picker" data-target="crear-periodos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Nivelaci&oacute;n</option><option value="2">Grado</option><option value="3">Postgrado</option></select></label>
+                    </div>
+                    <div class="selected-boxes">
+                        <div data-selected-box="crear-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
+                            <span class="selection-chip" data-value="">Todos<button type="button" aria-label="Quitar Todos">&times;</button><input type="hidden" name="id_perfil_externo" value=""></span>
+                        </div>
+                        <div data-selected-box="crear-grupos" data-field="id_grupo_externo" data-placeholder="Grupos seleccionados">
+                            <span class="selection-chip" data-value="">Todos<button type="button" aria-label="Quitar Todos">&times;</button><input type="hidden" name="id_grupo_externo" value=""></span>
+                        </div>
+                        <div data-selected-box="crear-periodos" data-field="id_tipo_periodo_externo" data-placeholder="Periodos seleccionados">
+                            <span class="selection-chip" data-value="">Todos<button type="button" aria-label="Quitar Todos">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value=""></span>
+                        </div>
+                    </div>
+                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a><button type="submit" class="btn btn-success">Crear</button></div>
+                </form>
+            </div>
+        </div>
+
+        {% for doc in documentos %}
+            <div id="modal-editar-{{ doc.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-edit-with-preview">
+                    <form action="{% url 'documentos:editar' id_documento=doc.id_documento %}" method="post" enctype="multipart/form-data" class="document-form">
+                        {% csrf_token %}
+                        <div class="edit-modal-layout">
+                            <aside class="edit-pdf-pane" aria-label="Vista previa del PDF">
+                                <iframe data-pdf-viewer class="edit-pdf-frame" src="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}?preview_version={{ doc.id_version_preview }}" data-current-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}?preview_version={{ doc.id_version_preview }}" title="Vista previa de {{ doc.titulo }}"></iframe>
+                            </aside>
+                            <div class="edit-form-pane">
+                                <div class="modal-header"><h2>Detalles del documento legal</h2></div>
+                                <div class="form-row two-columns">
+                                    <label>
+                                        <strong>T&iacute;tulo del documento</strong>
+                                        <input type="text" name="titulo" value="{{ doc.titulo }}" required>
+                                    </label>
+                                    <label>
+                                        <strong>Fecha de aprobaci&oacute;n</strong>
+                                        <input type="date" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                                    </label>
+                                </div>
+                                <div class="form-row two-columns">
+                                    <label>
+                                        <strong>Versi&oacute;n del documento</strong>
+                                        <select name="id_version_vigente" data-version-select required>
+                                            {% for version in doc.versiones %}
+                                                <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
+                                                    Versi&oacute;n {{ version.numero_version }}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <strong>Estado de la versi&oacute;n</strong>
+                                        <select name="estado_version" data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
+                                            <option value="VIGENTE" {% if doc.estado == 'VIGENTE' %}selected{% endif %}>Vigente</option>
+                                            {% if capacidades.puede_cambiar_estado_version %}
+                                                <option value="INACTIVO" {% if doc.estado == 'INACTIVO' %}selected{% endif %}>No vigente</option>
+                                            {% endif %}
+                                        </select>
+                                        {% if not capacidades.puede_cambiar_estado_version %}
+                                            <input type="hidden" name="estado_version" value="VIGENTE">
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                <div class="upload-row">
+                                    <span>Seleccione archivo PDF</span>
+                                    <label class="btn btn-success file-button {% if not capacidades.puede_reemplazar_archivo %}is-disabled{% endif %}">
+                                        <i class="fa fa-upload"></i> Cargar archivo
+                                        <input type="file" name="archivo" accept="application/pdf" {% if not capacidades.puede_reemplazar_archivo %}disabled{% endif %}>
+                                    </label>
+                                    <small>Tama&ntilde;o m&aacute;ximo recomendado 4MB, en formato PDF.</small>
+                                    <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
+                                </div>
+                                <div class="form-row">
+                                    <label>
+                                        <strong>Descripci&oacute;n</strong>
+                                        <textarea name="descripcion" placeholder="Ingrese la descripci&oacute;n">{{ doc.descripcion|default:'' }}</textarea>
+                                    </label>
+                                </div>
+                                <div class="form-row">
+                                    <label>
+                                        <strong>Palabras clave</strong>
+                                        <textarea name="palabras_clave" placeholder="Ejemplo: reglamento, estudiantes, matr&iacute;cula">{{ doc.palabras_clave|default:'' }}</textarea>
+                                    </label>
+                                </div>
+                                <div class="form-row access-row">
+                                    <label><strong>Perfiles</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Estudiante</option><option value="2">Docente</option><option value="3">Coordinador</option></select></label>
+                                    <label><strong>Grupos</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="10">Computaci&oacute;n</option><option value="20">Empresariales</option><option value="30">Derecho</option></select></label>
+                                    <label><strong>Tipo de periodo</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Nivelaci&oacute;n</option><option value="2">Grado</option><option value="3">Postgrado</option></select></label>
+                                </div>
+                                <div class="selected-boxes">
+                                    <div data-selected-box="editar-{{ doc.id_documento }}-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
+                                        {% for valor in doc.perfiles_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 1 %}Estudiante{% elif valor == 2 %}Docente{% elif valor == 3 %}Coordinador{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ valor }}"></span>
+                                        {% endfor %}
+                                    </div>
+                                    <div data-selected-box="editar-{{ doc.id_documento }}-grupos" data-field="id_grupo_externo" data-placeholder="Grupos seleccionados">
+                                        {% for valor in doc.grupos_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 10 %}Computaci&oacute;n{% elif valor == 20 %}Empresariales{% elif valor == 30 %}Derecho{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ valor }}"></span>
+                                        {% endfor %}
+                                    </div>
+                                    <div data-selected-box="editar-{{ doc.id_documento }}-periodos" data-field="id_tipo_periodo_externo" data-placeholder="Periodos seleccionados">
+                                        {% for valor in doc.periodos_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 1 %}Nivelaci&oacute;n{% elif valor == 2 %}Grado{% elif valor == 3 %}Postgrado{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ valor }}"></span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="modal-footer"><a href="#" class="btn">Cerrar</a><button type="submit" class="btn btn-success">Guardar</button></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="modal-version-{{ doc.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Agregar nueva versi&oacute;n</h2></div>
+                    <form action="{% url 'documentos:agregar_version' id_documento=doc.id_documento %}" method="post" enctype="multipart/form-data" class="document-form">
+                        {% csrf_token %}
+                        <div class="upload-row simple-upload">
+                            <span>Seleccione archivo PDF</span>
+                            <label class="btn btn-success file-button"><i class="fa fa-upload"></i> Cargar archivo<input type="file" name="archivo" accept="application/pdf" required></label>
+                            <small>Tama&ntilde;o m&aacute;ximo recomendado 4MB, en formato PDF.</small>
+                            <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
+                        </div>
+                        <div class="form-row two-columns">
+                            <label>
+                                <strong>Descripci&oacute;n del cambio</strong>
+                                <input type="text" name="descripcion_cambio" placeholder="Ejemplo: actualizaci&oacute;n de normativa">
+                            </label>
+                            <label>
+                                <strong>Fecha de aprobaci&oacute;n</strong>
+                                <input type="date" name="fecha_aprobacion" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                            </label>
+                        </div>
+                        <div class="modal-footer"><a href="#" class="btn">Cerrar</a><button type="submit" class="btn btn-success">Procesar</button></div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="modal-eliminar-{{ doc.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Eliminaci&oacute;n de documento</h2></div>
+                    <form action="{% url 'documentos:eliminar' id_documento=doc.id_documento %}" method="post" class="document-form">
+                        {% csrf_token %}
+                        <div class="delete-question">
+                            <h3>&iquest;Desea eliminar este documento legal?</h3>
+                            <p><strong>{{ doc.titulo }}</strong></p>
+                            <div class="delete-options">
+                                <label class="radio-row">
+                                    <input type="radio" name="alcance_eliminacion" value="documento" checked {% if doc.estado != 'INACTIVO' %}disabled{% endif %}>
+                                    <span>Eliminar documento completo y sus versiones</span>
+                                </label>
+                                {% if doc.estado != 'INACTIVO' %}
+                                    <p class="delete-note">Para eliminar, primero cambie la versi&oacute;n vigente a No vigente.</p>
+                                {% endif %}
+                                {% if capacidades.puede_eliminar_version and doc.versiones|length > 1 %}
+                                    <label class="radio-row">
+                                        <input type="radio" name="alcance_eliminacion" value="version" {% if doc.estado != 'INACTIVO' %}checked{% endif %}>
+                                        <span>Eliminar una versi&oacute;n espec&iacute;fica</span>
+                                    </label>
+                                    <label>
+                                        <strong>Versi&oacute;n a eliminar</strong>
+                                        <select name="id_version_eliminacion" {% if doc.estado == 'INACTIVO' %}disabled{% endif %}>
+                                            <option value="">Seleccione una versi&oacute;n</option>
+                                            {% for version in doc.versiones %}
+                                                <option value="{{ version.id_version }}" {% if version.estado == 'VIGENTE' or version.vigente %}disabled{% endif %}>
+                                                    Versi&oacute;n {{ version.numero_version }}{% if version.vigente %} - vigente{% endif %}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                {% elif not capacidades.puede_eliminar_version %}
+                                    <p class="delete-note">La eliminaci&oacute;n por versi&oacute;n no est&aacute; disponible en esta base de datos.</p>
+                                {% elif doc.versiones|length == 1 %}
+                                    <p class="delete-note">Este documento solo tiene una versi&oacute;n activa; para eliminarla, elimine el documento completo.</p>
+                                {% endif %}
+                                <label>
+                                    <strong>Motivo de eliminaci&oacute;n</strong>
+                                    <input type="text" name="motivo_eliminacion" placeholder="Documento reemplazado, error de carga, etc.">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer modal-footer-center">
+                            <a href="#" class="btn">Volver</a>
+                            <button type="submit" class="btn btn-danger" {% if doc.estado != 'INACTIVO' and not capacidades.puede_eliminar_version or doc.estado != 'INACTIVO' and doc.versiones|length == 1 %}disabled{% endif %}>Eliminar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if usuario %}
+        <p class="documentos-hint">Usuario simulado: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block moreblock %}
+    <script src="{% static 'js/documentos.js' %}"></script>
+{% endblock %}
