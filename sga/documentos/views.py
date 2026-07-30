@@ -106,18 +106,16 @@ def _consultar_filas(sql, parametros):
 
 
 def _obtener_usuario_modulo():
-    """Obtiene el rol del usuario simulado desde la misma funciÃ³n de Flask."""
+    """Obtiene el rol del usuario simulado desde la misma funcion de Flask."""
     usuario = dict(USUARIO_SIMULADO)
-    usuario["rol_modulo"] = "EDITOR"
-    return usuario
     try:
         filas = _consultar_filas(
             "SELECT fn_usuario_es_editor(%s) AS editor;",
             [usuario["id_usuario_externo"]],
         )
-        usuario["rol_modulo"] = "EDITOR" if filas and filas[0]["editor"] else "CONSULTA"
+        usuario["rol_modulo"] = "EDITOR" if filas and filas[0]["editor"] else "LECTOR"
     except DatabaseError:
-        usuario["rol_modulo"] = "CONSULTA"
+        usuario["rol_modulo"] = "LECTOR"
     return usuario
 
 
