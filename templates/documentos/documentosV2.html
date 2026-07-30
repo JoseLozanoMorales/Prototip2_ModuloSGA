@@ -182,9 +182,9 @@
                         <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
                     </div>
                     <div class="form-row access-row">
-                        <label><strong>Perfiles</strong><select class="access-picker" data-target="crear-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Estudiante</option><option value="2">Docente</option><option value="3">Coordinador</option></select></label>
-                        <label><strong>Grupos</strong><select class="access-picker" data-target="crear-grupos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="10">Computaci&oacute;n</option><option value="20">Empresariales</option><option value="30">Derecho</option></select></label>
-                        <label><strong>Tipo de periodo</strong><select class="access-picker" data-target="crear-periodos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Nivelaci&oacute;n</option><option value="2">Grado</option><option value="3">Postgrado</option></select></label>
+                        <label><strong>Perfiles</strong><select class="access-picker" data-target="crear-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.perfiles %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label><strong>Grupos</strong><select class="access-picker" data-target="crear-grupos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.grupos %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label><strong>Periodo</strong><select class="access-picker" data-target="crear-periodos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.tipos_periodo %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
                     </div>
                     <div class="selected-boxes">
                         <div data-selected-box="crear-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
@@ -269,24 +269,24 @@
                                     </label>
                                 </div>
                                 <div class="form-row access-row">
-                                    <label><strong>Perfiles</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Estudiante</option><option value="2">Docente</option><option value="3">Coordinador</option></select></label>
-                                    <label><strong>Grupos</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="10">Computaci&oacute;n</option><option value="20">Empresariales</option><option value="30">Derecho</option></select></label>
-                                    <label><strong>Tipo de periodo</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos"><option value="__placeholder__" disabled selected>Seleccione</option><option value="">Todos</option><option value="1">Nivelaci&oacute;n</option><option value="2">Grado</option><option value="3">Postgrado</option></select></label>
+                                    <label><strong>Perfiles</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.perfiles %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                                    <label><strong>Grupos</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.grupos %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                                    <label><strong>Periodo</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.tipos_periodo %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
                                 </div>
                                 <div class="selected-boxes">
                                     <div data-selected-box="editar-{{ doc.id_documento }}-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
-                                        {% for valor in doc.perfiles_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 1 %}Estudiante{% elif valor == 2 %}Docente{% elif valor == 3 %}Coordinador{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ valor }}"></span>
+                                        {% for opcion in doc.perfiles_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-grupos" data-field="id_grupo_externo" data-placeholder="Grupos seleccionados">
-                                        {% for valor in doc.grupos_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 10 %}Computaci&oacute;n{% elif valor == 20 %}Empresariales{% elif valor == 30 %}Derecho{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ valor }}"></span>
+                                        {% for opcion in doc.grupos_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-periodos" data-field="id_tipo_periodo_externo" data-placeholder="Periodos seleccionados">
-                                        {% for valor in doc.periodos_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ valor }}">{% if valor == '' %}Todos{% elif valor == 1 %}Nivelaci&oacute;n{% elif valor == 2 %}Grado{% elif valor == 3 %}Postgrado{% endif %}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ valor }}"></span>
+                                        {% for opcion in doc.periodos_seleccionados %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                 </div>

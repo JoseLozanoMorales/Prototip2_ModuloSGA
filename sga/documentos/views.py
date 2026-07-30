@@ -16,6 +16,8 @@ from django.db import transaction
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
+from sga.models import PerfilUsuario, Periodo
+
 
 USUARIO_SIMULADO = {
     "id_usuario_externo": 1001,
@@ -55,12 +57,13 @@ def lista_documentos(request):
     documentos = []
     error_base_datos = None
     usuario = _obtener_usuario_modulo()
+    catalogos_acceso = _catalogos_acceso()
     busqueda = request.GET.get("q", "").strip()
     anio = request.GET.get("anio", "").strip()
     try:
         documentos = _listar_documentos_modulo(usuario, busqueda, anio or None)
         if usuario["rol_modulo"] == "EDITOR":
-            _adjuntar_detalles_editor(documentos)
+            _adjuntar_detalles_editor(documentos, catalogos_acceso)
     except (DatabaseError, ValueError) as error:
         # La pÃ¡gina sigue siendo Ãºtil para comprobar el servidor aunque PostgreSQL
         # aÃºn no estÃ© disponible o falten variables en .env.
@@ -88,6 +91,7 @@ def lista_documentos(request):
             "fecha_aprobacion_maxima": date.today().isoformat(),
             "error_base_datos": error_base_datos,
             "capacidades": _capacidades_base() if usuario["rol_modulo"] == "EDITOR" else {},
+            "catalogos_acceso": catalogos_acceso,
         },
     )
 
@@ -197,7 +201,7 @@ def _capacidades_base():
     }
 
 
-def _adjuntar_detalles_editor(documentos):
+def _adjuntar_detalles_editor(documentos, catalogos_acceso):
     """Completa versiones y accesos necesarios por los formularios de editor."""
     if not documentos:
         return
@@ -221,14 +225,17 @@ def _adjuntar_detalles_editor(documentos):
 
     for documento in documentos:
         accesos_documento = accesos_por_documento.get(documento["id_documento"], [])
-        documento["perfiles_seleccionados"] = _valores_acceso(
-            accesos_documento, "id_perfil_externo"
+        documento["perfiles_seleccionados"] = _opciones_acceso(
+            _valores_acceso(accesos_documento, "id_perfil_externo"),
+            _nombres_catalogo(catalogos_acceso["perfiles"]),
         )
-        documento["grupos_seleccionados"] = _valores_acceso(
-            accesos_documento, "id_grupo_externo"
+        documento["grupos_seleccionados"] = _opciones_acceso(
+            _valores_acceso(accesos_documento, "id_grupo_externo"),
+            _nombres_catalogo(catalogos_acceso["grupos"]),
         )
-        documento["periodos_seleccionados"] = _valores_acceso(
-            accesos_documento, "id_tipo_periodo_externo"
+        documento["periodos_seleccionados"] = _opciones_acceso(
+            _valores_acceso(accesos_documento, "id_tipo_periodo_externo"),
+            _nombres_catalogo(catalogos_acceso["tipos_periodo"]),
         )
 
 
@@ -297,6 +304,74 @@ def _combinaciones_acceso(request):
     )
 
 
+def _catalogos_acceso():
+    return {
+        "perfiles": _opciones_perfiles_acceso(),
+        "grupos": _opciones_grupos_acceso(),
+        "tipos_periodo": _opciones_periodos_acceso(),
+    }
+
+
+def _opciones_perfiles_acceso():
+    opciones = [{"id": "", "nombre": "Todos"}]
+    try:
+        perfiles = PerfilUsuario.objects.filter(status=True)
+        if perfiles.filter(inscripcion__isnull=False).exists():
+            opciones.append({"id": 1, "nombre": "Estudiante"})
+        if perfiles.filter(profesor__isnull=False).exists():
+            opciones.append({"id": 2, "nombre": "Docente"})
+        if perfiles.filter(administrativo__isnull=False).exists():
+            opciones.append({"id": 3, "nombre": "Administrativo"})
+        if perfiles.filter(empleador__isnull=False).exists():
+            opciones.append({"id": 4, "nombre": "Empleador"})
+    except DatabaseError:
+        pass
+
+    if len(opciones) == 1:
+        return _opciones_desde_mapa(NOMBRES_PERFILES_ACCESO)
+    return opciones
+
+
+def _opciones_grupos_acceso():
+    return _opciones_desde_mapa(NOMBRES_GRUPOS_ACCESO)
+
+
+def _opciones_periodos_acceso():
+    opciones = [{"id": "", "nombre": "Todos"}]
+    try:
+        periodos = (
+            Periodo.objects.filter(status=True, activo=True)
+            .order_by("nombre")
+            .values("id", "nombre")
+        )
+        opciones.extend(
+            {"id": periodo["id"], "nombre": periodo["nombre"]}
+            for periodo in periodos
+        )
+    except DatabaseError:
+        pass
+
+    if len(opciones) == 1:
+        return _opciones_desde_mapa(NOMBRES_PERIODOS_ACCESO)
+    return opciones
+
+
+def _opciones_desde_mapa(nombres):
+    return [
+        {"id": "" if identificador is None else identificador, "nombre": nombre}
+        for identificador, nombre in nombres.items()
+    ]
+
+
+def _nombres_catalogo(opciones):
+    nombres = {}
+    for opcion in opciones:
+        identificador = opcion["id"]
+        identificador = None if identificador == "" else int(identificador)
+        nombres[identificador] = opcion["nombre"]
+    return nombres
+
+
 def _opciones_acceso(valores, nombres):
     opciones = []
     for valor in valores or [None]:
@@ -311,10 +386,20 @@ def _opciones_acceso(valores, nombres):
 
 
 def _contexto_accesos(perfiles, grupos, periodos):
+    catalogos_acceso = _catalogos_acceso()
     return {
-        "perfiles": _opciones_acceso(perfiles, NOMBRES_PERFILES_ACCESO),
-        "grupos": _opciones_acceso(grupos, NOMBRES_GRUPOS_ACCESO),
-        "tipos_periodo": _opciones_acceso(periodos, NOMBRES_PERIODOS_ACCESO),
+        "perfiles": _opciones_acceso(
+            perfiles,
+            _nombres_catalogo(catalogos_acceso["perfiles"]),
+        ),
+        "grupos": _opciones_acceso(
+            grupos,
+            _nombres_catalogo(catalogos_acceso["grupos"]),
+        ),
+        "tipos_periodo": _opciones_acceso(
+            periodos,
+            _nombres_catalogo(catalogos_acceso["tipos_periodo"]),
+        ),
     }
 
 
