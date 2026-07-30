@@ -28,6 +28,27 @@ USUARIO_SIMULADO = {
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
 
+NOMBRES_PERFILES_ACCESO = {
+    None: "Todos",
+    1: "Estudiante",
+    2: "Docente",
+    3: "Coordinador",
+}
+
+NOMBRES_GRUPOS_ACCESO = {
+    None: "Todos",
+    10: "Computacion",
+    20: "Empresariales",
+    30: "Derecho",
+}
+
+NOMBRES_PERIODOS_ACCESO = {
+    None: "Todos",
+    1: "Nivelacion",
+    2: "Grado",
+    3: "Postgrado",
+}
+
 
 def lista_documentos(request):
     """Lista documentos leyendo el estado desde la versiÃ³n actual."""
@@ -278,6 +299,126 @@ def _combinaciones_acceso(request):
     )
 
 
+def _opciones_acceso(valores, nombres):
+    opciones = []
+    for valor in valores or [None]:
+        valor_normalizado = None if valor in ("", None) else int(valor)
+        opciones.append(
+            {
+                "id": "" if valor_normalizado is None else valor_normalizado,
+                "nombre": nombres.get(valor_normalizado, str(valor_normalizado)),
+            }
+        )
+    return opciones
+
+
+def _contexto_accesos(perfiles, grupos, periodos):
+    return {
+        "perfiles": _opciones_acceso(perfiles, NOMBRES_PERFILES_ACCESO),
+        "grupos": _opciones_acceso(grupos, NOMBRES_GRUPOS_ACCESO),
+        "tipos_periodo": _opciones_acceso(periodos, NOMBRES_PERIODOS_ACCESO),
+    }
+
+
+def _contexto_accesos_formulario(request):
+    return _contexto_accesos(
+        _valores_enteros_formulario(request, "id_perfil_externo"),
+        _valores_enteros_formulario(request, "id_grupo_externo"),
+        _valores_enteros_formulario(request, "id_tipo_periodo_externo"),
+    )
+
+
+def _contexto_accesos_documento(id_documento):
+    accesos = _consultar_filas(
+        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [[id_documento]]
+    )
+    return _contexto_accesos(
+        _valores_unicos_acceso(accesos, "id_perfil_externo"),
+        _valores_unicos_acceso(accesos, "id_grupo_externo"),
+        _valores_unicos_acceso(accesos, "id_tipo_periodo_externo"),
+    )
+
+
+def _valores_unicos_acceso(accesos, campo):
+    valores = []
+    for acceso in accesos:
+        valor = acceso.get(campo)
+        if valor not in valores:
+            valores.append(valor)
+    return valores or [None]
+
+
+def _campos_multipart_accesos(contexto_accesos):
+    contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
+    perfiles = contexto_accesos["perfiles"]
+    grupos = contexto_accesos["grupos"]
+    tipos_periodo = contexto_accesos["tipos_periodo"]
+    metadata_accesos = _metadata_accesos(contexto_accesos)
+    campos = [
+        ("metadata", json.dumps(metadata_accesos, ensure_ascii=False)),
+        ("perfiles_acceso", json.dumps(perfiles, ensure_ascii=False)),
+        ("grupos_acceso", json.dumps(grupos, ensure_ascii=False)),
+        ("tipos_periodo_acceso", json.dumps(tipos_periodo, ensure_ascii=False)),
+        ("perfiles_acceso_ids", json.dumps(_ids_opciones_acceso(perfiles), ensure_ascii=False)),
+        ("grupos_acceso_ids", json.dumps(_ids_opciones_acceso(grupos), ensure_ascii=False)),
+        (
+            "tipos_periodo_acceso_ids",
+            json.dumps(_ids_opciones_acceso(tipos_periodo), ensure_ascii=False),
+        ),
+    ]
+    campos.extend(("id_perfil_externo", opcion["id"]) for opcion in perfiles)
+    campos.extend(("id_grupo_externo", opcion["id"]) for opcion in grupos)
+    campos.extend(("id_tipo_periodo_externo", opcion["id"]) for opcion in tipos_periodo)
+    campos.extend(("perfiles", opcion["nombre"]) for opcion in perfiles)
+    campos.extend(("grupos", opcion["nombre"]) for opcion in grupos)
+    campos.extend(("tipos_periodo", opcion["nombre"]) for opcion in tipos_periodo)
+    campos.extend(("tipo_periodo", opcion["nombre"]) for opcion in tipos_periodo)
+    return campos
+
+
+def _metadata_accesos(contexto_accesos):
+    contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
+    perfiles = contexto_accesos["perfiles"]
+    grupos = contexto_accesos["grupos"]
+    tipos_periodo = contexto_accesos["tipos_periodo"]
+    return {
+        "perfiles_acceso": perfiles,
+        "grupos_acceso": grupos,
+        "tipos_periodo_acceso": tipos_periodo,
+        "id_perfil_externo": _ids_opciones_acceso(perfiles),
+        "id_grupo_externo": _ids_opciones_acceso(grupos),
+        "id_tipo_periodo_externo": _ids_opciones_acceso(tipos_periodo),
+        "perfiles": _nombres_opciones_acceso(perfiles),
+        "grupos": _nombres_opciones_acceso(grupos),
+        "tipos_periodo": _nombres_opciones_acceso(tipos_periodo),
+        "tipo_periodo": _nombres_opciones_acceso(tipos_periodo),
+    }
+
+
+def _ids_opciones_acceso(opciones):
+    return [opcion["id"] for opcion in opciones]
+
+
+def _nombres_opciones_acceso(opciones):
+    return [opcion["nombre"] for opcion in opciones]
+
+
+def _items_campos_multipart(campos):
+    if hasattr(campos, "items"):
+        return campos.items()
+    return campos
+
+
+def _formatear_valor_multipart(valor):
+    if isinstance(valor, (dict, list, tuple)):
+        return json.dumps(valor, ensure_ascii=False)
+    return "" if valor is None else str(valor)
+
+
+def _nombres_campos_multipart(campos):
+    return [nombre for nombre, _valor in _items_campos_multipart(campos)]
+
+
 def _guardar_pdf_django(archivo):
     nombre_original = Path(archivo.name).name
     if not nombre_original.lower().endswith(".pdf"):
@@ -355,12 +496,12 @@ def _publicar_json(url, payload):
 def _publicar_multipart(url, campos, archivos):
     boundary = f"----django-documentos-{uuid4().hex}"
     partes = []
-    for nombre, valor in campos.items():
+    for nombre, valor in _items_campos_multipart(campos):
         partes.extend(
             [
                 f"--{boundary}\r\n".encode("utf-8"),
                 f'Content-Disposition: form-data; name="{nombre}"\r\n\r\n'.encode("utf-8"),
-                str(valor).encode("utf-8"),
+                _formatear_valor_multipart(valor).encode("utf-8"),
                 b"\r\n",
             ]
         )
@@ -395,13 +536,14 @@ def _publicar_multipart(url, campos, archivos):
         raise RuntimeError(str(error.reason)) from error
 
 
-def _llamar_ia_documentos(datos_archivo):
+def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
     url = f"{settings.IA_DOCUMENTOS_BASE_URL}{settings.IA_DOCUMENTOS_ANALIZAR_PATH}"
     ruta_pdf = _ruta_media_segura(datos_archivo["archivo_path"])
+    campos_accesos = _campos_multipart_accesos(contexto_accesos)
     try:
         contenido = _publicar_multipart(
             url,
-            {},
+            campos_accesos,
             {
                 "archivo": {
                     "filename": datos_archivo["archivo_nombre"],
@@ -411,7 +553,11 @@ def _llamar_ia_documentos(datos_archivo):
             },
         )
     except RuntimeError as error:
-        raise RuntimeError(f"No se pudo conectar con la IA documental en {url}: {error}") from error
+        campos = ", ".join(_nombres_campos_multipart(campos_accesos))
+        raise RuntimeError(
+            f"No se pudo conectar con la IA documental en {url}. "
+            f"Campos enviados: {campos}. Error: {error}"
+        ) from error
 
     return contenido
 
@@ -442,8 +588,8 @@ def _validar_porcentaje_texto_ia(contenido):
     return porcentaje_texto
 
 
-def _analizar_pdf_subido(datos_archivo):
-    respuesta_ia = _llamar_ia_documentos(datos_archivo)
+def _analizar_pdf_subido(datos_archivo, contexto_accesos=None):
+    respuesta_ia = _llamar_ia_documentos(datos_archivo, contexto_accesos)
     porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
     return respuesta_ia, porcentaje_texto
 
@@ -520,14 +666,23 @@ def _bool_a_texto(valor):
     return "true" if bool(valor) else "false"
 
 
-def _construir_payload_chroma(id_documento, titulo, datos_archivo, respuesta_ia, contexto_version=None):
+def _construir_payload_chroma(
+    id_documento,
+    titulo,
+    datos_archivo,
+    respuesta_ia,
+    contexto_version=None,
+    contexto_accesos=None,
+):
     interpretacion = _obtener_interpretacion_ia(respuesta_ia)
     contexto_version = contexto_version or {}
+    contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
     anio_documento = (
         contexto_version.get("anio_aprobacion")
         or interpretacion.get("anio_documento_sugerido")
         or ""
     )
+    metadata_accesos = _metadata_accesos(contexto_accesos)
     payload = {
         "id_documento": str(id_documento),
         "id_version": contexto_version.get("id_version") or "",
@@ -546,6 +701,9 @@ def _construir_payload_chroma(id_documento, titulo, datos_archivo, respuesta_ia,
         "rol": interpretacion.get("rol_sugerido") or "GENERAL",
         "carrera": interpretacion.get("carrera_sugerida") or "GENERAL",
         "tipo_estudio": interpretacion.get("tipo_estudio_sugerido") or "GENERAL",
+        "perfiles_acceso": contexto_accesos["perfiles"],
+        "grupos_acceso": contexto_accesos["grupos"],
+        "tipos_periodo_acceso": contexto_accesos["tipos_periodo"],
         "nombre_archivo": respuesta_ia.get("nombre_archivo") or datos_archivo["archivo_nombre"],
         "resumen_documento": interpretacion.get("resumen") or respuesta_ia.get("resumen") or "",
         "temas_detectados": interpretacion.get("temas_detectados") or respuesta_ia.get("temas_detectados") or [],
@@ -570,6 +728,7 @@ def _construir_payload_chroma(id_documento, titulo, datos_archivo, respuesta_ia,
             "uuid_version_anterior": contexto_version.get("uuid_version_anterior") or "",
             "porcentaje_texto": respuesta_ia.get("porcentaje_texto"),
             "porcentaje_imagenes": respuesta_ia.get("porcentaje_imagenes"),
+            **metadata_accesos,
         },
         "paginas": respuesta_ia.get("paginas") or 0,
         "paginas_con_texto": respuesta_ia.get("paginas_con_texto") or 0,
@@ -586,7 +745,14 @@ def _convertir_payload_chroma_multipart(payload):
     for clave, valor in payload.items():
         if clave == "texto_extraido" and not valor:
             continue
-        if clave in ("temas_detectados", "advertencias", "metadata"):
+        if clave in (
+            "temas_detectados",
+            "advertencias",
+            "metadata",
+            "perfiles_acceso",
+            "grupos_acceso",
+            "tipos_periodo_acceso",
+        ):
             data[clave] = _lista_a_json_texto(valor)
         elif isinstance(valor, bool):
             data[clave] = _bool_a_texto(valor)
@@ -595,7 +761,14 @@ def _convertir_payload_chroma_multipart(payload):
     return data
 
 
-def _guardar_documento_chroma(id_documento, titulo, datos_archivo, respuesta_ia, contexto_version=None):
+def _guardar_documento_chroma(
+    id_documento,
+    titulo,
+    datos_archivo,
+    respuesta_ia,
+    contexto_version=None,
+    contexto_accesos=None,
+):
     url = f"{settings.IA_CHROMA_BASE_URL}{settings.IA_CHROMA_GUARDAR_PATH}"
     payload = _construir_payload_chroma(
         id_documento,
@@ -603,6 +776,7 @@ def _guardar_documento_chroma(id_documento, titulo, datos_archivo, respuesta_ia,
         datos_archivo,
         respuesta_ia,
         contexto_version,
+        contexto_accesos,
     )
     try:
         if payload["texto_extraido"]:
@@ -784,6 +958,26 @@ def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
         """,
         [id_documento, perfil, grupo, periodo, usuario["id_usuario_externo"]],
     )
+
+
+def _insertar_accesos_documento(id_documento, accesos, usuario):
+    for perfil, grupo, periodo in accesos:
+        _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario)
+
+
+def _eliminar_accesos_documento(id_documento):
+    _ejecutar_procedimiento(
+        """
+        DELETE FROM documento_acceso
+        WHERE id_documento = %s;
+        """,
+        [id_documento],
+    )
+
+
+def _reemplazar_accesos_documento(id_documento, accesos, usuario):
+    _eliminar_accesos_documento(id_documento)
+    _insertar_accesos_documento(id_documento, accesos, usuario)
 
 
 def _crear_documento_base(titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo, usuario):
@@ -1020,8 +1214,12 @@ def crear_documento(request):
 
         _validar_titulo_unico(titulo)
         accesos = _combinaciones_acceso(request)
+        contexto_accesos = _contexto_accesos_formulario(request)
         datos_archivo = _guardar_pdf_django(archivo)
-        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(datos_archivo)
+        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
+            datos_archivo,
+            contexto_accesos,
+        )
         with transaction.atomic():
             id_documento = _crear_documento_base(
                 titulo,
@@ -1031,8 +1229,7 @@ def crear_documento(request):
                 datos_archivo,
                 usuario,
             )
-            for perfil, grupo, periodo in accesos:
-                _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario)
+            _insertar_accesos_documento(id_documento, accesos, usuario)
             _sincronizar_estado_versiones(id_documento)
         version_nueva = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(version_nueva)
@@ -1043,6 +1240,7 @@ def crear_documento(request):
                 datos_archivo,
                 respuesta_ia,
                 contexto_version,
+                contexto_accesos,
             )
             estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
             fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
@@ -1096,6 +1294,7 @@ def editar_documento(request, id_documento):
         _seleccionar_version(_obtener_versiones(id_documento), id_version)
         _validar_titulo_unico(titulo, id_documento)
         accesos = _combinaciones_acceso(request)
+        contexto_accesos = _contexto_accesos_formulario(request)
         version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
             id_documento,
             vigente=True,
@@ -1111,10 +1310,12 @@ def editar_documento(request, id_documento):
                 id_version=id_version,
             )
             datos_archivo = _guardar_pdf_django(archivo)
-            respuesta_ia, porcentaje_texto = _analizar_pdf_subido(datos_archivo)
+            respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
+                datos_archivo,
+                contexto_accesos,
+            )
 
         with transaction.atomic():
-            perfil, grupo, periodo = accesos[0]
             _editar_documento_base(
                 id_documento,
                 titulo,
@@ -1124,11 +1325,9 @@ def editar_documento(request, id_documento):
                 id_version,
                 usuario,
             )
-            _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario)
+            _reemplazar_accesos_documento(id_documento, accesos, usuario)
             if puede_cambiar_estado_version:
                 _cambiar_estado_version_directo(id_documento, id_version, estado_version)
-            for perfil, grupo, periodo in accesos[1:]:
-                _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario)
             if datos_archivo:
                 _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario)
         version_vigente_actual_chroma = _obtener_contexto_version_chroma(
@@ -1158,6 +1357,7 @@ def editar_documento(request, id_documento):
                     datos_archivo,
                     respuesta_ia,
                     contexto_version,
+                    contexto_accesos,
                 )
                 estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
                 fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
@@ -1192,6 +1392,7 @@ def editar_documento(request, id_documento):
                         _datos_archivo_desde_contexto_version(version_vigente_actual_chroma),
                         {},
                         contexto_version,
+                        contexto_accesos,
                     )
                     estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
                     fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
@@ -1233,8 +1434,12 @@ def agregar_version_documento(request, id_documento):
             requerido=True,
         )
         version_anterior_chroma = _obtener_contexto_version_chroma(id_documento, vigente=True)
+        contexto_accesos = _contexto_accesos_documento(id_documento)
         datos_archivo = _guardar_pdf_django(archivo)
-        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(datos_archivo)
+        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
+            datos_archivo,
+            contexto_accesos,
+        )
         _agregar_version_directa(
             id_documento,
             datos_archivo,
@@ -1261,6 +1466,7 @@ def agregar_version_documento(request, id_documento):
                 datos_archivo,
                 respuesta_ia,
                 contexto_version,
+                contexto_accesos,
             )
             estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
             fragmentos = respuesta_chroma.get("fragmentos_generados", 0)

@@ -99,6 +99,78 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function positionActionMenu(menu) {
+        if (!menu || (!menu.open && !menu.classList.contains('is-open'))) {
+            return;
+        }
+
+        const summary = menu.querySelector('.menu-trigger, summary');
+        const menuBox = menu.querySelector('.menu-box');
+        if (!summary || !menuBox) {
+            return;
+        }
+
+        menuBox.style.left = '0px';
+        menuBox.style.top = '0px';
+
+        const spacing = 6;
+        const margin = 8;
+        const summaryRect = summary.getBoundingClientRect();
+        const boxRect = menuBox.getBoundingClientRect();
+        const maxLeft = window.innerWidth - boxRect.width - margin;
+        const left = Math.max(margin, Math.min(summaryRect.right - boxRect.width, maxLeft));
+        let top = summaryRect.bottom + spacing;
+
+        if (top + boxRect.height > window.innerHeight - margin) {
+            top = summaryRect.top - boxRect.height - spacing;
+        }
+
+        menuBox.style.left = left + 'px';
+        menuBox.style.top = Math.max(margin, top) + 'px';
+    }
+
+    function positionOpenActionMenus() {
+        document.querySelectorAll('.menu-actions[open], .menu-actions.is-open').forEach(positionActionMenu);
+    }
+
+    function closeActionMenu(menu) {
+        const trigger = menu.querySelector('.menu-trigger');
+        menu.classList.remove('is-open');
+        menu.removeAttribute('open');
+        const menuBox = menu.querySelector('.menu-box');
+        if (menuBox) {
+            menuBox.hidden = true;
+        }
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function openActionMenu(menu) {
+        const trigger = menu.querySelector('.menu-trigger');
+        const menuBox = menu.querySelector('.menu-box');
+        if (menuBox) {
+            menuBox.hidden = false;
+        }
+        menu.classList.add('is-open');
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'true');
+        }
+        positionActionMenu(menu);
+    }
+
+    function toggleActionMenu(menu) {
+        if (menu.classList.contains('is-open')) {
+            closeActionMenu(menu);
+        } else {
+            openActionMenu(menu);
+        }
+    }
+
+    function closeOpenActionMenus() {
+        document.querySelectorAll('.menu-actions[open], .menu-actions.is-open').forEach(closeActionMenu);
+    }
+
     document.querySelectorAll('[data-selected-box]').forEach(refreshPlaceholder);
     document.querySelectorAll('[data-version-select]').forEach(refreshVersionStatus);
     document.querySelectorAll('[data-version-select]').forEach(function (select) {
@@ -110,7 +182,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
     refreshActiveModalPdf();
-    window.addEventListener('hashchange', refreshActiveModalPdf);
+    window.addEventListener('hashchange', function () {
+        closeOpenActionMenus();
+        refreshActiveModalPdf();
+    });
 
     document.addEventListener('change', function (event) {
         const autoSubmitSelect = event.target.closest('.auto-submit-select');
@@ -157,11 +232,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('click', function (event) {
         const activeMenu = event.target.closest('.menu-actions');
-        document.querySelectorAll('.menu-actions[open]').forEach(function (menu) {
+        const menuTrigger = event.target.closest('.menu-trigger');
+        const menuLink = event.target.closest('.menu-box a');
+
+        document.querySelectorAll('.menu-actions[open], .menu-actions.is-open').forEach(function (menu) {
             if (menu !== activeMenu) {
-                menu.removeAttribute('open');
+                closeActionMenu(menu);
             }
         });
+
+        if (menuTrigger && activeMenu) {
+            event.preventDefault();
+            toggleActionMenu(activeMenu);
+            return;
+        }
+
+        if (menuLink && activeMenu) {
+            closeActionMenu(activeMenu);
+            return;
+        }
+
+        if (activeMenu && activeMenu.open) {
+            window.requestAnimationFrame(function () {
+                positionActionMenu(activeMenu);
+            });
+        }
 
         const button = event.target.closest('.selection-chip button');
         if (!button) {
@@ -172,6 +267,16 @@ document.addEventListener('DOMContentLoaded', function () {
         button.closest('.selection-chip').remove();
         refreshPlaceholder(box);
     });
+
+    document.querySelectorAll('.menu-actions').forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+            if (menu.open) {
+                positionActionMenu(menu);
+            }
+        });
+    });
+    window.addEventListener('resize', positionOpenActionMenus);
+    window.addEventListener('scroll', positionOpenActionMenus, true);
 
     document.querySelectorAll('input[name="alcance_eliminacion"]').forEach(function (radio) {
         radio.addEventListener('change', function () {

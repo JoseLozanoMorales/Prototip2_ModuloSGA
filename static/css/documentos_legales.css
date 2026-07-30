@@ -74,9 +74,12 @@
     vertical-align: middle;
 }
 
-.documentos-table .title-cell,
+.documentos-table .title-cell{
+    text-align: center;
+}
+
 .documentos-table .description-cell {
-    text-align: left;
+    text-align: justify;
 }
 
 .documentos-table .description-cell {
@@ -113,9 +116,11 @@
 }
 
 .menu-actions {
+    display: inline-block;
     position: relative;
 }
 
+.menu-trigger,
 .menu-actions summary {
     background: #f2f4f7;
     border: 1px solid #d0d5dd;
@@ -130,6 +135,10 @@
     width: 32px;
 }
 
+.menu-trigger {
+    padding: 0;
+}
+
 .menu-actions summary::-webkit-details-marker {
     display: none;
 }
@@ -141,11 +150,19 @@
     box-shadow: 0 8px 20px rgba(16, 24, 40, .16);
     min-width: 235px;
     padding: 6px 0;
-    position: absolute;
-    right: 24px;
+    position: fixed;
+    right: auto;
     text-align: left;
-    top: 34px;
-    z-index: 60;
+    top: auto;
+    z-index: 1040;
+}
+
+.menu-box[hidden] {
+    display: none !important;
+}
+
+.menu-actions.is-open .menu-box {
+    display: block;
 }
 
 .menu-box a {

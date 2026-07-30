@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260729-menu-fix-3" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -100,15 +100,17 @@
                             <td>{{ doc.anio|default:'-' }}</td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
                                 <td class="actions-cell">
-                                    <details class="menu-actions">
-                                        <summary><i class="fa fa-ellipsis-v"></i></summary>
-                                        <div class="menu-box">
+                                    <div class="menu-actions">
+                                        <button type="button" class="menu-trigger" aria-label="Abrir acciones" aria-expanded="false">
+                                            <i class="fa fa-ellipsis-v"></i>
+                                        </button>
+                                        <div class="menu-box" hidden>
                                             <a href="#modal-editar-{{ doc.id_documento }}"><i class="fa fa-pencil"></i> Editar</a>
                                             <a href="#modal-version-{{ doc.id_documento }}"><i class="fa fa-files-o"></i> Agregar nueva versi&oacute;n</a>
                                             <a href="#modal-eliminar-{{ doc.id_documento }}"><i class="fa fa-trash"></i> Eliminar</a>
                                             <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-download"></i> Descargar</a>
                                         </div>
-                                    </details>
+                                    </div>
                                 </td>
                             {% else %}
                                 <td class="download-cell">
@@ -381,5 +383,5 @@
 {% endblock %}
 
 {% block moreblock %}
-    <script src="{% static 'js/documentos.js' %}"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260729-menu-fix-3"></script>
 {% endblock %}
