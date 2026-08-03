@@ -10,22 +10,49 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def env_bool(nombre, defecto=False):
+    valor = os.environ.get(nombre)
+    if valor is None:
+        return defecto
+    return valor.strip().lower() in {"1", "true", "yes", "on", "si"}
+
+
+def env_int(nombre, defecto):
+    valor = os.environ.get(nombre)
+    if valor in (None, ""):
+        return defecto
+    return int(valor)
+
+
+def env_list(nombre, defecto=None):
+    valor = os.environ.get(nombre)
+    if valor in (None, ""):
+        return defecto or []
+    return [item.strip() for item in valor.split(",") if item.strip()]
+
+
+def env_path(nombre, defecto):
+    valor = os.environ.get(nombre)
+    return Path(valor) if valor else defecto
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b=$+8zdpp&mev70_9@(h%hw=ldxgm)&q^xpn8x)1hl6j4!qjqm'
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-only")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
 
 
 # Application definition
@@ -79,12 +106,12 @@ WSGI_APPLICATION = 'djangoprojectbase.wsgi.application'
 DATABASES = {
 
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'uteq',                      # Or path to database file if using sqlite3.
-        'USER': 'postgres',                      # Not used with sqlite3.
-        'PASSWORD': 'pass123',                  # Not used with sqlite3.
-        'HOST': 'localhost',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '5432',                      # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql_psycopg2'),
+        'NAME': os.environ.get('DB_NAME', 'uteq'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     },
 }
 
@@ -133,14 +160,26 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configuracion requerida por el modulo de gestion de documentos legales.
-FLASK_PDF_DIR = BASE_DIR / 'Prototipo_Version_Django' / 'media' / 'documentos'
-IA_DOCUMENTOS_BASE_URL = 'http://16.58.71.138:8000'
-IA_DOCUMENTOS_ANALIZAR_PATH = '/api/integracion/documentos/analizar/'
-IA_DOCUMENTOS_TIMEOUT = 120
-IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO = 80
-IA_CHROMA_BASE_URL = 'http://16.58.71.138:8000'
-IA_CHROMA_GUARDAR_PATH = '/api/integracion/documentos/guardar-chroma/'
-IA_CHROMA_QUITAR_VIGENCIA_PATH = '/api/integracion/documentos/quitar-vigencia/'
+FLASK_PDF_DIR = env_path(
+    'FLASK_PDF_DIR',
+    BASE_DIR / 'Prototipo_Version_Django' / 'media' / 'documentos',
+)
+IA_DOCUMENTOS_BASE_URL = os.environ.get('IA_DOCUMENTOS_BASE_URL', 'http://localhost:8000')
+IA_DOCUMENTOS_ANALIZAR_PATH = os.environ.get(
+    'IA_DOCUMENTOS_ANALIZAR_PATH',
+    '/api/integracion/documentos/analizar/',
+)
+IA_DOCUMENTOS_TIMEOUT = env_int('IA_DOCUMENTOS_TIMEOUT', 120)
+IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO = env_int('IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO', 80)
+IA_CHROMA_BASE_URL = os.environ.get('IA_CHROMA_BASE_URL', IA_DOCUMENTOS_BASE_URL)
+IA_CHROMA_GUARDAR_PATH = os.environ.get(
+    'IA_CHROMA_GUARDAR_PATH',
+    '/api/integracion/documentos/guardar-chroma/',
+)
+IA_CHROMA_QUITAR_VIGENCIA_PATH = os.environ.get(
+    'IA_CHROMA_QUITAR_VIGENCIA_PATH',
+    '/api/integracion/documentos/quitar-vigencia/',
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

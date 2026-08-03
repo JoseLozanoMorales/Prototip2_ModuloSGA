@@ -4,7 +4,7 @@
 {% block pagetitle %}Visor PDF - documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260803-visor-split" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -28,41 +28,55 @@
         </div>
     </div>
 
-    <div class="documentos-panel">
-        <form method="get" class="version-bar">
-            <label>
-                <strong>Versi&oacute;n del documento</strong>
-                <select name="version" class="auto-submit-select">
-                    {% for v in versiones %}
-                        <option value="{{ v.id_version }}" {% if v.id_version == version_actual.id_version %}selected{% endif %}>
-                            Versi&oacute;n {{ v.numero_version }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </label>
+    <div class="documentos-panel modal-card modal-edit-with-preview pdf-viewer-card">
+        <div class="edit-modal-layout pdf-viewer-layout">
+            <div class="edit-form-pane pdf-info-pane">
+                <div class="modal-header"><h2>Informaci&oacute;n del documento</h2></div>
 
-            <div>
-                <strong>Fecha de aprobaci&oacute;n</strong>
-                <span>{{ version_actual.fecha_aprobacion|date:"d/m/Y"|default:"Sin fecha" }}</span>
+                <form method="get" class="version-bar pdf-version-bar">
+                    <label>
+                        <strong>Versi&oacute;n del documento</strong>
+                        <select name="version" class="auto-submit-select">
+                            {% for v in versiones %}
+                                <option value="{{ v.id_version }}" {% if v.id_version == version_actual.id_version %}selected{% endif %}>
+                                    Versi&oacute;n {{ v.numero_version }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <div>
+                        <strong>Fecha de aprobaci&oacute;n</strong>
+                        <span>{{ version_actual.fecha_aprobacion|date:"d/m/Y"|default:"Sin fecha" }}</span>
+                    </div>
+
+                    <div>
+                        <strong>Fecha de subida</strong>
+                        <span>{{ version_actual.fecha_subida|date:"d/m/Y H:i"|default:"Sin fecha" }}</span>
+                    </div>
+
+                    <div>
+                        <strong>Vigencia</strong>
+                        <span>{% if version_actual.estado == "VIGENTE" %}Vigente{% else %}No vigente{% endif %}</span>
+                    </div>
+                </form>
+
+                <div class="document-description pdf-document-description">
+                    <strong>Descripci&oacute;n del documento</strong>
+                    <p>{{ documento.descripcion|default:"Sin descripci&oacute;n registrada." }}</p>
+                </div>
+
+                <div class="modal-footer">
+                    <a href="{% url 'documentos:lista' %}" class="btn">
+                        <i class="fa fa-arrow-left"></i> Volver
+                    </a>
+                </div>
             </div>
 
-            <div>
-                <strong>Fecha de subida</strong>
-                <span>{{ version_actual.fecha_subida|date:"d/m/Y H:i"|default:"Sin fecha" }}</span>
-            </div>
-
-            <div>
-                <strong>Vigencia</strong>
-                <span>{% if version_actual.estado == "VIGENTE" %}Vigente{% else %}No vigente{% endif %}</span>
-            </div>
-        </form>
-
-        <div class="document-description">
-            <strong>Descripci&oacute;n del documento</strong>
-            <p>{{ documento.descripcion|default:"Sin descripci&oacute;n registrada." }}</p>
+            <aside class="edit-pdf-pane pdf-viewer-pane" aria-label="Visor PDF">
+                <iframe class="edit-pdf-frame" src="{% url 'documentos:pdf' id_documento=id_documento id_version=version_actual.id_version %}#toolbar=1&view=FitH" title="{{ documento.titulo }}"></iframe>
+            </aside>
         </div>
-
-        <iframe class="pdf-frame" src="{% url 'documentos:pdf' id_documento=id_documento id_version=version_actual.id_version %}" title="{{ documento.titulo }}"></iframe>
     </div>
 </div>
 {% endblock %}
