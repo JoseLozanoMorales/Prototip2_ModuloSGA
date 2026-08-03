@@ -1,8 +1,10 @@
 ﻿import json
+import re
 import threading
 import urllib.error
 import urllib.request
 from datetime import date
+from io import BytesIO
 from itertools import product
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
@@ -30,6 +32,7 @@ USUARIO_SIMULADO = {
 }
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
+PDF_TEXTO_MINIMO_CARACTERES = 200
 
 ESTADO_IA_PENDIENTE = "PENDIENTE"
 ESTADO_IA_LEIDO = "LEIDO"
@@ -651,6 +654,67 @@ def _formatear_valor_multipart(valor):
 
 def _nombres_campos_multipart(campos):
     return [nombre for nombre, _valor in _items_campos_multipart(campos)]
+
+
+def _obtener_pdf_reader():
+    try:
+        from pypdf import PdfReader
+
+        return PdfReader
+    except ImportError:
+        try:
+            from PyPDF2 import PdfReader
+
+            return PdfReader
+        except ImportError as error:
+            raise RuntimeError(
+                "No se puede validar el texto del PDF porque falta la dependencia pypdf."
+            ) from error
+
+
+def _leer_bytes_archivo_subido(archivo):
+    if hasattr(archivo, "seek"):
+        archivo.seek(0)
+
+    if hasattr(archivo, "chunks"):
+        contenido = b"".join(archivo.chunks())
+    else:
+        contenido = archivo.read()
+
+    if hasattr(archivo, "seek"):
+        archivo.seek(0)
+    return contenido
+
+
+def _extraer_texto_pdf_subido(archivo):
+    PdfReader = _obtener_pdf_reader()
+    contenido = _leer_bytes_archivo_subido(archivo)
+    try:
+        lector = PdfReader(BytesIO(contenido))
+    except Exception as error:
+        raise ValueError("No se pudo leer el PDF para validar su texto.") from error
+
+    textos = []
+    for numero_pagina, pagina in enumerate(lector.pages, start=1):
+        try:
+            textos.append(pagina.extract_text() or "")
+        except Exception as error:
+            raise ValueError(
+                f"No se pudo extraer texto de la pagina {numero_pagina} del PDF."
+            ) from error
+    return "\n".join(textos)
+
+
+def _validar_pdf_texto_minimo(archivo):
+    texto = _extraer_texto_pdf_subido(archivo)
+    caracteres = len(re.sub(r"\s+", "", texto or ""))
+    if caracteres < PDF_TEXTO_MINIMO_CARACTERES:
+        raise ValueError(
+            "El PDF debe contener al menos "
+            f"{PDF_TEXTO_MINIMO_CARACTERES} caracteres de texto extraible; "
+            f"se detectaron {caracteres}. Verifique que no sea un PDF netamente escaneado."
+        )
+    return caracteres
 
 
 def _guardar_pdf_django(archivo):
@@ -1564,6 +1628,7 @@ def crear_documento(request):
         if not archivo:
             raise ValueError("Debe seleccionar un archivo PDF.")
 
+        _validar_pdf_texto_minimo(archivo)
         _validar_titulo_unico(titulo)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)

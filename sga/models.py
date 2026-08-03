@@ -111,6 +111,21 @@ class Inscripcion(ModeloBase):
 
 
 class PerfilUsuario(ModeloBase):
+    def es_estudiante(self):
+        return self.inscripcion_id is not None
+
+    def es_profesor(self):
+        return self.profesor_id is not None
+
+    def es_administrativo(self):
+        return self.administrativo_id is not None
+
+    def es_empleador(self):
+        return self.empleador_id is not None
+
+    def es_instructor(self):
+        return False
+
     persona = models.ForeignKey(Persona, on_delete=models.CASCADE)
     administrativo = models.ForeignKey(Administrativo, on_delete=models.CASCADE, blank=True, null=True, verbose_name=u'Administrativo')
     profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, blank=True, null=True, verbose_name=u'Profesor')

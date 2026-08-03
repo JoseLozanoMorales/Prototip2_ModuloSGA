@@ -192,9 +192,33 @@
                         <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
                     </div>
                     <div class="form-row access-row">
-                        <label><strong>Perfiles</strong><select class="access-picker" data-target="crear-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.perfiles %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
-                        <label><strong>Grupos</strong><select class="access-picker" data-target="crear-grupos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.grupos %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
-                        <label><strong>Periodo</strong><select class="access-picker" data-target="crear-periodos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.tipos_periodo %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label>
+                            <strong>Perfiles</strong>
+                            <select class="access-picker" data-target="crear-perfiles">
+                                <option value="__placeholder__" disabled selected>Seleccione</option>
+                                {% for opcion in perfiles_acceso %}
+                                    <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <strong>Grupos</strong>
+                            <select class="access-picker" data-target="crear-grupos">
+                                <option value="__placeholder__" disabled selected>Seleccione</option>
+                                {% for opcion in grupos_acceso %}
+                                    <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <strong>Periodo</strong>
+                            <select class="access-picker" data-target="crear-periodos">
+                                <option value="__placeholder__" disabled selected>Seleccione</option>
+                                {% for opcion in tipos_periodo_acceso %}
+                                    <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
                     </div>
                     <div class="selected-boxes">
                         <div data-selected-box="crear-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
@@ -276,24 +300,48 @@
                                     </label>
                                 </div>
                                 <div class="form-row access-row">
-                                    <label><strong>Perfiles</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.perfiles %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
-                                    <label><strong>Grupos</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.grupos %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
-                                    <label><strong>Periodo</strong><select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos"><option value="__placeholder__" disabled selected>Seleccione</option>{% for opcion in catalogos_acceso.tipos_periodo %}<option value="{{ opcion.id }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                                    <label>
+                                        <strong>Perfiles</strong>
+                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles">
+                                            <option value="__placeholder__" disabled selected>Seleccione</option>
+                                            {% for opcion in perfiles_acceso %}
+                                                <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <strong>Grupos</strong>
+                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos">
+                                            <option value="__placeholder__" disabled selected>Seleccione</option>
+                                            {% for opcion in grupos_acceso %}
+                                                <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <strong>Periodo</strong>
+                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos">
+                                            <option value="__placeholder__" disabled selected>Seleccione</option>
+                                            {% for opcion in tipos_periodo_acceso %}
+                                                <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
                                 </div>
                                 <div class="selected-boxes">
                                     <div data-selected-box="editar-{{ doc.id_documento }}-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
-                                        {% for opcion in doc.perfiles_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ opcion.id }}"></span>
+                                        {% for opcion in doc.perfiles_seleccionados_opciones %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-grupos" data-field="id_grupo_externo" data-placeholder="Grupos seleccionados">
-                                        {% for opcion in doc.grupos_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ opcion.id }}"></span>
+                                        {% for opcion in doc.grupos_seleccionados_opciones %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-periodos" data-field="id_tipo_periodo_externo" data-placeholder="Periodos seleccionados">
-                                        {% for opcion in doc.periodos_seleccionados %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ opcion.id }}"></span>
+                                        {% for opcion in doc.periodos_seleccionados_opciones %}
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                 </div>
