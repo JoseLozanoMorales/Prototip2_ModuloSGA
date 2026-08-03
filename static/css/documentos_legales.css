@@ -53,6 +53,10 @@
     width: 52vw;
 }
 
+.documentos-legales .input-prepend .add-on {
+    height: auto;
+}
+
 .documentos-table-box {
     background: #fff;
     border: 1px solid #d9dfe7;
@@ -106,6 +110,61 @@
 .documentos-table .actions-column,
 .documentos-table .actions-cell {
     width: 110px;
+}
+
+.documentos-table .ia-status-column,
+.documentos-table .ia-status-cell {
+    width: 130px;
+}
+
+.ia-status-cell {
+    text-align: center;
+}
+
+.ia-read-value {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.ia-status-badge {
+    border: 1px solid transparent;
+    border-radius: 12px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 4px 8px;
+}
+
+.ia-status-cell small {
+    color: #667085;
+    display: block;
+    margin-top: 4px;
+}
+
+.ia-status-badge.status-pending {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #475467;
+}
+
+.ia-status-badge.status-success {
+    background: #eaf6ee;
+    border-color: #b7dfc1;
+    color: #1b7505;
+}
+
+.ia-status-badge.status-warning {
+    background: #fff4e5;
+    border-color: #ffd399;
+    color: #9a5b00;
+}
+
+.ia-status-badge.status-error {
+    background: #fdecec;
+    border-color: #f5b5b5;
+    color: #b42318;
 }
 
 .description-more {

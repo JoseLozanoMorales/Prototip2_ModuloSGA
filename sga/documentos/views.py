@@ -1,4 +1,5 @@
 ﻿import json
+import threading
 import urllib.error
 import urllib.request
 from datetime import date
@@ -8,7 +9,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib import messages
-from django.db import DatabaseError, connection
+from django.db import DatabaseError, close_old_connections, connection
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.core.files.storage import default_storage
@@ -29,6 +30,34 @@ USUARIO_SIMULADO = {
 }
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
+
+ESTADO_IA_PENDIENTE = "PENDIENTE"
+ESTADO_IA_LEIDO = "LEIDO"
+ESTADO_IA_OBSERVADO = "OBSERVADO"
+ESTADO_IA_ERROR = "ERROR"
+
+ESTADOS_IA_DOCUMENTO = {
+    ESTADO_IA_PENDIENTE: {
+        "label": "Pendiente",
+        "leido": False,
+        "clase": "status-pending",
+    },
+    ESTADO_IA_LEIDO: {
+        "label": "Leido",
+        "leido": True,
+        "clase": "status-success",
+    },
+    ESTADO_IA_OBSERVADO: {
+        "label": "Observado",
+        "leido": False,
+        "clase": "status-warning",
+    },
+    ESTADO_IA_ERROR: {
+        "label": "Error",
+        "leido": False,
+        "clase": "status-error",
+    },
+}
 
 NOMBRES_PERFILES_ACCESO = {
     None: "Todos",
@@ -62,6 +91,7 @@ def lista_documentos(request):
     anio = request.GET.get("anio", "").strip()
     try:
         documentos = _listar_documentos_modulo(usuario, busqueda, anio or None)
+        _adjuntar_estado_ia_documentos(documentos)
         if usuario["rol_modulo"] == "EDITOR":
             _adjuntar_detalles_editor(documentos, catalogos_acceso)
     except (DatabaseError, ValueError) as error:
@@ -73,6 +103,7 @@ def lista_documentos(request):
     if anio and error_base_datos is None:
         try:
             documentos_para_anios = _listar_documentos_modulo(usuario, busqueda, None)
+            _adjuntar_estado_ia_documentos(documentos_para_anios)
         except (DatabaseError, ValueError):
             documentos_para_anios = documentos
 
@@ -149,6 +180,61 @@ def _columna_existe(tabla, columna):
         return bool(filas and filas[0]["existe"])
     except DatabaseError:
         return False
+
+
+def _normalizar_estado_ia(estado):
+    estado = str(estado or ESTADO_IA_PENDIENTE).upper()
+    return estado if estado in ESTADOS_IA_DOCUMENTO else ESTADO_IA_PENDIENTE
+
+
+def _datos_estado_ia(estado, porcentaje_texto=None, mensaje=""):
+    estado = _normalizar_estado_ia(estado)
+    datos = dict(ESTADOS_IA_DOCUMENTO[estado])
+    return {
+        "estado_ia": estado,
+        "label_ia": datos["label"],
+        "leido_ia": datos["leido"],
+        "clase_ia": datos["clase"],
+        "porcentaje_texto_ia": porcentaje_texto,
+        "mensaje_ia": mensaje or "",
+        "leido_ia_texto": "Si" if datos["leido"] else "No",
+    }
+
+
+def _adjuntar_estado_ia_documentos(documentos):
+    if not documentos:
+        return
+
+    estado_por_defecto = _datos_estado_ia(ESTADO_IA_PENDIENTE)
+    if not _columna_existe("doc_versions", "estado_ia"):
+        for documento in documentos:
+            documento.update(estado_por_defecto)
+        return
+
+    ids_documentos = [documento["id_documento"] for documento in documentos]
+    filas = _consultar_filas(
+        """
+        SELECT
+            d.id_documento,
+            COALESCE(v.estado_ia, %s) AS estado_ia,
+            v.porcentaje_texto_ia,
+            COALESCE(v.mensaje_ia, '') AS mensaje_ia
+        FROM docs d
+        LEFT JOIN doc_versions v ON v.id_version = d.id_version_vigente
+        WHERE d.id_documento = ANY(%s);
+        """,
+        [ESTADO_IA_PENDIENTE, ids_documentos],
+    )
+    estados = {
+        fila["id_documento"]: _datos_estado_ia(
+            fila.get("estado_ia"),
+            fila.get("porcentaje_texto_ia"),
+            fila.get("mensaje_ia"),
+        )
+        for fila in filas
+    }
+    for documento in documentos:
+        documento.update(estados.get(documento["id_documento"], estado_por_defecto))
 
 
 def _sincronizar_estado_versiones(id_documento):
@@ -664,17 +750,11 @@ def _validar_porcentaje_texto_ia(contenido):
     porcentaje_texto = _obtener_porcentaje_texto_ia(contenido)
     if porcentaje_texto < settings.IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO:
         raise ValueError(
-            "No se guardo el documento porque tiene un bajo porcentaje de texto "
+            "El documento tiene un bajo porcentaje de texto "
             f"({porcentaje_texto:g}%). Minimo requerido: "
             f"{settings.IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO:g}%."
         )
     return porcentaje_texto
-
-
-def _analizar_pdf_subido(datos_archivo, contexto_accesos=None):
-    respuesta_ia = _llamar_ia_documentos(datos_archivo, contexto_accesos)
-    porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
-    return respuesta_ia, porcentaje_texto
 
 
 def _obtener_interpretacion_ia(contenido):
@@ -879,6 +959,130 @@ def _guardar_documento_chroma(
         )
     except RuntimeError as error:
         raise RuntimeError(f"No se pudo conectar con ChromaDB en {url}: {error}") from error
+
+
+def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_texto=None, mensaje=""):
+    columnas_requeridas = (
+        "estado_ia",
+        "porcentaje_texto_ia",
+        "mensaje_ia",
+        "fecha_analisis_ia",
+    )
+    if not id_version or not all(
+        _columna_existe("doc_versions", columna) for columna in columnas_requeridas
+    ):
+        return
+
+    _ejecutar_procedimiento(
+        """
+        UPDATE doc_versions
+        SET estado_ia = %s,
+            porcentaje_texto_ia = %s,
+            mensaje_ia = %s,
+            fecha_analisis_ia = CASE
+                WHEN %s = %s THEN NULL
+                ELSE CURRENT_TIMESTAMP
+            END
+        WHERE id_documento = %s
+          AND id_version = %s;
+        """,
+        [
+            _normalizar_estado_ia(estado),
+            porcentaje_texto,
+            str(mensaje or "")[:1000],
+            _normalizar_estado_ia(estado),
+            ESTADO_IA_PENDIENTE,
+            id_documento,
+            id_version,
+        ],
+    )
+
+
+def _procesar_ia_documento_segundo_plano(
+    id_documento,
+    titulo,
+    datos_archivo,
+    contexto_version,
+    contexto_accesos,
+):
+    close_old_connections()
+    id_version = contexto_version.get("id_version")
+    respuesta_ia = {}
+    try:
+        respuesta_ia = _llamar_ia_documentos(datos_archivo, contexto_accesos)
+        porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
+    except ValueError as error:
+        try:
+            porcentaje_texto = _obtener_porcentaje_texto_ia(respuesta_ia)
+        except Exception:
+            porcentaje_texto = None
+        _actualizar_estado_ia_version(
+            id_documento,
+            id_version,
+            ESTADO_IA_OBSERVADO,
+            porcentaje_texto,
+            error,
+        )
+        close_old_connections()
+        return
+    except RuntimeError as error:
+        _actualizar_estado_ia_version(
+            id_documento,
+            id_version,
+            ESTADO_IA_ERROR,
+            None,
+            error,
+        )
+        close_old_connections()
+        return
+
+    mensaje = "Analisis de IA completado."
+    try:
+        respuesta_chroma = _guardar_documento_chroma(
+            id_documento,
+            titulo,
+            datos_archivo,
+            respuesta_ia,
+            contexto_version,
+            contexto_accesos,
+        )
+        estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
+        fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
+        mensaje = f"{mensaje} ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}."
+    except RuntimeError as error_chroma:
+        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
+
+    _actualizar_estado_ia_version(
+        id_documento,
+        id_version,
+        ESTADO_IA_LEIDO,
+        porcentaje_texto,
+        mensaje,
+    )
+    close_old_connections()
+
+
+def _iniciar_analisis_ia_segundo_plano(
+    id_documento,
+    titulo,
+    datos_archivo,
+    contexto_version,
+    contexto_accesos,
+):
+    id_version = contexto_version.get("id_version")
+    _actualizar_estado_ia_version(
+        id_documento,
+        id_version,
+        ESTADO_IA_PENDIENTE,
+        None,
+        "Analisis de IA pendiente.",
+    )
+    hilo = threading.Thread(
+        target=_procesar_ia_documento_segundo_plano,
+        args=(id_documento, titulo, datos_archivo, contexto_version, contexto_accesos),
+        daemon=True,
+    )
+    hilo.start()
 
 
 def _datos_archivo_desde_contexto_version(contexto_version):
@@ -1299,10 +1503,6 @@ def crear_documento(request):
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
         datos_archivo = _guardar_pdf_django(archivo)
-        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
-            datos_archivo,
-            contexto_accesos,
-        )
         with transaction.atomic():
             id_documento = _crear_documento_base(
                 titulo,
@@ -1316,29 +1516,17 @@ def crear_documento(request):
             _sincronizar_estado_versiones(id_documento)
         version_nueva = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(version_nueva)
-        try:
-            respuesta_chroma = _guardar_documento_chroma(
-                id_documento,
-                titulo,
-                datos_archivo,
-                respuesta_ia,
-                contexto_version,
-                contexto_accesos,
-            )
-            estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
-            fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
-            messages.success(
-                request,
-                "Documento creado correctamente. "
-                f"Porcentaje de texto: {porcentaje_texto:g}%. "
-                f"ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}.",
-            )
-        except RuntimeError as error_chroma:
-            messages.warning(
-                request,
-                "Documento creado correctamente, pero no se pudo guardar en ChromaDB: "
-                f"{error_chroma}",
-            )
+        _iniciar_analisis_ia_segundo_plano(
+            id_documento,
+            titulo,
+            datos_archivo,
+            contexto_version,
+            contexto_accesos,
+        )
+        messages.success(
+            request,
+            "Documento creado correctamente. Analisis de IA en segundo plano.",
+        )
     except (DatabaseError, ValueError, RuntimeError) as error:
         if datos_archivo:
             default_storage.delete(datos_archivo["archivo_path"])
@@ -1393,10 +1581,6 @@ def editar_documento(request, id_documento):
                 id_version=id_version,
             )
             datos_archivo = _guardar_pdf_django(archivo)
-            respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
-                datos_archivo,
-                contexto_accesos,
-            )
 
         with transaction.atomic():
             _editar_documento_base(
@@ -1433,29 +1617,17 @@ def editar_documento(request, id_documento):
                 version_nueva_chroma,
                 version_anterior_chroma,
             )
-            try:
-                respuesta_chroma = _guardar_documento_chroma(
-                    id_documento,
-                    titulo,
-                    datos_archivo,
-                    respuesta_ia,
-                    contexto_version,
-                    contexto_accesos,
-                )
-                estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
-                fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
-                messages.success(
-                    request,
-                    "Documento editado correctamente. "
-                    f"Porcentaje de texto: {porcentaje_texto:g}%. "
-                    f"ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}.",
-                )
-            except RuntimeError as error_chroma:
-                messages.warning(
-                    request,
-                    "Documento editado correctamente, pero no se pudo actualizar ChromaDB: "
-                    f"{error_chroma}",
-                )
+            _iniciar_analisis_ia_segundo_plano(
+                id_documento,
+                titulo,
+                datos_archivo,
+                contexto_version,
+                contexto_accesos,
+            )
+            messages.success(
+                request,
+                "Documento editado correctamente. Analisis de IA en segundo plano.",
+            )
         else:
             cambio_version_vigente = (
                 estado_version == "VIGENTE"
@@ -1519,10 +1691,6 @@ def agregar_version_documento(request, id_documento):
         version_anterior_chroma = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_accesos = _contexto_accesos_documento(id_documento)
         datos_archivo = _guardar_pdf_django(archivo)
-        respuesta_ia, porcentaje_texto = _analizar_pdf_subido(
-            datos_archivo,
-            contexto_accesos,
-        )
         _agregar_version_directa(
             id_documento,
             datos_archivo,
@@ -1542,29 +1710,17 @@ def agregar_version_documento(request, id_documento):
             )
         except RuntimeError as error_chroma_vigencia:
             messages.warning(request, str(error_chroma_vigencia))
-        try:
-            respuesta_chroma = _guardar_documento_chroma(
-                id_documento,
-                documento.get("titulo") or "",
-                datos_archivo,
-                respuesta_ia,
-                contexto_version,
-                contexto_accesos,
-            )
-            estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
-            fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
-            messages.success(
-                request,
-                "Nueva version agregada correctamente. "
-                f"Porcentaje de texto: {porcentaje_texto:g}%. "
-                f"ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}.",
-            )
-        except RuntimeError as error_chroma:
-            messages.warning(
-                request,
-                "Nueva version agregada correctamente, pero no se pudo actualizar ChromaDB: "
-                f"{error_chroma}",
-            )
+        _iniciar_analisis_ia_segundo_plano(
+            id_documento,
+            documento.get("titulo") or "",
+            datos_archivo,
+            contexto_version,
+            contexto_accesos,
+        )
+        messages.success(
+            request,
+            "Nueva version agregada correctamente. Analisis de IA en segundo plano.",
+        )
     except (DatabaseError, ValueError, RuntimeError) as error:
         if datos_archivo:
             default_storage.delete(datos_archivo["archivo_path"])

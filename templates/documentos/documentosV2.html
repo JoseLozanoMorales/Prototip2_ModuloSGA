@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260729-menu-fix-3" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260803-ia-status" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -73,6 +73,7 @@
                         <th>T&iacute;tulo</th>
                         <th>Descripci&oacute;n</th>
                         <th>A&ntilde;o</th>
+                        <th class="ia-status-column">Le&iacute;do por IA</th>
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="actions-column">Acciones</th>
                         {% else %}
@@ -98,6 +99,15 @@
                                 {% endwith %}
                             </td>
                             <td>{{ doc.anio|default:'-' }}</td>
+                            <td class="ia-status-cell">
+                                <span class="ia-read-value">{{ doc.leido_ia_texto|default:'No' }}</span>
+                                <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}">
+                                    {{ doc.label_ia|default:'Pendiente' }}
+                                </span>
+                                {% if doc.porcentaje_texto_ia %}
+                                    <small>{{ doc.porcentaje_texto_ia|floatformat:0 }}% texto</small>
+                                {% endif %}
+                            </td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
                                 <td class="actions-cell">
                                     <div class="menu-actions">
@@ -122,7 +132,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center empty">No hay documentos legales para mostrar.</td>
+                            <td colspan="6" class="text-center empty">No hay documentos legales para mostrar.</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -383,5 +393,6 @@
 {% endblock %}
 
 {% block moreblock %}
+    <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
     <script src="{% static 'js/documentos.js' %}?v=20260729-menu-fix-3"></script>
 {% endblock %}
