@@ -73,8 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const separator = pdfUrl.indexOf('?') === -1 ? '?' : '&';
-        const nextUrl = pdfUrl + separator + 'preview_version=' + encodeURIComponent(option.value);
+        const nextUrl = pdfUrl + '#toolbar=1&view=FitH';
 
         if (pdfViewer.dataset.currentPdfUrl !== nextUrl) {
             pdfViewer.dataset.currentPdfUrl = nextUrl;

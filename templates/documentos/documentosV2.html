@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260803-ia-status" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260803-edit-pdf-right" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -218,9 +218,6 @@
                     <form action="{% url 'documentos:editar' id_documento=doc.id_documento %}" method="post" enctype="multipart/form-data" class="document-form">
                         {% csrf_token %}
                         <div class="edit-modal-layout">
-                            <aside class="edit-pdf-pane" aria-label="Vista previa del PDF">
-                                <iframe data-pdf-viewer class="edit-pdf-frame" src="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}?preview_version={{ doc.id_version_preview }}" data-current-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}?preview_version={{ doc.id_version_preview }}" title="Vista previa de {{ doc.titulo }}"></iframe>
-                            </aside>
                             <div class="edit-form-pane">
                                 <div class="modal-header"><h2>Detalles del documento legal</h2></div>
                                 <div class="form-row two-columns">
@@ -302,6 +299,9 @@
                                 </div>
                                 <div class="modal-footer"><a href="#" class="btn">Cerrar</a><button type="submit" class="btn btn-success">Guardar</button></div>
                             </div>
+                            <aside class="edit-pdf-pane" aria-label="Vista previa del PDF">
+                                <iframe data-pdf-viewer class="edit-pdf-frame" src="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}#toolbar=1&view=FitH" data-current-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=doc.id_version_preview %}#toolbar=1&view=FitH" title="Vista previa de {{ doc.titulo }}"></iframe>
+                            </aside>
                         </div>
                     </form>
                 </div>
@@ -394,5 +394,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260729-menu-fix-3"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260803-edit-pdf-right"></script>
 {% endblock %}
