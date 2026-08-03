@@ -167,21 +167,31 @@
     color: #b42318;
 }
 
+.ia-analysis-toast-stack {
+    align-items: flex-end;
+    bottom: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(420px, calc(100vw - 28px));
+    pointer-events: none;
+    position: fixed;
+    right: 22px;
+    z-index: 3000;
+}
+
 .ia-analysis-toast {
     background: #fff;
     border: 1px solid #d9dfe7;
     border-left: 5px solid #d0d5dd;
     border-radius: 6px;
-    bottom: 22px;
-    box-shadow: 0 12px 30px rgba(16, 24, 40, .22);
+    box-shadow: 0 8px 22px rgba(16, 24, 40, .18);
     color: #1f2933;
     display: grid;
     gap: 4px;
-    max-width: min(420px, calc(100vw - 28px));
+    pointer-events: auto;
+    width: 100%;
     padding: 14px 42px 14px 16px;
-    position: fixed;
-    right: 22px;
-    z-index: 3000;
 }
 
 .ia-analysis-toast.is-success {

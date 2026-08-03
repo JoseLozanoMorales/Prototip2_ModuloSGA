@@ -184,24 +184,32 @@ document.addEventListener('DOMContentLoaded', function () {
             : '';
         const message = (documento.titulo ? documento.titulo + ': ' : '') + details + percent;
 
-        if (typeof window.abrirnotificacionmodal === 'function') {
-            window.abrirnotificacionmodal(message);
-            return;
+        let stack = document.querySelector('[data-ia-toast-stack]');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.className = 'ia-analysis-toast-stack';
+            stack.dataset.iaToastStack = '';
+            document.body.append(stack);
         }
-
         const toast = document.createElement('div');
         toast.className = 'ia-analysis-toast ' + (documento.estado_ia === 'LEIDO' ? 'is-success' : 'is-warning');
         toast.setAttribute('role', 'status');
         toast.innerHTML = '<strong></strong><span></span><button type="button" aria-label="Cerrar">&times;</button>';
         toast.querySelector('strong').textContent = title;
         toast.querySelector('span').textContent = message;
+        const removeToast = function () {
+            toast.remove();
+            if (stack && !stack.children.length) {
+                stack.remove();
+            }
+        };
         toast.querySelector('button').addEventListener('click', function () {
-            toast.remove();
+            removeToast();
         });
-        document.body.append(toast);
+        stack.append(toast);
         window.setTimeout(function () {
-            toast.remove();
-        }, 9000);
+            removeToast();
+        }, 5000);
     }
 
     function updateIaRow(documento) {
