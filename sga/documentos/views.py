@@ -1710,6 +1710,7 @@ def editar_documento(request, id_documento):
                 id_documento,
                 id_version=id_version,
             )
+            _validar_pdf_texto_minimo(archivo)
             datos_archivo = _guardar_pdf_django(archivo)
 
         with transaction.atomic():
@@ -1820,6 +1821,7 @@ def agregar_version_documento(request, id_documento):
         )
         version_anterior_chroma = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_accesos = _contexto_accesos_documento(id_documento)
+        _validar_pdf_texto_minimo(archivo)
         datos_archivo = _guardar_pdf_django(archivo)
         _agregar_version_directa(
             id_documento,
