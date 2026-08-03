@@ -10,7 +10,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.contrib import messages
 from django.db import DatabaseError, close_old_connections, connection
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -235,6 +235,71 @@ def _adjuntar_estado_ia_documentos(documentos):
     }
     for documento in documentos:
         documento.update(estados.get(documento["id_documento"], estado_por_defecto))
+
+
+def estado_analisis_ia_documentos(request):
+    """Devuelve el estado IA de documentos visibles para refrescar la UI."""
+    try:
+        ids_solicitados = _ids_documentos_consulta(request.GET.get("ids", ""))
+        if not ids_solicitados:
+            return JsonResponse({"documentos": []})
+
+        usuario = _obtener_usuario_modulo()
+        documentos_visibles = _listar_documentos_modulo(usuario, "", None)
+        documentos = [
+            documento
+            for documento in documentos_visibles
+            if documento.get("id_documento") in ids_solicitados
+        ]
+        _adjuntar_estado_ia_documentos(documentos)
+    except ValueError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    except DatabaseError as error:
+        return JsonResponse({"error": str(error)}, status=500)
+
+    return JsonResponse(
+        {
+            "documentos": [
+                {
+                    "id_documento": documento["id_documento"],
+                    "titulo": documento.get("titulo") or "",
+                    "estado_ia": documento.get("estado_ia") or ESTADO_IA_PENDIENTE,
+                    "label_ia": documento.get("label_ia") or "Pendiente",
+                    "leido_ia_texto": documento.get("leido_ia_texto") or "No",
+                    "clase_ia": documento.get("clase_ia") or "status-pending",
+                    "porcentaje_texto_ia": _numero_json(documento.get("porcentaje_texto_ia")),
+                    "mensaje_ia": documento.get("mensaje_ia") or "",
+                    "finalizado": documento.get("estado_ia") in {
+                        ESTADO_IA_LEIDO,
+                        ESTADO_IA_OBSERVADO,
+                        ESTADO_IA_ERROR,
+                    },
+                }
+                for documento in documentos
+            ]
+        }
+    )
+
+
+def _ids_documentos_consulta(valor):
+    ids = []
+    for item in str(valor or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            id_documento = int(item)
+        except ValueError as error:
+            raise ValueError("Los identificadores de documentos no son validos.") from error
+        if id_documento not in ids:
+            ids.append(id_documento)
+    return ids
+
+
+def _numero_json(valor):
+    if valor is None:
+        return None
+    return float(valor)
 
 
 def _sincronizar_estado_versiones(id_documento):

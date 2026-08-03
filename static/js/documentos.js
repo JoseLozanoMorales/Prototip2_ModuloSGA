@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
+    const IA_FINAL_STATES = ['LEIDO', 'OBSERVADO', 'ERROR'];
+    const IA_POLL_INTERVAL = 5000;
+    let iaPollTimer = null;
+
     function refreshPlaceholder(box) {
         const hasChips = box.querySelector('.selection-chip');
         box.classList.toggle('is-empty', !hasChips);
@@ -170,6 +174,133 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.menu-actions[open], .menu-actions.is-open').forEach(closeActionMenu);
     }
 
+    function showIaNotification(documento) {
+        const title = documento.estado_ia === 'LEIDO'
+            ? 'Analisis de IA completado'
+            : 'Resultado del analisis de IA';
+        const details = documento.mensaje_ia || documento.label_ia || 'El documento ya tiene resultado de IA.';
+        const percent = documento.porcentaje_texto_ia !== null && documento.porcentaje_texto_ia !== undefined
+            ? ' Texto detectado: ' + Math.round(Number(documento.porcentaje_texto_ia)) + '%.'
+            : '';
+        const message = (documento.titulo ? documento.titulo + ': ' : '') + details + percent;
+
+        if (typeof window.abrirnotificacionmodal === 'function') {
+            window.abrirnotificacionmodal(message);
+            return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'ia-analysis-toast ' + (documento.estado_ia === 'LEIDO' ? 'is-success' : 'is-warning');
+        toast.setAttribute('role', 'status');
+        toast.innerHTML = '<strong></strong><span></span><button type="button" aria-label="Cerrar">&times;</button>';
+        toast.querySelector('strong').textContent = title;
+        toast.querySelector('span').textContent = message;
+        toast.querySelector('button').addEventListener('click', function () {
+            toast.remove();
+        });
+        document.body.append(toast);
+        window.setTimeout(function () {
+            toast.remove();
+        }, 9000);
+    }
+
+    function updateIaRow(documento) {
+        const row = document.querySelector('[data-documento-id="' + documento.id_documento + '"]');
+        if (!row) {
+            return false;
+        }
+
+        const previousState = row.dataset.iaEstado || 'PENDIENTE';
+        row.dataset.iaEstado = documento.estado_ia || 'PENDIENTE';
+
+        const read = row.querySelector('[data-ia-read]');
+        const badge = row.querySelector('[data-ia-badge]');
+        let percent = row.querySelector('[data-ia-percent]');
+
+        if (read) {
+            read.textContent = documento.leido_ia_texto || 'No';
+        }
+        if (badge) {
+            badge.className = 'ia-status-badge ' + (documento.clase_ia || 'status-pending');
+            badge.textContent = documento.label_ia || 'Pendiente';
+            badge.title = documento.mensaje_ia || '';
+        }
+        if (!percent && row.querySelector('[data-ia-status-cell]')) {
+            percent = document.createElement('small');
+            percent.dataset.iaPercent = '';
+            row.querySelector('[data-ia-status-cell]').append(percent);
+        }
+        if (percent) {
+            if (documento.porcentaje_texto_ia !== null && documento.porcentaje_texto_ia !== undefined) {
+                percent.hidden = false;
+                percent.textContent = Math.round(Number(documento.porcentaje_texto_ia)) + '% texto';
+            } else {
+                percent.hidden = true;
+                percent.textContent = '';
+            }
+        }
+
+        return previousState === 'PENDIENTE' && IA_FINAL_STATES.indexOf(documento.estado_ia) !== -1;
+    }
+
+    function pendingIaIds() {
+        return Array.from(document.querySelectorAll('[data-documento-id][data-ia-estado="PENDIENTE"]'))
+            .map(function (row) {
+                return row.dataset.documentoId;
+            })
+            .filter(Boolean);
+    }
+
+    function pollIaStatus() {
+        const root = document.querySelector('.documentos-legales');
+        const statusUrl = root ? root.dataset.iaStatusUrl : '';
+        const ids = pendingIaIds();
+
+        if (!statusUrl || ids.length === 0) {
+            if (iaPollTimer) {
+                window.clearInterval(iaPollTimer);
+                iaPollTimer = null;
+            }
+            return;
+        }
+
+        fetch(statusUrl + '?ids=' + encodeURIComponent(ids.join(',')), {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('No se pudo consultar el estado IA.');
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                (data.documentos || []).forEach(function (documento) {
+                    if (updateIaRow(documento)) {
+                        showIaNotification(documento);
+                    }
+                });
+                if (pendingIaIds().length === 0 && iaPollTimer) {
+                    window.clearInterval(iaPollTimer);
+                    iaPollTimer = null;
+                }
+            })
+            .catch(function () {
+                if (iaPollTimer) {
+                    window.clearInterval(iaPollTimer);
+                    iaPollTimer = null;
+                }
+            });
+    }
+
+    function startIaPolling() {
+        if (pendingIaIds().length === 0) {
+            return;
+        }
+        pollIaStatus();
+        iaPollTimer = window.setInterval(pollIaStatus, IA_POLL_INTERVAL);
+    }
+
     document.querySelectorAll('[data-selected-box]').forEach(refreshPlaceholder);
     document.querySelectorAll('[data-version-select]').forEach(refreshVersionStatus);
     document.querySelectorAll('[data-version-select]').forEach(function (select) {
@@ -292,4 +423,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    startIaPolling();
 });

@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block canvas %}
-<div class="documentos-legales">
+<div class="documentos-legales" data-ia-status-url="{% url 'documentos:estado_analisis_ia' %}">
     <div class="row-fluid documentos-header">
         <div class="span8">
             <div class="documentos-title">
@@ -83,7 +83,7 @@
                     </thead>
                     <tbody>
                     {% for doc in documentos %}
-                        <tr>
+                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}">
                             <td></td>
                             <td class="title-cell">{{ doc.titulo }}</td>
                             <td class="description-cell">
@@ -99,13 +99,13 @@
                                 {% endwith %}
                             </td>
                             <td>{{ doc.anio|default:'-' }}</td>
-                            <td class="ia-status-cell">
-                                <span class="ia-read-value">{{ doc.leido_ia_texto|default:'No' }}</span>
-                                <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}">
+                            <td class="ia-status-cell" data-ia-status-cell>
+                                <span class="ia-read-value" data-ia-read>{{ doc.leido_ia_texto|default:'No' }}</span>
+                                <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
                                     {{ doc.label_ia|default:'Pendiente' }}
                                 </span>
                                 {% if doc.porcentaje_texto_ia %}
-                                    <small>{{ doc.porcentaje_texto_ia|floatformat:0 }}% texto</small>
+                                    <small data-ia-percent>{{ doc.porcentaje_texto_ia|floatformat:0 }}% texto</small>
                                 {% endif %}
                             </td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
@@ -394,5 +394,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260803-edit-pdf-right"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260803-ia-notifications"></script>
 {% endblock %}
