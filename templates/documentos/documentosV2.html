@@ -105,7 +105,6 @@
                                     {{ doc.label_ia|default:'Pendiente' }}
                                 </span>
                                 {% if doc.porcentaje_texto_ia %}
-                                    <small data-ia-percent>{{ doc.porcentaje_texto_ia|floatformat:0 }}% texto</small>
                                 {% endif %}
                             </td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
