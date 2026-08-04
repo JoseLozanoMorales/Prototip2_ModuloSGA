@@ -1315,6 +1315,23 @@ def _seleccionar_version(versiones, id_version):
     return next((version for version in versiones if version.get("vigente")), versiones[0])
 
 
+def _validar_cambio_vigencia_version(versiones, id_version, estado_version):
+    if estado_version != "VIGENTE":
+        return
+
+    existe_otra_vigente = any(
+        version["id_version"] != id_version
+        and (version.get("vigente") or version.get("estado") == "VIGENTE")
+        for version in versiones
+    )
+    if existe_otra_vigente:
+        raise ValueError(
+            "No se puede tener mas de una version vigente para el documento. "
+            "Primero cambie la version vigente actual a No vigente y luego active "
+            "la version seleccionada."
+        )
+
+
 def _eliminar_documento_logico(id_documento, motivo, usuario):
     _ejecutar_procedimiento(
         """
@@ -1692,7 +1709,10 @@ def editar_documento(request, id_documento):
         if not titulo:
             raise ValueError("El titulo del documento es obligatorio.")
 
-        _seleccionar_version(_obtener_versiones(id_documento), id_version)
+        versiones = _obtener_versiones(id_documento)
+        _seleccionar_version(versiones, id_version)
+        if puede_cambiar_estado_version:
+            _validar_cambio_vigencia_version(versiones, id_version, estado_version)
         _validar_titulo_unico(titulo, id_documento)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
