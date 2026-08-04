@@ -1818,7 +1818,11 @@ def editar_documento(request, id_documento):
     except (DatabaseError, ValueError, RuntimeError) as error:
         if datos_archivo:
             default_storage.delete(datos_archivo["archivo_path"])
-        messages.error(request, f"No se pudo editar el documento: {error}")
+        mensaje_error = f"No se pudo editar el documento: {error}"
+        if "No se puede tener mas de una version vigente" in str(error):
+            messages.info(request, mensaje_error)
+        else:
+            messages.error(request, mensaje_error)
     return redirect("documentos:lista")
 
 
