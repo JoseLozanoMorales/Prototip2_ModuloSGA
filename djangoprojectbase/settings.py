@@ -17,6 +17,26 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def cargar_env(ruta_env):
+    if not ruta_env.exists():
+        return
+
+    for linea in ruta_env.read_text(encoding="utf-8").splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+
+        nombre, valor = linea.split("=", 1)
+        nombre = nombre.strip()
+        valor = valor.strip().strip('"').strip("'")
+
+        if nombre:
+            os.environ.setdefault(nombre, valor)
+
+
+cargar_env(BASE_DIR / ".env")
+
+
 def env_bool(nombre, defecto=False):
     valor = os.environ.get(nombre)
     if valor is None:
