@@ -7,6 +7,11 @@ app_name = "documentos"
 urlpatterns = [
     path("", views.lista_documentos, name="lista"),
     path("analisis-ia/estado/", views.estado_analisis_ia_documentos, name="estado_analisis_ia"),
+    path(
+        "<int:id_documento>/analisis-ia/reintentar/",
+        views.reintentar_analisis_ia_documento,
+        name="reintentar_analisis_ia",
+    ),
     path("visor/<int:id_documento>/", views.visor_pdf, name="visor"),
     path("visor/<int:id_documento>/pdf/<int:id_version>/", views.servir_pdf, name="pdf"),
     path("papelera/", views.papelera_documentos, name="papelera"),

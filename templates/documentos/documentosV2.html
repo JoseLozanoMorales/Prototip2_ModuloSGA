@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260803-edit-pdf-right" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260806-ia-retry-button" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -116,6 +116,12 @@
                                         <div class="menu-box" hidden>
                                             <a href="#modal-editar-{{ doc.id_documento }}"><i class="fa fa-pencil"></i> Editar</a>
                                             <a href="#modal-version-{{ doc.id_documento }}"><i class="fa fa-files-o"></i> Agregar nueva versi&oacute;n</a>
+                                            {% if doc.estado_ia != 'LEIDO' %}
+                                                <form class="menu-action-form" action="{% url 'documentos:reintentar_analisis_ia' id_documento=doc.id_documento %}" method="post">
+                                                    {% csrf_token %}
+                                                    <button type="submit"><i class="fa fa-refresh"></i> Reintentar lectura IA</button>
+                                                </form>
+                                            {% endif %}
                                             <a href="#modal-eliminar-{{ doc.id_documento }}"><i class="fa fa-trash"></i> Eliminar</a>
                                             <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-download"></i> Descargar</a>
                                         </div>

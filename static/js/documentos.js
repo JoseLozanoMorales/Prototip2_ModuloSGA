@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', function (event) {
         const activeMenu = event.target.closest('.menu-actions');
         const menuTrigger = event.target.closest('.menu-trigger');
-        const menuLink = event.target.closest('.menu-box a');
+        const menuLink = event.target.closest('.menu-box a, .menu-box form button');
 
         document.querySelectorAll('.menu-actions[open], .menu-actions.is-open').forEach(function (menu) {
             if (menu !== activeMenu) {

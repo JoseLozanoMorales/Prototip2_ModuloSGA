@@ -282,15 +282,33 @@
     display: block;
 }
 
-.menu-box a {
-    color: #344054;
-    display: block;
-    font-size: 13px;
-    padding: 8px 12px;
-    text-decoration: none;
+.menu-box .menu-action-form {
+    margin: 0;
 }
 
-.menu-box a:hover {
+.menu-box a,
+.menu-box form button {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: #344054;
+    cursor: pointer;
+    display: block;
+    font-family: inherit;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: normal;
+    padding: 8px 12px;
+    text-align: left;
+    text-decoration: none;
+    width: 100%;
+}
+
+.menu-box a:hover,
+.menu-box form button:hover {
     background: #f7f9fb;
 }
 

@@ -1108,10 +1108,7 @@ def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_t
         SET estado_ia = %s,
             porcentaje_texto_ia = %s,
             mensaje_ia = %s,
-            fecha_analisis_ia = CASE
-                WHEN %s = %s THEN NULL
-                ELSE CURRENT_TIMESTAMP
-            END
+            fecha_analisis_ia = CURRENT_TIMESTAMP
         WHERE id_documento = %s
           AND id_version = %s;
         """,
@@ -1119,12 +1116,43 @@ def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_t
             _normalizar_estado_ia(estado),
             porcentaje_texto,
             str(mensaje or "")[:1000],
-            _normalizar_estado_ia(estado),
-            ESTADO_IA_PENDIENTE,
             id_documento,
             id_version,
         ],
     )
+
+
+def _reservar_reintento_ia(id_documento, id_version):
+    """Reserva de forma atomica un reintento y evita dos analisis simultaneos."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE doc_versions
+            SET estado_ia = %s,
+                porcentaje_texto_ia = NULL,
+                mensaje_ia = %s,
+                fecha_analisis_ia = CURRENT_TIMESTAMP
+            WHERE id_documento = %s
+              AND id_version = %s
+              AND estado_ia <> %s
+              AND (
+                    estado_ia <> %s
+                    OR fecha_analisis_ia IS NULL
+                    OR fecha_analisis_ia < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
+              )
+            RETURNING id_version;
+            """,
+            [
+                ESTADO_IA_PENDIENTE,
+                "Reintento de analisis de IA pendiente.",
+                id_documento,
+                id_version,
+                ESTADO_IA_LEIDO,
+                ESTADO_IA_PENDIENTE,
+                settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
+            ],
+        )
+        return cursor.fetchone() is not None
 
 
 def _procesar_ia_documento_segundo_plano(
@@ -1212,6 +1240,55 @@ def _iniciar_analisis_ia_segundo_plano(
         daemon=True,
     )
     hilo.start()
+
+
+@require_POST
+def reintentar_analisis_ia_documento(request, id_documento):
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    id_version = None
+    reintento_reservado = False
+    try:
+        documento = _obtener_documento_para_edicion(id_documento)
+        contexto_version = _obtener_contexto_version_chroma(id_documento, vigente=True)
+        id_version = contexto_version.get("id_version")
+        if not id_version:
+            raise ValueError("El documento no tiene una version vigente para analizar.")
+
+        reintento_reservado = _reservar_reintento_ia(id_documento, id_version)
+        if not reintento_reservado:
+            messages.info(
+                request,
+                "El documento ya fue leido o su analisis de IA sigue en ejecucion.",
+            )
+            return redirect("documentos:lista")
+
+        datos_archivo = _datos_archivo_desde_contexto_version(contexto_version)
+        contexto_accesos = _contexto_accesos_documento(id_documento)
+        _iniciar_analisis_ia_segundo_plano(
+            id_documento,
+            documento.get("titulo") or "",
+            datos_archivo,
+            contexto_version,
+            contexto_accesos,
+        )
+        messages.success(request, "El analisis de IA se envio nuevamente.")
+    except (DatabaseError, ValueError, RuntimeError) as error:
+        if reintento_reservado and id_version:
+            try:
+                _actualizar_estado_ia_version(
+                    id_documento,
+                    id_version,
+                    ESTADO_IA_ERROR,
+                    None,
+                    error,
+                )
+            except DatabaseError:
+                pass
+        messages.error(request, f"No se pudo reintentar el analisis de IA: {error}")
+    return redirect("documentos:lista")
 
 
 def _datos_archivo_desde_contexto_version(contexto_version):
