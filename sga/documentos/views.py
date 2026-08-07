@@ -53,7 +53,7 @@ ESTADOS_IA_DOCUMENTO = {
         "clase": "status-success",
     },
     ESTADO_IA_OBSERVADO: {
-        "label": "Observado",
+        "label": "No Leído",
         "leido": False,
         "clase": "status-warning",
     },
@@ -217,6 +217,11 @@ def _adjuntar_estado_ia_documentos(documentos):
         return
 
     estado_por_defecto = _datos_estado_ia(ESTADO_IA_PENDIENTE)
+    estado_sin_vigente = _datos_estado_ia(
+        ESTADO_IA_OBSERVADO,
+        None,
+        "El documento no tiene versiones vigentes para IA.",
+    )
     if not _columna_existe("doc_versions", "estado_ia"):
         for documento in documentos:
             documento.update(estado_por_defecto)
@@ -227,14 +232,32 @@ def _adjuntar_estado_ia_documentos(documentos):
         """
         SELECT
             d.id_documento,
-            COALESCE(v.estado_ia, %s) AS estado_ia,
+            CASE
+                WHEN v.id_version IS NULL THEN %s
+                ELSE COALESCE(v.estado_ia, %s)
+            END AS estado_ia,
             v.porcentaje_texto_ia,
-            COALESCE(v.mensaje_ia, '') AS mensaje_ia
+            CASE
+                WHEN v.id_version IS NULL THEN %s
+                ELSE COALESCE(v.mensaje_ia, '')
+            END AS mensaje_ia
         FROM docs d
-        LEFT JOIN doc_versions v ON v.id_version = d.id_version_vigente
+        LEFT JOIN LATERAL (
+            SELECT dv.*
+            FROM doc_versions dv
+            WHERE dv.id_documento = d.id_documento
+              AND COALESCE(dv.estado, 'INACTIVO') = 'VIGENTE'
+            ORDER BY dv.numero_version DESC, dv.id_version DESC
+            LIMIT 1
+        ) v ON TRUE
         WHERE d.id_documento = ANY(%s);
         """,
-        [ESTADO_IA_PENDIENTE, ids_documentos],
+        [
+            ESTADO_IA_OBSERVADO,
+            ESTADO_IA_PENDIENTE,
+            estado_sin_vigente["mensaje_ia"],
+            ids_documentos,
+        ],
     )
     estados = {
         fila["id_documento"]: _datos_estado_ia(
@@ -2009,26 +2032,22 @@ def editar_documento(request, id_documento):
                     version_vigente_anterior_chroma,
                 )
                 try:
-                    respuesta_chroma = _guardar_documento_chroma(
+                    _iniciar_analisis_ia_segundo_plano(
                         id_documento,
                         titulo,
                         _datos_archivo_desde_contexto_version(version_vigente_actual_chroma),
-                        {},
                         contexto_version,
                         contexto_accesos,
                     )
-                    estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
-                    fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
                     messages.success(
                         request,
-                        "Documento editado correctamente. "
-                        f"ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}.",
+                        "Documento editado correctamente. Analisis de IA en segundo plano.",
                     )
                 except (RuntimeError, ValueError) as error_chroma:
                     messages.warning(
                         request,
-                        "Documento editado correctamente, pero no se pudo enviar la "
-                        f"version vigente a ChromaDB: {error_chroma}",
+                        "Documento editado correctamente, pero no se pudo iniciar el "
+                        f"analisis de IA de la version vigente: {error_chroma}",
                     )
             else:
                 messages.success(request, "Documento editado correctamente.")
