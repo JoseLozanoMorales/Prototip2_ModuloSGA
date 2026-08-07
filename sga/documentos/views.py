@@ -23,7 +23,7 @@ from sga.models import PerfilUsuario, Periodo
 
 
 USUARIO_SIMULADO = {
-    "id_usuario_externo": 1001,
+    "id_usuario_externo": 100,
     "id_perfil_externo": 2,
     "id_grupo_externo": 10,
     "id_tipo_periodo_externo": 2,
@@ -94,6 +94,9 @@ def lista_documentos(request):
     anio = request.GET.get("anio", "").strip()
     try:
         documentos = _listar_documentos_modulo(usuario, busqueda, anio or None)
+        _adjuntar_publicacion_documentos(documentos)
+        if usuario["rol_modulo"] != "EDITOR":
+            documentos = _filtrar_documentos_publicados(documentos)
         _adjuntar_estado_ia_documentos(documentos)
         if usuario["rol_modulo"] == "EDITOR":
             _adjuntar_detalles_editor(documentos, catalogos_acceso)
@@ -106,6 +109,9 @@ def lista_documentos(request):
     if anio and error_base_datos is None:
         try:
             documentos_para_anios = _listar_documentos_modulo(usuario, busqueda, None)
+            _adjuntar_publicacion_documentos(documentos_para_anios)
+            if usuario["rol_modulo"] != "EDITOR":
+                documentos_para_anios = _filtrar_documentos_publicados(documentos_para_anios)
             _adjuntar_estado_ia_documentos(documentos_para_anios)
         except (DatabaseError, ValueError):
             documentos_para_anios = documentos
@@ -249,6 +255,9 @@ def estado_analisis_ia_documentos(request):
 
         usuario = _obtener_usuario_modulo()
         documentos_visibles = _listar_documentos_modulo(usuario, "", None)
+        _adjuntar_publicacion_documentos(documentos_visibles)
+        if usuario["rol_modulo"] != "EDITOR":
+            documentos_visibles = _filtrar_documentos_publicados(documentos_visibles)
         documentos = [
             documento
             for documento in documentos_visibles
@@ -311,6 +320,50 @@ def _sincronizar_estado_versiones(id_documento):
     return
 
 
+def _publicacion_habilitada():
+    return _columna_existe("doc_versions", "publicado")
+
+
+def _adjuntar_publicacion_documentos(documentos):
+    if not documentos:
+        return
+
+    if not _publicacion_habilitada():
+        for documento in documentos:
+            documento["publicado"] = None
+            documento["publicado_texto"] = "No disponible"
+        return
+
+    ids_documentos = [documento["id_documento"] for documento in documentos]
+    filas = _consultar_filas(
+        """
+        SELECT
+            d.id_documento,
+            EXISTS (
+                SELECT 1
+                FROM doc_versions v
+                WHERE v.id_documento = d.id_documento
+                  AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
+                  AND COALESCE(v.publicado, FALSE) = TRUE
+            ) AS publicado
+        FROM docs d
+        WHERE d.id_documento = ANY(%s);
+        """,
+        [ids_documentos],
+    )
+    publicados = {fila["id_documento"]: bool(fila["publicado"]) for fila in filas}
+    for documento in documentos:
+        publicado = publicados.get(documento["id_documento"], False)
+        documento["publicado"] = publicado
+        documento["publicado_texto"] = "Publicado" if publicado else "No publicado"
+
+
+def _filtrar_documentos_publicados(documentos):
+    if not _publicacion_habilitada():
+        return documentos
+    return [documento for documento in documentos if documento.get("publicado")]
+
+
 def _listar_documentos_modulo(usuario, busqueda, anio):
     return _consultar_filas(
         """
@@ -352,6 +405,7 @@ def _capacidades_base():
         "puede_reemplazar_archivo": _columna_existe("doc_versions", "archivo_path"),
         "puede_eliminar_version": _columna_existe("doc_versions", "estado"),
         "puede_restaurar_version": _columna_existe("doc_versions", "estado"),
+        "puede_publicar_version": _publicacion_habilitada(),
     }
 
 
@@ -446,6 +500,21 @@ def _valores_enteros_formulario(request, campo):
         return list(dict.fromkeys(int(valor) for valor in valores))
     except ValueError as error:
         raise ValueError("Los valores de acceso no son válidos.") from error
+
+
+def _ids_enteros_formulario(request, campo):
+    ids = []
+    for valor in request.POST.getlist(campo):
+        valor = valor.strip()
+        if not valor:
+            continue
+        try:
+            id_entero = int(valor)
+        except ValueError as error:
+            raise ValueError("Los identificadores de versiones no son validos.") from error
+        if id_entero not in ids:
+            ids.append(id_entero)
+    return ids
 
 
 def _combinaciones_acceso(request):
@@ -1370,7 +1439,7 @@ def _obtener_documento_visible(id_documento):
     return detalle
 
 
-def _obtener_versiones(id_documento):
+def _obtener_versiones(id_documento, solo_publicadas=False):
     versiones = _consultar_filas(
         """
         SELECT *
@@ -1378,9 +1447,39 @@ def _obtener_versiones(id_documento):
         """,
         [id_documento],
     )
+    _adjuntar_publicacion_versiones(id_documento, versiones)
+    if solo_publicadas and _publicacion_habilitada():
+        versiones = [version for version in versiones if version.get("publicado")]
     if not versiones:
         raise Http404("El documento no tiene versiones disponibles.")
     return versiones
+
+
+def _adjuntar_publicacion_versiones(id_documento, versiones):
+    if not versiones or not _publicacion_habilitada():
+        return
+
+    ids_versiones = [version["id_version"] for version in versiones]
+    filas = _consultar_filas(
+        """
+        SELECT id_version, COALESCE(publicado, FALSE) AS publicado
+        FROM doc_versions
+        WHERE id_documento = %s
+          AND id_version = ANY(%s);
+        """,
+        [id_documento, ids_versiones],
+    )
+    publicados = {fila["id_version"]: bool(fila["publicado"]) for fila in filas}
+    for version in versiones:
+        version["publicado"] = publicados.get(version["id_version"], False)
+
+
+def _obtener_versiones_visibles(id_documento):
+    usuario = _obtener_usuario_modulo()
+    return _obtener_versiones(
+        id_documento,
+        solo_publicadas=usuario["rol_modulo"] != "EDITOR",
+    )
 
 
 def _seleccionar_version(versiones, id_version):
@@ -1575,6 +1674,44 @@ def _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo,
     )
 
 
+def _guardar_publicacion_versiones(id_documento, ids_publicados, usuario):
+    if not _publicacion_habilitada():
+        raise ValueError(
+            "La publicacion de versiones no esta disponible en esta base de datos."
+        )
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE doc_versions
+            SET publicado = FALSE
+            WHERE id_documento = %s
+              AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO';
+            """,
+            [id_documento],
+        )
+        if ids_publicados:
+            cursor.execute(
+                """
+                UPDATE doc_versions
+                SET publicado = TRUE
+                WHERE id_documento = %s
+                  AND id_version = ANY(%s)
+                  AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO';
+                """,
+                [id_documento, list(ids_publicados)],
+            )
+        cursor.execute(
+            """
+            UPDATE docs
+            SET actualizado_por = %s,
+                fecha_actualizacion = NOW()
+            WHERE id_documento = %s;
+            """,
+            [usuario["id_usuario_externo"], id_documento],
+        )
+
+
 def visor_pdf(request, id_documento):
     """Muestra una versiÃ³n existente sin registrar eventos ni modificar la base."""
     try:
@@ -1584,7 +1721,7 @@ def visor_pdf(request, id_documento):
 
     try:
         documento = _obtener_documento_visible(id_documento)
-        versiones = _obtener_versiones(id_documento)
+        versiones = _obtener_versiones_visibles(id_documento)
     except DatabaseError as error:
         raise Http404("No fue posible consultar el documento.") from error
 
@@ -1606,7 +1743,7 @@ def servir_pdf(request, id_documento, id_version):
     """Entrega un PDF existente de Flask, restringido al documento y versiÃ³n visibles."""
     try:
         _obtener_documento_visible(id_documento)
-        version = _seleccionar_version(_obtener_versiones(id_documento), id_version)
+        version = _seleccionar_version(_obtener_versiones_visibles(id_documento), id_version)
     except DatabaseError as error:
         raise Http404("No fue posible consultar el archivo.") from error
 
@@ -1958,6 +2095,29 @@ def agregar_version_documento(request, id_documento):
         if datos_archivo:
             default_storage.delete(datos_archivo["archivo_path"])
         messages.error(request, f"No se pudo agregar la versión: {error}")
+    return redirect("documentos:lista")
+
+
+@require_POST
+def publicar_versiones_documento(request, id_documento):
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    try:
+        _obtener_documento_para_edicion(id_documento)
+        versiones = _obtener_versiones(id_documento)
+        ids_disponibles = {int(version["id_version"]) for version in versiones}
+        ids_publicados = set(_ids_enteros_formulario(request, "id_version_publicada"))
+        ids_invalidos = ids_publicados - ids_disponibles
+        if ids_invalidos:
+            raise ValueError("Una o mas versiones seleccionadas no pertenecen al documento.")
+
+        with transaction.atomic():
+            _guardar_publicacion_versiones(id_documento, ids_publicados, usuario)
+        messages.success(request, "Estado de publicacion guardado correctamente.")
+    except (DatabaseError, ValueError) as error:
+        messages.error(request, f"No se pudo guardar la publicacion: {error}")
     return redirect("documentos:lista")
 
 

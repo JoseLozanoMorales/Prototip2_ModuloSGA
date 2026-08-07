@@ -117,6 +117,11 @@
     width: 130px;
 }
 
+.documentos-table .publish-status-column,
+.documentos-table .publish-status-cell {
+    width: 130px;
+}
+
 .ia-status-cell {
     text-align: center;
 }
@@ -165,6 +170,28 @@
     background: #fdecec;
     border-color: #f5b5b5;
     color: #b42318;
+}
+
+.publish-status-badge {
+    border: 1px solid transparent;
+    border-radius: 12px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 4px 8px;
+}
+
+.publish-status-badge.is-published {
+    background: #eaf6ee;
+    border-color: #b7dfc1;
+    color: #1b7505;
+}
+
+.publish-status-badge.is-unpublished {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #475467;
 }
 
 .ia-analysis-toast-stack {
@@ -461,7 +488,8 @@
 }
 
 .description-modal-body,
-.delete-question {
+.delete-question,
+.publish-modal-body {
     padding: 22px;
 }
 
@@ -476,6 +504,40 @@
     margin: 0;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+
+.publish-modal-body h3 {
+    font-size: 16px;
+    margin: 0 0 14px;
+}
+
+.publish-versions-table {
+    margin-bottom: 0;
+}
+
+.publish-versions-table th,
+.publish-versions-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.publish-versions-table td:nth-child(3) {
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+.publish-check {
+    align-items: center;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    margin: 0;
+}
+
+.publish-check input {
+    margin: 0;
+    min-height: auto;
+    width: auto;
 }
 
 .document-form {
