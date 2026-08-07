@@ -15,11 +15,13 @@ from django.db import DatabaseError, close_old_connections, connection
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
+from sga.documentos.crypto import cifrar_pdf, descifrar_pdf
 
 
 USUARIO_SIMULADO = {
@@ -46,12 +48,12 @@ ESTADOS_IA_DOCUMENTO = {
         "clase": "status-pending",
     },
     ESTADO_IA_LEIDO: {
-        "label": "Leído",
+        "label": "Leido",
         "leido": True,
         "clase": "status-success",
     },
     ESTADO_IA_OBSERVADO: {
-        "label": "No Leído",
+        "label": "Observado",
         "leido": False,
         "clase": "status-warning",
     },
@@ -793,13 +795,17 @@ def _guardar_pdf_django(archivo):
     if archivo.size <= 0:
         raise ValueError("El archivo PDF está¡ vacio.")
 
+    contenido = _leer_bytes_archivo_subido(archivo)
     nombre_guardado = f"{uuid4().hex}_{nombre_original}"
-    ruta_relativa = default_storage.save(f"documentos/{nombre_guardado}", archivo)
+    ruta_relativa = default_storage.save(
+        f"documentos/{nombre_guardado}.enc",
+        ContentFile(cifrar_pdf(contenido)),
+    )
     return {
         "archivo_nombre": nombre_guardado,
         "archivo_path": ruta_relativa,
         "archivo_tipo": archivo.content_type or "application/pdf",
-        "archivo_tamano": default_storage.size(ruta_relativa),
+        "archivo_tamano": len(contenido),
     }
 
 
@@ -829,6 +835,13 @@ def _ruta_pdf_version_segura(datos_archivo):
     if not ruta_pdf.is_file():
         raise ValueError("El PDF original no esta disponible.")
     return ruta_pdf
+
+
+def _leer_pdf_version(datos_archivo):
+    ruta_pdf = _ruta_pdf_version_segura(datos_archivo)
+    if not ruta_pdf.is_file():
+        raise ValueError("El PDF original no esta disponible.")
+    return descifrar_pdf(ruta_pdf.read_bytes())
 
 
 def _leer_json_http(respuesta):
@@ -905,7 +918,6 @@ def _publicar_multipart(url, campos, archivos):
 
 def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
     url = f"{settings.IA_DOCUMENTOS_BASE_URL}{settings.IA_DOCUMENTOS_ANALIZAR_PATH}"
-    ruta_pdf = _ruta_media_segura(datos_archivo["archivo_path"])
     campos_accesos = _campos_multipart_accesos(contexto_accesos)
     try:
         contenido = _publicar_multipart(
@@ -914,7 +926,7 @@ def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
             {
                 "archivo": {
                     "filename": datos_archivo["archivo_nombre"],
-                    "content": ruta_pdf.read_bytes(),
+                    "content": _leer_pdf_version(datos_archivo),
                     "content_type": "application/pdf",
                 }
             },
@@ -1143,14 +1155,13 @@ def _guardar_documento_chroma(
         if payload["texto_extraido"]:
             return _publicar_json(url, payload)
 
-        ruta_pdf = _ruta_pdf_version_segura(datos_archivo)
         return _publicar_multipart(
             url,
             _convertir_payload_chroma_multipart(payload),
             {
                 "archivo": {
                     "filename": datos_archivo["archivo_nombre"],
-                    "content": ruta_pdf.read_bytes(),
+                    "content": _leer_pdf_version(datos_archivo),
                     "content_type": "application/pdf",
                 }
             },
@@ -1365,17 +1376,14 @@ def _datos_archivo_desde_contexto_version(contexto_version):
     archivo_nombre = str((contexto_version or {}).get("archivo_nombre") or Path(archivo_path).name)
     if not archivo_nombre:
         raise ValueError("La version vigente no tiene archivo asociado.")
-    ruta_pdf = _ruta_pdf_version_segura(
-        {
-            "archivo_nombre": archivo_nombre,
-            "archivo_path": archivo_path,
-        }
+    contenido = _leer_pdf_version(
+        {"archivo_nombre": archivo_nombre, "archivo_path": archivo_path}
     )
     return {
         "archivo_nombre": archivo_nombre,
         "archivo_path": archivo_path,
         "archivo_tipo": "application/pdf",
-        "archivo_tamano": ruta_pdf.stat().st_size,
+        "archivo_tamano": len(contenido),
     }
 
 
@@ -1748,24 +1756,19 @@ def servir_pdf(request, id_documento, id_version):
         raise Http404("No fue posible consultar el archivo.") from error
 
     nombre_archivo = Path(
-        str(version.get("archivo_path") or version.get("archivo_nombre") or "")
+        str(version.get("archivo_nombre") or version.get("archivo_path") or "")
     ).name
     if not nombre_archivo.lower().endswith(".pdf"):
         raise Http404("El archivo asociado no es un PDF válido.")
 
-    ruta_relativa = str(version.get("archivo_path") or "")
-    if ruta_relativa.startswith("documentos/"):
-        raiz_media = settings.MEDIA_ROOT.resolve()
-        ruta_pdf = (raiz_media / PurePosixPath(ruta_relativa)).resolve()
-        if raiz_media not in ruta_pdf.parents:
-            raise Http404("La ruta del PDF no es válida.")
-    else:
-        ruta_pdf = settings.FLASK_PDF_DIR / nombre_archivo
-    if not ruta_pdf.is_file():
-        raise Http404("El PDF original no está¡ disponible.")
+    try:
+        contenido = _leer_pdf_version(version)
+    except ValueError as error:
+        raise Http404(str(error)) from error
 
-    respuesta = FileResponse(ruta_pdf.open("rb"), content_type="application/pdf")
+    respuesta = FileResponse(BytesIO(contenido), content_type="application/pdf")
     respuesta["Content-Disposition"] = f'inline; filename="{nombre_archivo}"'
+    respuesta["Cache-Control"] = "private, no-store"
     return respuesta
 
 

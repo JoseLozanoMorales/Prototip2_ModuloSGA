@@ -179,6 +179,9 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Clave AES-256 exclusiva para documentos. No reutilizar DJANGO_SECRET_KEY.
+DOCUMENTOS_ENCRYPTION_KEY = os.environ.get('DOCUMENTOS_ENCRYPTION_KEY', '')
+
 # Configuracion requerida por el modulo de gestion de documentos legales.
 FLASK_PDF_DIR = env_path(
     'FLASK_PDF_DIR',
