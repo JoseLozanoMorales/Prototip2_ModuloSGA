@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260806-publicacion-versiones" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260807-ia-badge-only" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -103,12 +103,9 @@
                             </td>
                             <td>{{ doc.anio|default:'-' }}</td>
                             <td class="ia-status-cell" data-ia-status-cell>
-                                <span class="ia-read-value" data-ia-read>{{ doc.leido_ia_texto|default:'No' }}</span>
                                 <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
                                     {{ doc.label_ia|default:'Pendiente' }}
                                 </span>
-                                {% if doc.porcentaje_texto_ia %}
-                                {% endif %}
                             </td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
                                 <td class="publish-status-cell">
@@ -500,5 +497,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260803-ia-notifications"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260807-ia-badge-only"></script>
 {% endblock %}

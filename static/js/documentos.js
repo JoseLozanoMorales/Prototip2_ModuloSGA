@@ -179,10 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ? 'Analisis de IA completado'
             : 'Resultado del analisis de IA';
         const details = documento.mensaje_ia || documento.label_ia || 'El documento ya tiene resultado de IA.';
-        const percent = documento.porcentaje_texto_ia !== null && documento.porcentaje_texto_ia !== undefined
-            ? ' Texto detectado: ' + Math.round(Number(documento.porcentaje_texto_ia)) + '%.'
-            : '';
-        const message = (documento.titulo ? documento.titulo + ': ' : '') + details + percent;
+        const message = (documento.titulo ? documento.titulo + ': ' : '') + details;
 
         let stack = document.querySelector('[data-ia-toast-stack]');
         if (!stack) {
@@ -221,31 +218,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const previousState = row.dataset.iaEstado || 'PENDIENTE';
         row.dataset.iaEstado = documento.estado_ia || 'PENDIENTE';
 
-        const read = row.querySelector('[data-ia-read]');
         const badge = row.querySelector('[data-ia-badge]');
-        let percent = row.querySelector('[data-ia-percent]');
+        const percent = row.querySelector('[data-ia-percent]');
 
-        if (read) {
-            read.textContent = documento.leido_ia_texto || 'No';
-        }
         if (badge) {
             badge.className = 'ia-status-badge ' + (documento.clase_ia || 'status-pending');
             badge.textContent = documento.label_ia || 'Pendiente';
             badge.title = documento.mensaje_ia || '';
         }
-        if (!percent && row.querySelector('[data-ia-status-cell]')) {
-            percent = document.createElement('small');
-            percent.dataset.iaPercent = '';
-            row.querySelector('[data-ia-status-cell]').append(percent);
-        }
         if (percent) {
-            if (documento.porcentaje_texto_ia !== null && documento.porcentaje_texto_ia !== undefined) {
-                percent.hidden = false;
-                percent.textContent = Math.round(Number(documento.porcentaje_texto_ia)) + '% texto';
-            } else {
-                percent.hidden = true;
-                percent.textContent = '';
-            }
+            percent.remove();
         }
 
         return previousState === 'PENDIENTE' && IA_FINAL_STATES.indexOf(documento.estado_ia) !== -1;

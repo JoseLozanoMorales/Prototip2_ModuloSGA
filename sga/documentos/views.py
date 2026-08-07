@@ -23,7 +23,7 @@ from sga.models import PerfilUsuario, Periodo
 
 
 USUARIO_SIMULADO = {
-    "id_usuario_externo": 100,
+    "id_usuario_externo": 1001,
     "id_perfil_externo": 2,
     "id_grupo_externo": 10,
     "id_tipo_periodo_externo": 2,
@@ -46,12 +46,12 @@ ESTADOS_IA_DOCUMENTO = {
         "clase": "status-pending",
     },
     ESTADO_IA_LEIDO: {
-        "label": "Leido",
+        "label": "Leído",
         "leido": True,
         "clase": "status-success",
     },
     ESTADO_IA_OBSERVADO: {
-        "label": "Observado",
+        "label": "No Leído",
         "leido": False,
         "clase": "status-warning",
     },

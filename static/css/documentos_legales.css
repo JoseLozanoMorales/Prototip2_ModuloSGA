@@ -126,10 +126,8 @@
     text-align: center;
 }
 
-.ia-read-value {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 5px;
+.ia-status-cell [data-ia-percent] {
+    display: none !important;
 }
 
 .ia-status-badge {
@@ -140,12 +138,6 @@
     font-weight: 700;
     line-height: 1.2;
     padding: 4px 8px;
-}
-
-.ia-status-cell small {
-    color: #667085;
-    display: block;
-    margin-top: 4px;
 }
 
 .ia-status-badge.status-pending {
