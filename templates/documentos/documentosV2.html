@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260807-ia-badge-only" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260807-versionamiento" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -76,6 +76,7 @@
                         <th class="ia-status-column">Le&iacute;do por IA</th>
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="publish-status-column">Publicaci&oacute;n</th>
+                            <th class="versioning-status-column">Versionamiento</th>
                         {% endif %}
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="actions-column">Acciones</th>
@@ -113,6 +114,11 @@
                                         {{ doc.publicado_texto|default:'No publicado' }}
                                     </span>
                                 </td>
+                                <td class="versioning-status-cell">
+                                    <span class="versioning-status-badge {% if doc.tiene_versionamiento %}is-enabled{% else %}is-disabled{% endif %}">
+                                        {{ doc.tiene_versionamiento_texto|default:'No' }}
+                                    </span>
+                                </td>
                                 <td class="actions-cell">
                                     <div class="menu-actions">
                                         <button type="button" class="menu-trigger" aria-label="Abrir acciones" aria-expanded="false">
@@ -143,7 +149,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}7{% else %}6{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
+                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}6{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
                         </tr>
                     {% endfor %}
                     </tbody>

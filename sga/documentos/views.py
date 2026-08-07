@@ -99,6 +99,8 @@ def lista_documentos(request):
         _adjuntar_publicacion_documentos(documentos)
         if usuario["rol_modulo"] != "EDITOR":
             documentos = _filtrar_documentos_publicados(documentos)
+        else:
+            _adjuntar_versionamiento_documentos(documentos)
         _adjuntar_estado_ia_documentos(documentos)
         if usuario["rol_modulo"] == "EDITOR":
             _adjuntar_detalles_editor(documentos, catalogos_acceso)
@@ -387,6 +389,55 @@ def _filtrar_documentos_publicados(documentos):
     if not _publicacion_habilitada():
         return documentos
     return [documento for documento in documentos if documento.get("publicado")]
+
+
+def _adjuntar_versionamiento_documentos(documentos):
+    if not documentos:
+        return
+
+    ids_documentos = [documento["id_documento"] for documento in documentos]
+    filas = _consultar_filas(
+        """
+        SELECT
+            d.id_documento,
+            COUNT(v.id_version) >= 2 AS tiene_versionamiento
+        FROM docs d
+        LEFT JOIN doc_versions v
+            ON v.id_documento = d.id_documento
+           AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
+        WHERE d.id_documento = ANY(%s)
+        GROUP BY d.id_documento;
+        """,
+        [ids_documentos],
+    )
+    versionamiento_por_documento = {
+        fila["id_documento"]: bool(fila["tiene_versionamiento"])
+        for fila in filas
+    }
+    for documento in documentos:
+        tiene_versionamiento = versionamiento_por_documento.get(
+            documento["id_documento"], False
+        )
+        documento["tiene_versionamiento"] = tiene_versionamiento
+        documento["tiene_versionamiento_texto"] = (
+            "Sí" if tiene_versionamiento else "No"
+        )
+
+
+def _sincronizar_versionamiento_documento(id_documento):
+    _ejecutar_procedimiento(
+        """
+        UPDATE docs d
+        SET tiene_versionamiento = (
+            SELECT COUNT(*) >= 2
+            FROM doc_versions v
+            WHERE v.id_documento = d.id_documento
+              AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
+        )
+        WHERE d.id_documento = %s;
+        """,
+        [id_documento],
+    )
 
 
 def _listar_documentos_modulo(usuario, busqueda, anio):
@@ -1571,6 +1622,7 @@ def _eliminar_version_logica(id_documento, id_version, motivo, usuario):
             usuario.get("nombre_usuario", ""),
         ],
     )
+    _sincronizar_versionamiento_documento(id_documento)
 
 
 def _restaurar_documento_logico(id_documento, usuario):
@@ -1580,6 +1632,7 @@ def _restaurar_documento_logico(id_documento, usuario):
         """,
         [id_documento, usuario["id_usuario_externo"]],
     )
+    _sincronizar_versionamiento_documento(id_documento)
 
 
 def _restaurar_version_logica(id_documento, id_version):
@@ -1589,6 +1642,7 @@ def _restaurar_version_logica(id_documento, id_version):
         """,
         [id_documento, id_version],
     )
+    _sincronizar_versionamiento_documento(id_documento)
 
 
 def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
@@ -1686,6 +1740,7 @@ def _agregar_version_directa(id_documento, datos_archivo, descripcion_cambio, fe
     )
     if not version or not version.get("id_version"):
         raise DatabaseError("No se pudo crear la nueva version.")
+    _sincronizar_versionamiento_documento(id_documento)
 
 
 def _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario):
@@ -1901,6 +1956,7 @@ def crear_documento(request):
             )
             _insertar_accesos_documento(id_documento, accesos, usuario)
             _sincronizar_estado_versiones(id_documento)
+            _sincronizar_versionamiento_documento(id_documento)
         version_nueva = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(version_nueva)
         _iniciar_analisis_ia_segundo_plano(

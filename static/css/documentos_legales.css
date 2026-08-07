@@ -122,6 +122,11 @@
     width: 130px;
 }
 
+.documentos-table .versioning-status-column,
+.documentos-table .versioning-status-cell {
+    width: 140px;
+}
+
 .ia-status-cell {
     text-align: center;
 }
@@ -181,6 +186,28 @@
 }
 
 .publish-status-badge.is-unpublished {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #475467;
+}
+
+.versioning-status-badge {
+    border: 1px solid transparent;
+    border-radius: 12px;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 4px 8px;
+}
+
+.versioning-status-badge.is-enabled {
+    background: #eaf6ee;
+    border-color: #b7dfc1;
+    color: #1b7505;
+}
+
+.versioning-status-badge.is-disabled {
     background: #f2f4f7;
     border-color: #d0d5dd;
     color: #475467;
