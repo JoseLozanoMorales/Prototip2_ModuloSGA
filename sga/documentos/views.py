@@ -21,9 +21,6 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
-from sga.documentos.crypto import cifrar_pdf, descifrar_pdf
-
-
 USUARIO_SIMULADO = {
     "id_usuario_externo": 1001,
     "id_perfil_externo": 2,
@@ -872,8 +869,8 @@ def _guardar_pdf_django(archivo):
     contenido = _leer_bytes_archivo_subido(archivo)
     nombre_guardado = f"{uuid4().hex}_{nombre_original}"
     ruta_relativa = default_storage.save(
-        f"documentos/{nombre_guardado}.enc",
-        ContentFile(cifrar_pdf(contenido)),
+        f"documentos/{nombre_guardado}",
+        ContentFile(contenido),
     )
     return {
         "archivo_nombre": nombre_guardado,
@@ -915,7 +912,7 @@ def _leer_pdf_version(datos_archivo):
     ruta_pdf = _ruta_pdf_version_segura(datos_archivo)
     if not ruta_pdf.is_file():
         raise ValueError("El PDF original no esta disponible.")
-    return descifrar_pdf(ruta_pdf.read_bytes())
+    return ruta_pdf.read_bytes()
 
 
 def _leer_json_http(respuesta):
@@ -1645,6 +1642,99 @@ def _restaurar_version_logica(id_documento, id_version):
     _sincronizar_versionamiento_documento(id_documento)
 
 
+def _eliminar_documento_fisico(id_documento, motivo, usuario):
+    """Elimina de la base un documento que ya se encuentra en la papelera."""
+    with transaction.atomic():
+        filas = _consultar_filas(
+            """
+            SELECT id_documento, titulo, descripcion, uuid_documento,
+                   fecha_eliminacion, motivo_eliminacion
+            FROM docs
+            WHERE id_documento = %s
+            FOR UPDATE;
+            """,
+            [id_documento],
+        )
+        if not filas:
+            raise ValueError("El documento no existe.")
+
+        documento = filas[0]
+        if not documento.get("fecha_eliminacion"):
+            raise ValueError(
+                "Solo se puede eliminar definitivamente un documento que esté en la papelera."
+            )
+
+        versiones = _consultar_filas(
+            """
+            SELECT id_version, numero_version, archivo_nombre, archivo_path, uuid_version
+            FROM doc_versions
+            WHERE id_documento = %s
+            ORDER BY numero_version;
+            """,
+            [id_documento],
+        )
+        resumen = {
+            "id_documento_eliminado": id_documento,
+            "titulo": documento.get("titulo"),
+            "uuid_documento": str(documento.get("uuid_documento") or ""),
+            "motivo_baja_logica": documento.get("motivo_eliminacion"),
+            "motivo_eliminacion_definitiva": motivo,
+            "versiones": [
+                {
+                    "id_version": version.get("id_version"),
+                    "numero_version": version.get("numero_version"),
+                    "archivo_nombre": version.get("archivo_nombre"),
+                    "uuid_version": str(version.get("uuid_version") or ""),
+                }
+                for version in versiones
+            ],
+        }
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO documento_auditoria
+                    (id_documento, id_usuario_externo, nombre_usuario, accion,
+                     mensaje, datos_anteriores)
+                VALUES (%s, %s, %s, 'ELIMINACION_DEFINITIVA', %s, %s::jsonb);
+                """,
+                [
+                    id_documento,
+                    usuario["id_usuario_externo"],
+                    usuario.get("nombre_usuario", ""),
+                    motivo,
+                    json.dumps(resumen, ensure_ascii=False),
+                ],
+            )
+            cursor.execute(
+                "UPDATE docs SET id_version_vigente = NULL WHERE id_documento = %s;",
+                [id_documento],
+            )
+            cursor.execute("DELETE FROM doc_versions WHERE id_documento = %s;", [id_documento])
+            cursor.execute("DELETE FROM docs WHERE id_documento = %s;", [id_documento])
+
+    return versiones
+
+
+def _eliminar_archivo_version_fisico(version):
+    ruta = str(version.get("archivo_path") or "").strip()
+    if not ruta:
+        return
+    if ruta.startswith("documentos/"):
+        default_storage.delete(ruta)
+        return
+
+    # Los documentos heredados se almacenan en FLASK_PDF_DIR y en la base
+    # pueden tener una ruta distinta a la usada por el storage de Django.
+    nombre = Path(ruta or str(version.get("archivo_nombre") or "")).name
+    raiz = settings.FLASK_PDF_DIR.resolve()
+    ruta_heredada = (raiz / nombre).resolve()
+    if ruta_heredada != raiz and raiz not in ruta_heredada.parents:
+        raise ValueError("La ruta del PDF heredado no es válida.")
+    if ruta_heredada.exists():
+        ruta_heredada.unlink()
+
+
 def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
     _ejecutar_procedimiento(
         """
@@ -1916,6 +2006,48 @@ def restaurar_version_documento(request, id_documento, id_version):
         messages.success(request, "Versión restaurada correctamente.")
     except DatabaseError as error:
         messages.error(request, f"No se pudo restaurar la versión: {error}")
+    return redirect("documentos:papelera")
+
+
+@require_POST
+def eliminar_documento_definitivamente(request, id_documento):
+    """Elimina permanentemente un documento previamente dado de baja lógica."""
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    motivo = request.POST.get("motivo_eliminacion_definitiva", "").strip()
+    if len(motivo) < 5:
+        messages.error(
+            request,
+            "El motivo de la eliminación definitiva es obligatorio y debe tener al menos 5 caracteres.",
+        )
+        return redirect("documentos:papelera")
+
+    try:
+        versiones = _eliminar_documento_fisico(id_documento, motivo, usuario)
+        archivos_no_eliminados = []
+        rutas_procesadas = set()
+        for version in versiones:
+            ruta = str(version.get("archivo_path") or "").strip()
+            if not ruta or ruta in rutas_procesadas:
+                continue
+            rutas_procesadas.add(ruta)
+            try:
+                _eliminar_archivo_version_fisico(version)
+            except (OSError, ValueError):
+                archivos_no_eliminados.append(ruta)
+
+        if archivos_no_eliminados:
+            messages.warning(
+                request,
+                "El registro fue eliminado definitivamente, pero no se pudieron borrar "
+                "todos los archivos físicos. Revisa el almacenamiento.",
+            )
+        else:
+            messages.success(request, "Documento eliminado definitivamente.")
+    except (DatabaseError, ValueError) as error:
+        messages.error(request, f"No se pudo eliminar definitivamente el documento: {error}")
     return redirect("documentos:papelera")
 
 

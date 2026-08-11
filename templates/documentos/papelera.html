@@ -66,7 +66,7 @@
                         <th>A&ntilde;o</th>
                         <th>Fecha eliminaci&oacute;n</th>
                         <th>Motivo</th>
-                        <th class="actions-column">Restaurar</th>
+                        <th class="actions-column">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -85,6 +85,9 @@
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
                                     </form>
+                                    <a href="#modal-eliminar-definitivamente-{{ item.id_documento }}" class="btn btn-danger btn-mini">
+                                        Eliminar definitivamente
+                                    </a>
                                 {% elif capacidades.puede_restaurar_version %}
                                     <form action="{% url 'documentos:restaurar_version' id_documento=item.id_documento id_version=item.id_version %}" method="post">
                                         {% csrf_token %}
@@ -105,6 +108,32 @@
             </div>
         </div>
     </div>
+
+    {% for item in documentos %}
+        {% if item.tipo_item == 'DOCUMENTO' %}
+            <div id="modal-eliminar-definitivamente-{{ item.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Eliminar documento definitivamente</h2></div>
+                    <form action="{% url 'documentos:eliminar_definitivamente' id_documento=item.id_documento %}" method="post" class="document-form">
+                        {% csrf_token %}
+                        <div class="delete-question">
+                            <h3>&iquest;Seguro que deseas eliminar definitivamente este documento?</h3>
+                            <p><strong>{{ item.titulo }}</strong></p>
+                            <p class="delete-note">Esta acci&oacute;n no se puede deshacer. Se eliminar&aacute;n el documento, todas sus versiones y sus archivos PDF.</p>
+                            <label>
+                                <strong>Motivo de eliminaci&oacute;n definitiva</strong>
+                                <textarea name="motivo_eliminacion_definitiva" required minlength="5" placeholder="Explique por qu&eacute; debe eliminarse definitivamente"></textarea>
+                            </label>
+                        </div>
+                        <div class="modal-footer modal-footer-center">
+                            <a href="#" class="btn">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Eliminar definitivamente</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
 
     {% if usuario %}
         <p class="documentos-hint">Usuario simulado: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>

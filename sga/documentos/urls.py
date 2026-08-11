@@ -17,6 +17,11 @@ urlpatterns = [
     path("papelera/", views.papelera_documentos, name="papelera"),
     path("<int:id_documento>/restaurar/", views.restaurar_documento, name="restaurar"),
     path(
+        "<int:id_documento>/eliminar-definitivamente/",
+        views.eliminar_documento_definitivamente,
+        name="eliminar_definitivamente",
+    ),
+    path(
         "<int:id_documento>/versiones/<int:id_version>/restaurar/",
         views.restaurar_version_documento,
         name="restaurar_version",
