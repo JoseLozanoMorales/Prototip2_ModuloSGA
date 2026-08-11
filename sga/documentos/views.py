@@ -440,8 +440,10 @@ def _sincronizar_versionamiento_documento(id_documento):
 def _listar_documentos_modulo(usuario, busqueda, anio):
     return _consultar_filas(
         """
-        SELECT *
-        FROM fn_listar_documentos_modulo(%s, %s, %s, %s, %s, %s);
+        SELECT listado.*
+        FROM fn_listar_documentos_modulo(%s, %s, %s, %s, %s, %s) AS listado
+        JOIN docs d ON d.id_documento = listado.id_documento
+        WHERE d.fecha_eliminacion IS NULL;
         """,
         [
             usuario["id_usuario_externo"],
@@ -455,13 +457,61 @@ def _listar_documentos_modulo(usuario, busqueda, anio):
 
 
 def _listar_papelera_fallback(busqueda, anio):
-    """Consulta documentos eliminados cuando la funciÃ³n nueva aÃºn no existe."""
+    """Lista cada documento y versión eliminada como un elemento independiente."""
+    texto_busqueda = (busqueda or "").strip()
+    patron_busqueda = f"%{texto_busqueda}%"
+    anio_consulta = _anio_entero(anio)
     return _consultar_filas(
         """
+        WITH papelera AS (
+            SELECT
+                'DOCUMENTO'::text AS tipo_item,
+                d.id_documento,
+                NULL::bigint AS id_version,
+                d.titulo,
+                NULL::integer AS numero_version,
+                NULL::text AS archivo_nombre,
+                EXTRACT(YEAR FROM d.fecha_aprobacion)::integer AS anio,
+                d.fecha_eliminacion,
+                d.motivo_eliminacion
+            FROM docs d
+            WHERE d.fecha_eliminacion IS NOT NULL
+
+            UNION ALL
+
+            SELECT
+                'VERSION'::text AS tipo_item,
+                d.id_documento,
+                v.id_version,
+                d.titulo,
+                v.numero_version,
+                v.archivo_nombre,
+                EXTRACT(YEAR FROM d.fecha_aprobacion)::integer AS anio,
+                v.fecha_eliminacion,
+                v.motivo_eliminacion
+            FROM docs d
+            JOIN doc_versions v ON v.id_documento = d.id_documento
+            WHERE COALESCE(v.estado, 'INACTIVO') = 'ELIMINADO'
+        )
         SELECT *
-        FROM fn_listar_papelera_documentos(%s, %s);
+        FROM papelera
+        WHERE (
+            %s = ''
+            OR titulo ILIKE %s
+            OR COALESCE(archivo_nombre, '') ILIKE %s
+        )
+          AND (%s IS NULL OR anio = %s)
+        ORDER BY titulo ASC,
+                 CASE tipo_item WHEN 'DOCUMENTO' THEN 0 ELSE 1 END,
+                 numero_version ASC NULLS FIRST;
         """,
-        [busqueda or "", _anio_entero(anio)],
+        [
+            texto_busqueda,
+            patron_busqueda,
+            patron_busqueda,
+            anio_consulta,
+            anio_consulta,
+        ],
     )
 
 
@@ -487,14 +537,29 @@ def _adjuntar_detalles_editor(documentos, catalogos_acceso):
     if not documentos:
         return
 
+    documentos_sin_versiones = []
     for documento in documentos:
-        versiones = _obtener_versiones(documento["id_documento"])
+        try:
+            versiones = _obtener_versiones(documento["id_documento"])
+        except Http404:
+            # Un dato heredado inconsistente no debe provocar un 404 en toda
+            # la lista. Sus versiones eliminadas siguen recuperables desde la papelera.
+            documentos_sin_versiones.append(documento)
+            continue
         documento["versiones"] = versiones
         id_version_vigente = documento.get("id_version_vigente")
         if not any(version["id_version"] == id_version_vigente for version in versiones):
             id_version_vigente = None
         version_vigente = _seleccionar_version(versiones, id_version_vigente)
         documento["id_version_preview"] = version_vigente["id_version"]
+
+    if documentos_sin_versiones:
+        documentos[:] = [
+            documento for documento in documentos if documento not in documentos_sin_versiones
+        ]
+
+    if not documentos:
+        return
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
     accesos = _consultar_filas(
@@ -1588,37 +1653,103 @@ def _validar_cambio_vigencia_version(versiones, id_version, estado_version):
 
 
 def _eliminar_documento_logico(id_documento, motivo, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_eliminar_documento_logico(%s, %s, %s);
-        """,
-        [id_documento, motivo, usuario["id_usuario_externo"]],
-    )
+    with transaction.atomic():
+        # La baja lógica retira automáticamente la vigencia. La publicación
+        # es la única condición que debe resolver el editor previamente.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE docs SET id_version_vigente = NULL WHERE id_documento = %s;",
+                [id_documento],
+            )
+            cursor.execute(
+                """
+                UPDATE doc_versions
+                SET estado = 'INACTIVO'
+                WHERE id_documento = %s AND estado = 'VIGENTE';
+                """,
+                [id_documento],
+            )
+        _ejecutar_procedimiento(
+            """
+            CALL sp_eliminar_documento_logico(%s, %s, %s);
+            """,
+            [id_documento, motivo, usuario["id_usuario_externo"]],
+        )
 
 
-def _documento_tiene_version_vigente(id_documento):
+def _documento_tiene_version_publicada(id_documento, id_version=None):
+    if not _publicacion_habilitada():
+        return False
+
+    parametros = [id_documento]
+    filtro_version = ""
+    if id_version is not None:
+        filtro_version = "AND id_version = %s"
+        parametros.append(id_version)
     filas = _consultar_filas(
-        """
-        SELECT fn_documento_tiene_version_vigente(%s) AS tiene_vigente;
+        f"""
+        SELECT EXISTS (
+            SELECT 1
+            FROM doc_versions
+            WHERE id_documento = %s
+              {filtro_version}
+              AND COALESCE(publicado, FALSE) = TRUE
+        ) AS tiene_publicada;
         """,
-        [id_documento],
+        parametros,
     )
-    return bool(filas and filas[0]["tiene_vigente"])
+    return bool(filas and filas[0]["tiene_publicada"])
 
 
 def _eliminar_version_logica(id_documento, id_version, motivo, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_eliminar_version_documento_logico(%s, %s, %s, %s, %s);
-        """,
-        [
-            id_documento,
-            id_version,
-            motivo,
-            usuario["id_usuario_externo"],
-            usuario.get("nombre_usuario", ""),
-        ],
-    )
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id_version
+                FROM doc_versions
+                WHERE id_documento = %s
+                  AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
+                FOR UPDATE;
+                """,
+                [id_documento],
+            )
+            ids_versiones = {fila[0] for fila in cursor.fetchall()}
+            if id_version not in ids_versiones:
+                raise ValueError("La versión seleccionada no pertenece al documento.")
+            if len(ids_versiones) <= 1:
+                raise ValueError(
+                    "No se puede eliminar la única versión del documento. "
+                    "Para enviarlo a la papelera, elimine el documento completo."
+                )
+            cursor.execute(
+                """
+                UPDATE docs
+                SET id_version_vigente = NULL
+                WHERE id_documento = %s AND id_version_vigente = %s;
+                """,
+                [id_documento, id_version],
+            )
+            cursor.execute(
+                """
+                UPDATE doc_versions
+                SET estado = 'INACTIVO'
+                WHERE id_documento = %s AND id_version = %s AND estado = 'VIGENTE';
+                """,
+                [id_documento, id_version],
+            )
+        _ejecutar_procedimiento(
+            """
+            CALL sp_eliminar_version_documento_logico(%s, %s, %s, %s, %s);
+            """,
+            [
+                id_documento,
+                id_version,
+                motivo,
+                usuario["id_usuario_externo"],
+                usuario.get("nombre_usuario", ""),
+            ],
+        )
     _sincronizar_versionamiento_documento(id_documento)
 
 
@@ -1733,6 +1864,63 @@ def _eliminar_archivo_version_fisico(version):
         raise ValueError("La ruta del PDF heredado no es válida.")
     if ruta_heredada.exists():
         ruta_heredada.unlink()
+
+
+def _eliminar_version_fisica(id_documento, id_version, motivo, usuario):
+    """Elimina permanentemente una versión que ya se encuentra en la papelera."""
+    with transaction.atomic():
+        filas = _consultar_filas(
+            """
+            SELECT id_version, id_documento, numero_version, archivo_nombre,
+                   archivo_path, uuid_version, fecha_eliminacion, motivo_eliminacion
+            FROM doc_versions
+            WHERE id_documento = %s AND id_version = %s
+            FOR UPDATE;
+            """,
+            [id_documento, id_version],
+        )
+        if not filas:
+            raise ValueError("La versión no existe o no pertenece al documento.")
+
+        version = filas[0]
+        if not version.get("fecha_eliminacion"):
+            raise ValueError(
+                "Solo se puede eliminar definitivamente una versión que esté en la papelera."
+            )
+
+        resumen = {
+            "id_documento": id_documento,
+            "id_version_eliminada": id_version,
+            "numero_version": version.get("numero_version"),
+            "archivo_nombre": version.get("archivo_nombre"),
+            "uuid_version": str(version.get("uuid_version") or ""),
+            "motivo_baja_logica": version.get("motivo_eliminacion"),
+            "motivo_eliminacion_definitiva": motivo,
+        }
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO documento_auditoria
+                    (id_documento, id_version, id_usuario_externo, nombre_usuario, accion,
+                     mensaje, datos_anteriores)
+                VALUES (%s, %s, %s, %s, 'ELIMINACION_DEFINITIVA_VERSION', %s, %s::jsonb);
+                """,
+                [
+                    id_documento,
+                    id_version,
+                    usuario["id_usuario_externo"],
+                    usuario.get("nombre_usuario", ""),
+                    motivo,
+                    json.dumps(resumen, ensure_ascii=False),
+                ],
+            )
+            cursor.execute(
+                "UPDATE docs SET id_version_vigente = NULL WHERE id_version_vigente = %s;",
+                [id_version],
+            )
+            cursor.execute("DELETE FROM doc_versions WHERE id_version = %s;", [id_version])
+
+    return version
 
 
 def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
@@ -2052,6 +2240,38 @@ def eliminar_documento_definitivamente(request, id_documento):
 
 
 @require_POST
+def eliminar_version_definitivamente(request, id_documento, id_version):
+    """Elimina permanentemente una versión eliminada lógicamente."""
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    motivo = request.POST.get("motivo_eliminacion_definitiva", "").strip()
+    if len(motivo) < 5:
+        messages.error(
+            request,
+            "El motivo de la eliminación definitiva es obligatorio y debe tener al menos 5 caracteres.",
+        )
+        return redirect("documentos:papelera")
+
+    try:
+        version = _eliminar_version_fisica(id_documento, id_version, motivo, usuario)
+        try:
+            _eliminar_archivo_version_fisico(version)
+        except (OSError, ValueError):
+            messages.warning(
+                request,
+                "La versión fue eliminada definitivamente, pero no se pudo borrar su archivo físico. "
+                "Revisa el almacenamiento.",
+            )
+        else:
+            messages.success(request, "Versión eliminada definitivamente.")
+    except (DatabaseError, ValueError) as error:
+        messages.error(request, f"No se pudo eliminar definitivamente la versión: {error}")
+    return redirect("documentos:papelera")
+
+
+@require_POST
 def crear_documento(request):
     usuario = _requerir_editor(request)
     if not usuario:
@@ -2318,14 +2538,22 @@ def publicar_versiones_documento(request, id_documento):
         _obtener_documento_para_edicion(id_documento)
         versiones = _obtener_versiones(id_documento)
         ids_disponibles = {int(version["id_version"]) for version in versiones}
-        ids_publicados = set(_ids_enteros_formulario(request, "id_version_publicada"))
+        retirar_todas = request.POST.get("accion_publicacion") == "retirar_todas"
+        ids_publicados = (
+            set()
+            if retirar_todas
+            else set(_ids_enteros_formulario(request, "id_version_publicada"))
+        )
         ids_invalidos = ids_publicados - ids_disponibles
         if ids_invalidos:
             raise ValueError("Una o mas versiones seleccionadas no pertenecen al documento.")
 
         with transaction.atomic():
             _guardar_publicacion_versiones(id_documento, ids_publicados, usuario)
-        messages.success(request, "Estado de publicacion guardado correctamente.")
+        if retirar_todas:
+            messages.success(request, "Publicación del documento retirada correctamente.")
+        else:
+            messages.success(request, "Estado de publicación guardado correctamente.")
     except (DatabaseError, ValueError) as error:
         messages.error(request, f"No se pudo guardar la publicacion: {error}")
     return redirect("documentos:lista")
@@ -2343,6 +2571,10 @@ def eliminar_documento(request, id_documento):
         motivo = request.POST.get("motivo_eliminacion", "").strip() or "Eliminación lógica desde Django"
         if alcance == "version":
             id_version = int(request.POST.get("id_version_eliminacion", ""))
+            if _documento_tiene_version_publicada(id_documento, id_version):
+                raise ValueError(
+                    "Para eliminar esta versión, primero debe quitar su publicación."
+                )
             version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
                 id_documento,
                 vigente=True,
@@ -2361,9 +2593,9 @@ def eliminar_documento(request, id_documento):
                 messages.warning(request, str(error_chroma_vigencia))
             messages.success(request, "Versión eliminada lógicamente.")
         elif alcance == "documento":
-            if documento.get("estado") == "VIGENTE" or _documento_tiene_version_vigente(id_documento):
+            if _documento_tiene_version_publicada(id_documento):
                 raise ValueError(
-                    "Para eliminar el documento completo no debe existir ninguna version vigente."
+                    "Para eliminar el documento, primero debe quitar la publicación de todas sus versiones."
                 )
             _eliminar_documento_logico(id_documento, motivo, usuario)
             messages.success(request, "Documento eliminado lógicamente.")

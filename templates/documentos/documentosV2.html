@@ -127,7 +127,7 @@
                                         <div class="menu-box" hidden>
                                             <a href="#modal-editar-{{ doc.id_documento }}"><i class="fa fa-pencil"></i> Editar</a>
                                             <a href="#modal-version-{{ doc.id_documento }}"><i class="fa fa-files-o"></i> Agregar nueva versi&oacute;n</a>
-                                            <a href="#modal-publicar-{{ doc.id_documento }}"><i class="fa fa-check-square-o"></i> Publicar</a>
+                                            <a href="#modal-publicar-{{ doc.id_documento }}"><i class="fa fa-check-square-o"></i> {% if doc.publicado %}Quitar publicaci&oacute;n{% else %}Gestionar publicaci&oacute;n{% endif %}</a>
                                             {% if doc.estado_ia != 'LEIDO' %}
                                                 <form class="menu-action-form" action="{% url 'documentos:reintentar_analisis_ia' id_documento=doc.id_documento %}" method="post">
                                                     {% csrf_token %}
@@ -400,11 +400,12 @@
 
             <div id="modal-publicar-{{ doc.id_documento }}" class="modal-layer">
                 <div class="modal-card modal-medium">
-                    <div class="modal-header"><h2>Publicar versiones</h2></div>
+                    <div class="modal-header"><h2>Gestionar publicaci&oacute;n</h2></div>
                     <form action="{% url 'documentos:publicar' id_documento=doc.id_documento %}" method="post" class="document-form">
                         {% csrf_token %}
                         <div class="publish-modal-body">
                             <h3>{{ doc.titulo }}</h3>
+                            <p class="delete-note">Marque las versiones que deben estar publicadas. Para quitar una publicaci&oacute;n, desmarque la versi&oacute;n y guarde los cambios.</p>
                             {% if not capacidades.puede_publicar_version %}
                                 <p class="delete-note">La publicaci&oacute;n no est&aacute; disponible en esta base de datos. Ejecute la migraci&oacute;n de publicaci&oacute;n de versiones.</p>
                             {% endif %}
@@ -436,6 +437,9 @@
                         </div>
                         <div class="modal-footer">
                             <a href="#" class="btn">Cerrar</a>
+                            {% if doc.publicado %}
+                                <button type="submit" name="accion_publicacion" value="retirar_todas" class="btn btn-danger" {% if not capacidades.puede_publicar_version %}disabled{% endif %}>Quitar publicaci&oacute;n</button>
+                            {% endif %}
                             <button type="submit" class="btn btn-success" {% if not capacidades.puede_publicar_version %}disabled{% endif %}>Guardar</button>
                         </div>
                     </form>
@@ -452,24 +456,24 @@
                             <p><strong>{{ doc.titulo }}</strong></p>
                             <div class="delete-options">
                                 <label class="radio-row">
-                                    <input type="radio" name="alcance_eliminacion" value="documento" checked {% if doc.estado != 'INACTIVO' %}disabled{% endif %}>
+                                    <input type="radio" name="alcance_eliminacion" value="documento" checked {% if doc.publicado %}disabled{% endif %}>
                                     <span>Eliminar documento completo y sus versiones</span>
                                 </label>
-                                {% if doc.estado != 'INACTIVO' %}
-                                    <p class="delete-note">Para eliminar, primero cambie la versi&oacute;n vigente a No vigente.</p>
+                                {% if doc.publicado %}
+                                    <p class="delete-note">Para eliminar el documento, primero quite la publicaci&oacute;n de todas sus versiones.</p>
                                 {% endif %}
                                 {% if capacidades.puede_eliminar_version and doc.versiones|length > 1 %}
                                     <label class="radio-row">
-                                        <input type="radio" name="alcance_eliminacion" value="version" {% if doc.estado != 'INACTIVO' %}checked{% endif %}>
+                                        <input type="radio" name="alcance_eliminacion" value="version" {% if doc.publicado %}checked{% endif %}>
                                         <span>Eliminar una versi&oacute;n espec&iacute;fica</span>
                                     </label>
                                     <label>
                                         <strong>Versi&oacute;n a eliminar</strong>
-                                        <select name="id_version_eliminacion" {% if doc.estado == 'INACTIVO' %}disabled{% endif %}>
+                                        <select name="id_version_eliminacion" {% if not doc.publicado %}disabled{% endif %}>
                                             <option value="">Seleccione una versi&oacute;n</option>
                                             {% for version in doc.versiones %}
-                                                <option value="{{ version.id_version }}" {% if version.estado == 'VIGENTE' or version.vigente %}disabled{% endif %}>
-                                                    Versi&oacute;n {{ version.numero_version }}{% if version.vigente %} - vigente{% endif %}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
+                                                <option value="{{ version.id_version }}" {% if version.publicado %}disabled{% endif %}>
+                                                    Versi&oacute;n {{ version.numero_version }}{% if version.vigente %} - vigente{% endif %}{% if version.publicado %} - publicada{% endif %}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
                                                 </option>
                                             {% endfor %}
                                         </select>
@@ -487,7 +491,7 @@
                         </div>
                         <div class="modal-footer modal-footer-center">
                             <a href="#" class="btn">Volver</a>
-                            <button type="submit" class="btn btn-danger" {% if doc.estado != 'INACTIVO' and not capacidades.puede_eliminar_version or doc.estado != 'INACTIVO' and doc.versiones|length == 1 %}disabled{% endif %}>Eliminar</button>
+                            <button type="submit" class="btn btn-danger" {% if doc.publicado and not capacidades.puede_eliminar_version or doc.publicado and doc.versiones|length == 1 %}disabled{% endif %}>Eliminar</button>
                         </div>
                     </form>
                 </div>

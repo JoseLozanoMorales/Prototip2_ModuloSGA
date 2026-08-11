@@ -22,6 +22,11 @@ urlpatterns = [
         name="eliminar_definitivamente",
     ),
     path(
+        "<int:id_documento>/versiones/<int:id_version>/eliminar-definitivamente/",
+        views.eliminar_version_definitivamente,
+        name="eliminar_version_definitivamente",
+    ),
+    path(
         "<int:id_documento>/versiones/<int:id_version>/restaurar/",
         views.restaurar_version_documento,
         name="restaurar_version",

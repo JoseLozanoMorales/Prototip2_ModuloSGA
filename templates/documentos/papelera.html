@@ -63,6 +63,7 @@
                         <th>Tipo</th>
                         <th>T&iacute;tulo</th>
                         <th>Versi&oacute;n</th>
+                        <th>Archivo</th>
                         <th>A&ntilde;o</th>
                         <th>Fecha eliminaci&oacute;n</th>
                         <th>Motivo</th>
@@ -76,6 +77,7 @@
                             <td>{{ item.tipo_item }}</td>
                             <td class="title-cell">{{ item.titulo }}</td>
                             <td>{% if item.numero_version %}Versi&oacute;n {{ item.numero_version }}{% else %}-{% endif %}</td>
+                            <td>{{ item.archivo_nombre|default:'-' }}</td>
                             <td>{{ item.anio|default:'-' }}</td>
                             <td>{{ item.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
                             <td>{{ item.motivo_eliminacion|default:'-' }}</td>
@@ -93,6 +95,9 @@
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
                                     </form>
+                                    <a href="#modal-eliminar-version-definitivamente-{{ item.id_version }}" class="btn btn-danger btn-mini">
+                                        Eliminar definitivamente
+                                    </a>
                                 {% else %}
                                     <span class="muted">No disponible</span>
                                 {% endif %}
@@ -100,7 +105,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center empty">No hay documentos ni versiones eliminadas.</td>
+                            <td colspan="9" class="text-center empty">No hay documentos ni versiones eliminadas.</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -120,6 +125,32 @@
                             <h3>&iquest;Seguro que deseas eliminar definitivamente este documento?</h3>
                             <p><strong>{{ item.titulo }}</strong></p>
                             <p class="delete-note">Esta acci&oacute;n no se puede deshacer. Se eliminar&aacute;n el documento, todas sus versiones y sus archivos PDF.</p>
+                            <label>
+                                <strong>Motivo de eliminaci&oacute;n definitiva</strong>
+                                <textarea name="motivo_eliminacion_definitiva" required minlength="5" placeholder="Explique por qu&eacute; debe eliminarse definitivamente"></textarea>
+                            </label>
+                        </div>
+                        <div class="modal-footer modal-footer-center">
+                            <a href="#" class="btn">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Eliminar definitivamente</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% for item in documentos %}
+        {% if item.tipo_item == 'VERSION' %}
+            <div id="modal-eliminar-version-definitivamente-{{ item.id_version }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Eliminar versi&oacute;n definitivamente</h2></div>
+                    <form action="{% url 'documentos:eliminar_version_definitivamente' id_documento=item.id_documento id_version=item.id_version %}" method="post" class="document-form">
+                        {% csrf_token %}
+                        <div class="delete-question">
+                            <h3>&iquest;Seguro que deseas eliminar definitivamente esta versi&oacute;n?</h3>
+                            <p><strong>{{ item.titulo }} — Versi&oacute;n {{ item.numero_version }}</strong></p>
+                            <p class="delete-note">Esta acci&oacute;n no se puede deshacer. Se eliminar&aacute; el archivo PDF de esta versi&oacute;n.</p>
                             <label>
                                 <strong>Motivo de eliminaci&oacute;n definitiva</strong>
                                 <textarea name="motivo_eliminacion_definitiva" required minlength="5" placeholder="Explique por qu&eacute; debe eliminarse definitivamente"></textarea>
