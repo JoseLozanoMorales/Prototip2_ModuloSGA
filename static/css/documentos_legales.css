@@ -762,6 +762,32 @@
     text-align: center !important;
 }
 
+/* Alcance de eliminación con la misma lectura tabular del modal de publicación. */
+.delete-scope-table {
+    margin: 0;
+}
+
+.delete-scope-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+.delete-scope-table td:first-child {
+    color: #344054;
+    font-weight: 600;
+}
+
+.delete-scope-table .delete-scope-control {
+    text-align: center;
+    width: 62px;
+}
+
+.delete-scope-table input[type="radio"] {
+    margin: 0;
+    min-height: auto;
+    width: auto;
+}
+
 @media (max-width: 1180px) {
     .modal-edit-with-preview {
         width: min(1120px, 100%);

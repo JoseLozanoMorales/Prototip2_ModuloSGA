@@ -455,18 +455,28 @@
                             <h3>&iquest;Desea eliminar este documento legal?</h3>
                             <p><strong>{{ doc.titulo }}</strong></p>
                             <div class="delete-options">
-                                <label class="radio-row">
-                                    <input type="radio" name="alcance_eliminacion" value="documento" checked {% if doc.publicado %}disabled{% endif %}>
-                                    <span>Eliminar documento completo y sus versiones</span>
-                                </label>
+                                <table class="table table-bordered delete-scope-table">
+                                    <tbody>
+                                    <tr>
+                                        <td>Eliminar documento completo y sus versiones</td>
+                                        <td class="delete-scope-control">
+                                            <input type="radio" name="alcance_eliminacion" value="documento" checked {% if doc.publicado %}disabled{% endif %} aria-label="Eliminar documento completo y sus versiones">
+                                        </td>
+                                    </tr>
+                                    {% if capacidades.puede_eliminar_version and doc.versiones|length > 1 %}
+                                        <tr>
+                                            <td>Eliminar una versi&oacute;n espec&iacute;fica</td>
+                                            <td class="delete-scope-control">
+                                                <input type="radio" name="alcance_eliminacion" value="version" {% if doc.publicado %}checked{% endif %} aria-label="Eliminar una versión específica">
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                    </tbody>
+                                </table>
                                 {% if doc.publicado %}
                                     <p class="delete-note">Para eliminar el documento, primero quite la publicaci&oacute;n de todas sus versiones.</p>
                                 {% endif %}
                                 {% if capacidades.puede_eliminar_version and doc.versiones|length > 1 %}
-                                    <label class="radio-row">
-                                        <input type="radio" name="alcance_eliminacion" value="version" {% if doc.publicado %}checked{% endif %}>
-                                        <span>Eliminar una versi&oacute;n espec&iacute;fica</span>
-                                    </label>
                                     <label>
                                         <strong>Versi&oacute;n a eliminar</strong>
                                         <select name="id_version_eliminacion" {% if not doc.publicado %}disabled{% endif %}>

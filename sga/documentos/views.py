@@ -229,33 +229,14 @@ def _adjuntar_estado_ia_documentos(documentos):
     ids_documentos = [documento["id_documento"] for documento in documentos]
     filas = _consultar_filas(
         """
-        SELECT
-            d.id_documento,
-            CASE
-                WHEN v.id_version IS NULL THEN %s
-                ELSE COALESCE(v.estado_ia, %s)
-            END AS estado_ia,
-            v.porcentaje_texto_ia,
-            CASE
-                WHEN v.id_version IS NULL THEN %s
-                ELSE COALESCE(v.mensaje_ia, '')
-            END AS mensaje_ia
-        FROM docs d
-        LEFT JOIN LATERAL (
-            SELECT dv.*
-            FROM doc_versions dv
-            WHERE dv.id_documento = d.id_documento
-              AND COALESCE(dv.estado, 'INACTIVO') = 'VIGENTE'
-            ORDER BY dv.numero_version DESC, dv.id_version DESC
-            LIMIT 1
-        ) v ON TRUE
-        WHERE d.id_documento = ANY(%s);
+        SELECT *
+        FROM fn_obtener_estados_ia_documentos(%s, %s, %s, %s);
         """,
         [
+            ids_documentos,
             ESTADO_IA_OBSERVADO,
             ESTADO_IA_PENDIENTE,
             estado_sin_vigente["mensaje_ia"],
-            ids_documentos,
         ],
     )
     estados = {
@@ -361,17 +342,7 @@ def _adjuntar_publicacion_documentos(documentos):
     ids_documentos = [documento["id_documento"] for documento in documentos]
     filas = _consultar_filas(
         """
-        SELECT
-            d.id_documento,
-            EXISTS (
-                SELECT 1
-                FROM doc_versions v
-                WHERE v.id_documento = d.id_documento
-                  AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
-                  AND COALESCE(v.publicado, FALSE) = TRUE
-            ) AS publicado
-        FROM docs d
-        WHERE d.id_documento = ANY(%s);
+        SELECT * FROM fn_obtener_publicacion_documentos(%s);
         """,
         [ids_documentos],
     )
@@ -395,15 +366,7 @@ def _adjuntar_versionamiento_documentos(documentos):
     ids_documentos = [documento["id_documento"] for documento in documentos]
     filas = _consultar_filas(
         """
-        SELECT
-            d.id_documento,
-            COUNT(v.id_version) >= 2 AS tiene_versionamiento
-        FROM docs d
-        LEFT JOIN doc_versions v
-            ON v.id_documento = d.id_documento
-           AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
-        WHERE d.id_documento = ANY(%s)
-        GROUP BY d.id_documento;
+        SELECT * FROM fn_obtener_versionamiento_documentos(%s);
         """,
         [ids_documentos],
     )
@@ -424,14 +387,7 @@ def _adjuntar_versionamiento_documentos(documentos):
 def _sincronizar_versionamiento_documento(id_documento):
     _ejecutar_procedimiento(
         """
-        UPDATE docs d
-        SET tiene_versionamiento = (
-            SELECT COUNT(*) >= 2
-            FROM doc_versions v
-            WHERE v.id_documento = d.id_documento
-              AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO'
-        )
-        WHERE d.id_documento = %s;
+        CALL sp_sincronizar_versionamiento_documento(%s);
         """,
         [id_documento],
     )
@@ -459,59 +415,12 @@ def _listar_documentos_modulo(usuario, busqueda, anio):
 def _listar_papelera_fallback(busqueda, anio):
     """Lista cada documento y versión eliminada como un elemento independiente."""
     texto_busqueda = (busqueda or "").strip()
-    patron_busqueda = f"%{texto_busqueda}%"
     anio_consulta = _anio_entero(anio)
     return _consultar_filas(
         """
-        WITH papelera AS (
-            SELECT
-                'DOCUMENTO'::text AS tipo_item,
-                d.id_documento,
-                NULL::bigint AS id_version,
-                d.titulo,
-                NULL::integer AS numero_version,
-                NULL::text AS archivo_nombre,
-                EXTRACT(YEAR FROM d.fecha_aprobacion)::integer AS anio,
-                d.fecha_eliminacion,
-                d.motivo_eliminacion
-            FROM docs d
-            WHERE d.fecha_eliminacion IS NOT NULL
-
-            UNION ALL
-
-            SELECT
-                'VERSION'::text AS tipo_item,
-                d.id_documento,
-                v.id_version,
-                d.titulo,
-                v.numero_version,
-                v.archivo_nombre,
-                EXTRACT(YEAR FROM d.fecha_aprobacion)::integer AS anio,
-                v.fecha_eliminacion,
-                v.motivo_eliminacion
-            FROM docs d
-            JOIN doc_versions v ON v.id_documento = d.id_documento
-            WHERE COALESCE(v.estado, 'INACTIVO') = 'ELIMINADO'
-        )
-        SELECT *
-        FROM papelera
-        WHERE (
-            %s = ''
-            OR titulo ILIKE %s
-            OR COALESCE(archivo_nombre, '') ILIKE %s
-        )
-          AND (%s IS NULL OR anio = %s)
-        ORDER BY titulo ASC,
-                 CASE tipo_item WHEN 'DOCUMENTO' THEN 0 ELSE 1 END,
-                 numero_version ASC NULLS FIRST;
+        SELECT * FROM fn_listar_papelera_documentos(%s, %s);
         """,
-        [
-            texto_busqueda,
-            patron_busqueda,
-            patron_busqueda,
-            anio_consulta,
-            anio_consulta,
-        ],
+        [texto_busqueda, anio_consulta],
     )
 
 
@@ -1128,10 +1037,7 @@ def _obtener_contexto_version_chroma(id_documento, id_version=None, vigente=None
 def _obtener_fecha_aprobacion_version(id_documento, id_version):
     filas = _consultar_filas(
         """
-        SELECT fecha_aprobacion
-        FROM doc_versions
-        WHERE id_documento = %s
-          AND id_version = %s;
+        SELECT fn_obtener_fecha_aprobacion_version(%s, %s) AS fecha_aprobacion;
         """,
         [id_documento, id_version],
     )
@@ -1320,55 +1226,34 @@ def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_t
 
     _ejecutar_procedimiento(
         """
-        UPDATE doc_versions
-        SET estado_ia = %s,
-            porcentaje_texto_ia = %s,
-            mensaje_ia = %s,
-            fecha_analisis_ia = CURRENT_TIMESTAMP
-        WHERE id_documento = %s
-          AND id_version = %s;
+        CALL sp_actualizar_estado_ia_version(%s, %s, %s, %s, %s);
         """,
         [
+            id_documento,
+            id_version,
             _normalizar_estado_ia(estado),
             porcentaje_texto,
             str(mensaje or "")[:1000],
-            id_documento,
-            id_version,
         ],
     )
 
 
 def _reservar_reintento_ia(id_documento, id_version):
     """Reserva de forma atomica un reintento y evita dos analisis simultaneos."""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            UPDATE doc_versions
-            SET estado_ia = %s,
-                porcentaje_texto_ia = NULL,
-                mensaje_ia = %s,
-                fecha_analisis_ia = CURRENT_TIMESTAMP
-            WHERE id_documento = %s
-              AND id_version = %s
-              AND estado_ia <> %s
-              AND (
-                    estado_ia <> %s
-                    OR fecha_analisis_ia IS NULL
-                    OR fecha_analisis_ia < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
-              )
-            RETURNING id_version;
-            """,
-            [
-                ESTADO_IA_PENDIENTE,
-                "Reintento de analisis de IA pendiente.",
-                id_documento,
-                id_version,
-                ESTADO_IA_LEIDO,
-                ESTADO_IA_PENDIENTE,
-                settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
-            ],
-        )
-        return cursor.fetchone() is not None
+    filas = _consultar_filas(
+        """
+        SELECT fn_reservar_reintento_ia(%s, %s, %s, %s, %s, %s) AS reservado;
+        """,
+        [
+            id_documento,
+            id_version,
+            ESTADO_IA_PENDIENTE,
+            "Reintento de analisis de IA pendiente.",
+            ESTADO_IA_LEIDO,
+            settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
+        ],
+    )
+    return bool(filas and filas[0]["reservado"])
 
 
 def _procesar_ia_documento_segundo_plano(
