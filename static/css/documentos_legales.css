@@ -2,6 +2,31 @@
     color: #1f2933;
 }
 
+#bety-iframe-container {
+    background: transparent;
+    bottom: 15px;
+    height: 82px;
+    overflow: hidden;
+    position: fixed;
+    right: 15px;
+    transition: width .2s ease, height .2s ease;
+    width: 82px;
+    z-index: 9999;
+}
+
+#bety-iframe-container.abierto {
+    height: min(540px, calc(100vh - 30px));
+    width: min(450px, calc(100vw - 30px));
+}
+
+#bety-chat-iframe {
+    background: transparent;
+    border: 0;
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
 .documentos-header {
     margin-bottom: 14px;
 }
@@ -587,6 +612,21 @@
     resize: vertical;
 }
 
+.document-form.is-version-edit-locked [data-edit-locked-field] {
+    background: #f5f6f8;
+    color: #667085;
+    cursor: not-allowed;
+}
+
+.document-form.is-version-edit-locked .selected-boxes [data-selected-box] {
+    background: #f5f6f8;
+}
+
+.document-form.is-version-edit-locked .selection-chip button:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+}
+
 .form-row {
     border-bottom: 8px solid #f5f6f8;
     padding: 20px 22px;
@@ -844,5 +884,19 @@
 
     .modal-layer {
         padding: 24px 10px;
+    }
+}
+
+@media (max-width: 430px) {
+    #bety-iframe-container {
+        bottom: 5px;
+        height: 82px;
+        right: 5px;
+        width: 82px;
+    }
+
+    #bety-iframe-container.abierto {
+        height: calc(100vh - 10px);
+        width: calc(100vw - 10px);
     }
 }

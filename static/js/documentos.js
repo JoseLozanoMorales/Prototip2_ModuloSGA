@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const button = document.createElement('button');
         button.type = 'button';
+        button.dataset.editLockedControl = '';
         button.setAttribute('aria-label', 'Quitar ' + label);
         button.innerHTML = '&times;';
         chip.append(button);
@@ -48,6 +49,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
         box.append(chip);
         refreshPlaceholder(box);
+    }
+
+    function rememberInitialDisabledState(form) {
+        if (!form) {
+            return;
+        }
+        form.querySelectorAll('[data-edit-locked-control]').forEach(function (control) {
+            if (!control.dataset.initialDisabled) {
+                control.dataset.initialDisabled = control.disabled ? 'true' : 'false';
+            }
+        });
+    }
+
+    function refreshEditLock(select) {
+        const option = select.selectedOptions[0];
+        const form = select.closest('form');
+        if (!option || !form) {
+            return;
+        }
+
+        const locked = (option.dataset.estado || 'INACTIVO') === 'VIGENTE';
+        form.classList.toggle('is-version-edit-locked', locked);
+
+        form.querySelectorAll('[data-edit-locked-field]').forEach(function (field) {
+            field.readOnly = locked;
+            field.title = locked ? 'Primero cambie la version a No vigente y guarde.' : '';
+        });
+
+        form.querySelectorAll('[data-edit-locked-control]').forEach(function (control) {
+            control.disabled = locked || control.dataset.initialDisabled === 'true';
+            control.title = locked ? 'Primero cambie la version a No vigente y guarde.' : '';
+        });
+
+        form.querySelectorAll('.file-button').forEach(function (label) {
+            const input = label.querySelector('input[type="file"]');
+            if (input) {
+                label.classList.toggle('is-disabled', input.disabled);
+            }
+        });
     }
 
     function refreshVersionStatus(select) {
@@ -86,8 +126,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function refreshVersionDetails(select) {
+        rememberInitialDisabledState(select.closest('form'));
         refreshVersionStatus(select);
         refreshPdfViewer(select);
+        refreshEditLock(select);
     }
 
     function refreshActiveModalPdf() {
@@ -291,8 +333,68 @@ document.addEventListener('DOMContentLoaded', function () {
         iaPollTimer = window.setInterval(pollIaStatus, IA_POLL_INTERVAL);
     }
 
+    function parseBetyMessageData(data) {
+        if (!data) {
+            return null;
+        }
+        if (typeof data === 'string') {
+            try {
+                return JSON.parse(data);
+            } catch (error) {
+                return null;
+            }
+        }
+        return data;
+    }
+
+    function initBetyIframe() {
+        const container = document.getElementById('bety-iframe-container');
+        const iframe = document.getElementById('bety-chat-iframe');
+        const origenPermitido = 'http://16.58.71.138:8000';
+
+        if (!container) {
+            return;
+        }
+
+        const abrirChat = function () {
+            container.classList.add('abierto');
+        };
+
+        if (iframe) {
+            iframe.addEventListener('focus', abrirChat);
+        }
+
+        container.addEventListener('click', function () {
+            if (!container.classList.contains('abierto')) {
+                abrirChat();
+            }
+        });
+
+        window.addEventListener('blur', function () {
+            if (document.activeElement === iframe && !container.classList.contains('abierto')) {
+                abrirChat();
+            }
+        });
+
+        window.addEventListener('message', function (event) {
+            const data = parseBetyMessageData(event.data);
+
+            if (event.origin !== origenPermitido || !data || !data.tipo) {
+                return;
+            }
+
+            if (data.tipo === 'BETY_CHAT_ABIERTO') {
+                container.classList.add('abierto');
+            }
+
+            if (data.tipo === 'BETY_CHAT_CERRADO') {
+                container.classList.remove('abierto');
+            }
+        });
+    }
+
     document.querySelectorAll('[data-selected-box]').forEach(refreshPlaceholder);
-    document.querySelectorAll('[data-version-select]').forEach(refreshVersionStatus);
+    document.querySelectorAll('[data-version-select]').forEach(refreshVersionDetails);
     document.querySelectorAll('[data-version-select]').forEach(function (select) {
         select.addEventListener('change', function () {
             refreshVersionDetails(select);
@@ -334,6 +436,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const select = event.target.closest('.access-picker');
         if (!select) {
+            return;
+        }
+        if (select.disabled) {
             return;
         }
 
@@ -382,6 +487,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!button) {
             return;
         }
+        if (button.disabled) {
+            return;
+        }
 
         const box = button.closest('[data-selected-box]');
         button.closest('.selection-chip').remove();
@@ -415,4 +523,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     startIaPolling();
+    initBetyIframe();
 });

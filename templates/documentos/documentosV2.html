@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260807-versionamiento" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260811-bety-chat" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -513,9 +513,18 @@
         <p class="documentos-hint">Usuario simulado: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>
     {% endif %}
 </div>
+
+<div id="bety-iframe-container">
+    <iframe
+        id="bety-chat-iframe"
+        src="http://16.58.71.138:8000/chatbot/{{ sessionid|urlencode }}/"
+        title="Chatbot BettIA"
+        loading="lazy"
+    ></iframe>
+</div>
 {% endblock %}
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260807-ia-badge-only"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260811-bety-chat-focus"></script>
 {% endblock %}

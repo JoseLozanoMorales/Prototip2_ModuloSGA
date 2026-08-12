@@ -88,6 +88,7 @@ def lista_documentos(request):
     documentos = []
     error_base_datos = None
     usuario = _obtener_usuario_modulo()
+    sessionid = _obtener_sessionid_chat(request)
     catalogos_acceso = _catalogos_acceso()
     busqueda = request.GET.get("q", "").strip()
     anio = request.GET.get("anio", "").strip()
@@ -131,8 +132,12 @@ def lista_documentos(request):
             "fecha_aprobacion_minima": FECHA_APROBACION_MINIMA.isoformat(),
             "fecha_aprobacion_maxima": date.today().isoformat(),
             "error_base_datos": error_base_datos,
+            "sessionid": sessionid,
             "capacidades": _capacidades_base() if usuario["rol_modulo"] == "EDITOR" else {},
             "catalogos_acceso": catalogos_acceso,
+            "perfiles_acceso": catalogos_acceso["perfiles"],
+            "grupos_acceso": catalogos_acceso["grupos"],
+            "tipos_periodo_acceso": catalogos_acceso["tipos_periodo"],
         },
     )
 
@@ -162,6 +167,13 @@ def _obtener_usuario_modulo():
     except DatabaseError:
         usuario["rol_modulo"] = "LECTOR"
     return usuario
+
+
+def _obtener_sessionid_chat(request):
+    """Asegura un identificador de sesion para el iframe de BettIA."""
+    if not request.session.session_key:
+        request.session.create()
+    return request.session.session_key
 
 
 def _ejecutar_procedimiento(sql, parametros):
@@ -484,14 +496,17 @@ def _adjuntar_detalles_editor(documentos, catalogos_acceso):
             _valores_acceso(accesos_documento, "id_perfil_externo"),
             _nombres_catalogo(catalogos_acceso["perfiles"]),
         )
+        documento["perfiles_seleccionados_opciones"] = documento["perfiles_seleccionados"]
         documento["grupos_seleccionados"] = _opciones_acceso(
             _valores_acceso(accesos_documento, "id_grupo_externo"),
             _nombres_catalogo(catalogos_acceso["grupos"]),
         )
+        documento["grupos_seleccionados_opciones"] = documento["grupos_seleccionados"]
         documento["periodos_seleccionados"] = _opciones_acceso(
             _valores_acceso(accesos_documento, "id_tipo_periodo_externo"),
             _nombres_catalogo(catalogos_acceso["tipos_periodo"]),
         )
+        documento["periodos_seleccionados_opciones"] = documento["periodos_seleccionados"]
 
 
 def _valores_acceso(accesos, campo):
@@ -1537,6 +1552,95 @@ def _validar_cambio_vigencia_version(versiones, id_version, estado_version):
         )
 
 
+def _version_esta_vigente(version):
+    return bool(version.get("vigente") or version.get("estado") == "VIGENTE")
+
+
+def _fecha_comparable(valor):
+    if valor is None:
+        return None
+    if hasattr(valor, "date"):
+        return valor.date()
+    return valor
+
+
+def _texto_comparable(valor):
+    return str(valor or "").strip()
+
+
+def _accesos_documento_combinaciones(id_documento):
+    accesos = _consultar_filas(
+        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [[id_documento]]
+    )
+    return {
+        (
+            acceso.get("id_perfil_externo"),
+            acceso.get("id_grupo_externo"),
+            acceso.get("id_tipo_periodo_externo"),
+        )
+        for acceso in accesos
+    } or {(None, None, None)}
+
+
+def _accesos_comparables(accesos):
+    return set(accesos) or {(None, None, None)}
+
+
+def _edicion_mantiene_metadata_actual(
+    documento,
+    id_documento,
+    titulo,
+    descripcion,
+    palabras_clave,
+    fecha_aprobacion,
+    accesos,
+):
+    return (
+        _texto_comparable(titulo) == _texto_comparable(documento.get("titulo"))
+        and _texto_comparable(descripcion) == _texto_comparable(documento.get("descripcion"))
+        and _texto_comparable(palabras_clave) == _texto_comparable(documento.get("palabras_clave"))
+        and _fecha_comparable(fecha_aprobacion)
+        == _fecha_comparable(documento.get("fecha_aprobacion"))
+        and _accesos_comparables(accesos)
+        == _accesos_documento_combinaciones(id_documento)
+    )
+
+
+def _validar_edicion_version_vigente(
+    documento,
+    version,
+    estado_version,
+    archivo,
+    titulo,
+    descripcion,
+    palabras_clave,
+    fecha_aprobacion,
+    accesos,
+):
+    if not _version_esta_vigente(version):
+        return
+
+    if estado_version != "INACTIVO":
+        raise ValueError(
+            "No se puede editar una version vigente. Primero cambie la version "
+            "a No vigente y guarde los cambios."
+        )
+
+    if archivo or not _edicion_mantiene_metadata_actual(
+        documento,
+        documento["id_documento"],
+        titulo,
+        descripcion,
+        palabras_clave,
+        fecha_aprobacion,
+        accesos,
+    ):
+        raise ValueError(
+            "Para reemplazar el PDF o editar los campos del documento, primero "
+            "guarde la version como No vigente. Luego vuelva a editarla."
+        )
+
+
 def _eliminar_documento_logico(id_documento, motivo, usuario):
     with transaction.atomic():
         # La baja lógica retira automáticamente la vigencia. La publicación
@@ -2233,7 +2337,7 @@ def editar_documento(request, id_documento):
         estado_version = request.POST.get("estado_version", "VIGENTE")
         if estado_version not in {"VIGENTE", "INACTIVO"}:
             raise ValueError("El estado de la versión no es válido.")
-        _obtener_documento_para_edicion(id_documento)
+        documento = _obtener_documento_para_edicion(id_documento)
         puede_cambiar_estado_version = _columna_existe("doc_versions", "estado")
         if estado_version != "VIGENTE" and not puede_cambiar_estado_version:
             raise ValueError(
@@ -2243,10 +2347,9 @@ def editar_documento(request, id_documento):
             raise ValueError("El titulo del documento es obligatorio.")
 
         versiones = _obtener_versiones(id_documento)
-        _seleccionar_version(versiones, id_version)
+        version_seleccionada = _seleccionar_version(versiones, id_version)
         if puede_cambiar_estado_version:
             _validar_cambio_vigencia_version(versiones, id_version, estado_version)
-        _validar_titulo_unico(titulo, id_documento)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
         version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
@@ -2258,6 +2361,18 @@ def editar_documento(request, id_documento):
             raise ValueError(
                 "El reemplazo de archivos no esta disponible en esta base de datos."
             )
+        _validar_edicion_version_vigente(
+            documento,
+            version_seleccionada,
+            estado_version,
+            archivo,
+            titulo,
+            descripcion,
+            palabras_clave,
+            fecha_aprobacion,
+            accesos,
+        )
+        _validar_titulo_unico(titulo, id_documento)
         if archivo:
             version_anterior_chroma = _obtener_contexto_version_chroma(
                 id_documento,
