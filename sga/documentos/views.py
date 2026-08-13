@@ -97,6 +97,7 @@ def lista_documentos(request):
         _adjuntar_publicacion_documentos(documentos)
         if usuario["rol_modulo"] != "EDITOR":
             documentos = _filtrar_documentos_publicados(documentos)
+            _adjuntar_ultima_version_documentos(documentos, solo_publicadas=True)
         else:
             _adjuntar_versionamiento_documentos(documentos)
         _adjuntar_estado_ia_documentos(documentos)
@@ -393,6 +394,41 @@ def _adjuntar_versionamiento_documentos(documentos):
         documento["tiene_versionamiento"] = tiene_versionamiento
         documento["tiene_versionamiento_texto"] = (
             "Sí" if tiene_versionamiento else "No"
+        )
+
+
+def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
+    if not documentos:
+        return
+
+    filtro_publicacion = ""
+    if solo_publicadas and _publicacion_habilitada():
+        filtro_publicacion = "AND COALESCE(publicado, FALSE) = TRUE"
+
+    ids_documentos = [documento["id_documento"] for documento in documentos]
+    filas = _consultar_filas(
+        f"""
+        SELECT DISTINCT ON (id_documento)
+               id_documento,
+               numero_version
+        FROM doc_versions
+        WHERE id_documento = ANY(%s)
+          AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
+          {filtro_publicacion}
+        ORDER BY id_documento, numero_version DESC, id_version DESC;
+        """,
+        [ids_documentos],
+    )
+    ultima_version_por_documento = {
+        fila["id_documento"]: fila.get("numero_version") for fila in filas
+    }
+    for documento in documentos:
+        numero_version = ultima_version_por_documento.get(documento["id_documento"])
+        if numero_version is None:
+            numero_version = documento.get("numero_version_vigente")
+        documento["ultima_version"] = numero_version
+        documento["ultima_version_texto"] = (
+            f"Versión {numero_version}" if numero_version else "No disponible"
         )
 
 

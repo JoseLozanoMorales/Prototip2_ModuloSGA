@@ -152,6 +152,12 @@
     width: 140px;
 }
 
+.documentos-table .latest-version-column,
+.documentos-table .latest-version-cell {
+    text-align: center;
+    width: 130px;
+}
+
 .ia-status-cell {
     text-align: center;
 }
@@ -236,6 +242,18 @@
     background: #f2f4f7;
     border-color: #d0d5dd;
     color: #475467;
+}
+
+.latest-version-badge {
+    background: #eef4ff;
+    border: 1px solid #b2ccff;
+    border-radius: 12px;
+    color: #175cd3;
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 4px 8px;
 }
 
 .ia-analysis-toast-stack {
