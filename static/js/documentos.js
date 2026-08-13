@@ -522,6 +522,33 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    document.querySelectorAll('[data-live-search-input]').forEach(function (input) {
+        const table = document.getElementById(input.dataset.liveSearchTarget);
+        if (!table) {
+            return;
+        }
+
+        const rows = Array.from(table.querySelectorAll('[data-live-search-row]'));
+        const emptyRow = table.querySelector('[data-live-search-empty]');
+
+        input.addEventListener('input', function () {
+            const query = input.value.trim().toLocaleLowerCase();
+            let matches = 0;
+
+            rows.forEach(function (row) {
+                const matchesQuery = !query || (row.dataset.searchText || '').toLocaleLowerCase().includes(query);
+                row.hidden = !matchesQuery;
+                if (matchesQuery) {
+                    matches += 1;
+                }
+            });
+
+            if (emptyRow) {
+                emptyRow.hidden = matches > 0;
+            }
+        });
+    });
+
     startIaPolling();
     initBetyIframe();
 });

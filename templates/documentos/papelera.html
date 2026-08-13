@@ -4,7 +4,7 @@
 {% block pagetitle %}Papelera - documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260729-menu-fix-3" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260813-trash-versions" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -36,6 +36,15 @@
                     <input type="text" name="q" value="{{ busqueda }}" placeholder="Buscar documentos o versiones eliminadas">
                 </div>
                 <button type="submit" class="btn btn-primary">Buscar</button>
+                <span class="year-filter">
+                    <span class="add-on" aria-hidden="true"><i class="fa fa-filter"></i></span>
+                    <select name="anio" class="auto-submit-select" aria-label="Filtrar por año">
+                        <option value="">Seleccione un a&ntilde;o</option>
+                        {% for anio_disponible in anios_disponibles %}
+                            <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if busqueda or anio %}
                     <a href="{% url 'documentos:papelera' %}" class="btn btn-link">Limpiar</a>
                 {% endif %}
@@ -49,17 +58,6 @@
                 <table class="table table-striped table-bordered documentos-table">
                     <thead>
                     <tr>
-                        <th class="filter-cell">
-                            <form method="get">
-                                <input type="hidden" name="q" value="{{ busqueda }}">
-                                <select name="anio" class="auto-submit-select">
-                                    <option value="">Seleccione un a&ntilde;o</option>
-                                    {% for anio_disponible in anios_disponibles %}
-                                        <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        </th>
                         <th>Tipo</th>
                         <th>T&iacute;tulo</th>
                         <th>Versi&oacute;n</th>
@@ -71,18 +69,26 @@
                     </tr>
                     </thead>
                     <tbody>
-                    {% for item in documentos %}
+                    {% for grupo in grupos_papelera %}
+                        {% with item=grupo.principal %}
                         <tr>
-                            <td></td>
-                            <td>{{ item.tipo_item }}</td>
+                            <td>{% if grupo.documento_eliminado %}DOCUMENTO{% else %}VERSIONES{% endif %}</td>
                             <td class="title-cell">{{ item.titulo }}</td>
-                            <td>{% if item.numero_version %}Versi&oacute;n {{ item.numero_version }}{% else %}-{% endif %}</td>
-                            <td>{{ item.archivo_nombre|default:'-' }}</td>
+                            <td>
+                                {% if grupo.versiones_eliminadas %}
+                                    <button type="button" class="btn btn-mini trash-versions-toggle" data-trash-versions-toggle="{{ grupo.id_documento }}" data-version-count="{{ grupo.versiones_eliminadas|length }}" aria-expanded="false">
+                                        <i class="fa fa-chevron-down"></i> Ver {{ grupo.versiones_eliminadas|length }} versiones
+                                    </button>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{% if grupo.documento_eliminado %}-{% else %}{{ item.archivo_nombre|default:'-' }}{% endif %}</td>
                             <td>{{ item.anio|default:'-' }}</td>
-                            <td>{{ item.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
-                            <td>{{ item.motivo_eliminacion|default:'-' }}</td>
+                            <td>{% if grupo.documento_eliminado %}{{ item.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}{% else %}-{% endif %}</td>
+                            <td>{% if grupo.documento_eliminado %}{{ item.motivo_eliminacion|default:'-' }}{% else %}-{% endif %}</td>
                             <td class="actions-cell">
-                                {% if item.tipo_item == 'DOCUMENTO' %}
+                                {% if grupo.documento_eliminado %}
                                     <form action="{% url 'documentos:restaurar' id_documento=item.id_documento %}" method="post">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
@@ -90,22 +96,39 @@
                                     <a href="#modal-eliminar-definitivamente-{{ item.id_documento }}" class="btn btn-danger btn-mini">
                                         Eliminar definitivamente
                                     </a>
-                                {% elif capacidades.puede_restaurar_version %}
-                                    <form action="{% url 'documentos:restaurar_version' id_documento=item.id_documento id_version=item.id_version %}" method="post">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
-                                    </form>
-                                    <a href="#modal-eliminar-version-definitivamente-{{ item.id_version }}" class="btn btn-danger btn-mini">
-                                        Eliminar definitivamente
-                                    </a>
                                 {% else %}
-                                    <span class="muted">No disponible</span>
+                                    <span class="muted">Documento activo</span>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% for version in grupo.versiones_eliminadas %}
+                            <tr class="trash-version-row" data-trash-version-row="{{ grupo.id_documento }}" hidden>
+                                <td>VERSI&Oacute;N</td>
+                                <td class="title-cell"><span class="trash-version-indent"><i class="fa fa-level-up fa-rotate-90"></i> {{ version.titulo }}</span></td>
+                                <td>Versi&oacute;n {{ version.numero_version }}</td>
+                                <td>{{ version.archivo_nombre|default:'-' }}</td>
+                                <td>{{ version.anio|default:'-' }}</td>
+                                <td>{{ version.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
+                                <td>{{ version.motivo_eliminacion|default:'-' }}</td>
+                                <td class="actions-cell">
+                                    {% if capacidades.puede_restaurar_version %}
+                                    <form action="{% url 'documentos:restaurar_version' id_documento=version.id_documento id_version=version.id_version %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
+                                    </form>
+                                    <a href="#modal-eliminar-version-definitivamente-{{ version.id_version }}" class="btn btn-danger btn-mini">
+                                        Eliminar definitivamente
+                                    </a>
+                                    {% else %}
+                                        <span class="muted">No disponible</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        {% endwith %}
                     {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center empty">No hay documentos ni versiones eliminadas.</td>
+                            <td colspan="8" class="text-center empty">No hay documentos ni versiones eliminadas.</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -174,4 +197,19 @@
 
 {% block moreblock %}
     <script src="{% static 'js/visor_pdf.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-trash-versions-toggle]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var idDocumento = button.getAttribute('data-trash-versions-toggle');
+                    var expandido = button.getAttribute('aria-expanded') === 'true';
+                    document.querySelectorAll('[data-trash-version-row="' + idDocumento + '"]').forEach(function (fila) {
+                        fila.hidden = expandido;
+                    });
+                    button.setAttribute('aria-expanded', String(!expandido));
+                    button.innerHTML = '<i class="fa fa-chevron-' + (expandido ? 'down' : 'up') + '"></i> ' + (expandido ? 'Ver ' : 'Ocultar ') + button.getAttribute('data-version-count') + ' versiones';
+                });
+            });
+        });
+    </script>
 {% endblock %}

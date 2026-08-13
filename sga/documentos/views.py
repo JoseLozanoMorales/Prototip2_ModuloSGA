@@ -472,6 +472,38 @@ def _listar_papelera_fallback(busqueda, anio):
     )
 
 
+def _agrupar_papelera_por_documento(elementos):
+    """Agrupa las versiones eliminadas bajo la fila de su documento."""
+    grupos = {}
+    for elemento in elementos:
+        id_documento = elemento["id_documento"]
+        grupo = grupos.setdefault(
+            id_documento,
+            {
+                "id_documento": id_documento,
+                "principal": None,
+                "versiones_eliminadas": [],
+            },
+        )
+        if elemento.get("tipo_item") == "DOCUMENTO":
+            grupo["principal"] = elemento
+        else:
+            grupo["versiones_eliminadas"].append(elemento)
+
+    resultado = []
+    for grupo in grupos.values():
+        # Un documento activo puede tener versiones eliminadas. En ese caso se
+        # usa la primera versión solo para identificar el grupo, sin habilitar
+        # las acciones propias de un documento eliminado.
+        if grupo["principal"] is None:
+            grupo["principal"] = grupo["versiones_eliminadas"][0]
+            grupo["documento_eliminado"] = False
+        else:
+            grupo["documento_eliminado"] = True
+        resultado.append(grupo)
+    return resultado
+
+
 def _extraer_anios_disponibles(documentos):
     return sorted(
         {str(documento["anio"]) for documento in documentos if documento.get("anio") is not None},
@@ -2176,11 +2208,13 @@ def papelera_documentos(request):
             documentos_para_anios = documentos
 
     anios_disponibles = _extraer_anios_disponibles(documentos_para_anios)
+    grupos_papelera = _agrupar_papelera_por_documento(documentos)
     return render(
         request,
         "documentos/papelera.html",
         {
             "documentos": documentos,
+            "grupos_papelera": grupos_papelera,
             "usuario": usuario,
             "busqueda": busqueda,
             "anio": anio,

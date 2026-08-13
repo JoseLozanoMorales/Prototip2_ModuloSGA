@@ -4,11 +4,11 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260813-reader-version" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260813-year-filter-icon-inside" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
-<div class="documentos-legales" {% if usuario.rol_modulo == 'EDITOR' %}data-ia-status-url="{% url 'documentos:estado_analisis_ia' %}"{% endif %}>
+<div class="documentos-legales" data-ia-status-url="{% url 'documentos:estado_analisis_ia' %}">
     <div class="row-fluid documentos-header">
         <div class="span8">
             <div class="documentos-title">
@@ -43,9 +43,18 @@
             <form method="get" class="form-inline documentos-search">
                 <div class="input-prepend">
                     <span class="add-on"><i class="fa fa-search"></i></span>
-                    <input type="text" name="q" value="{{ busqueda }}" placeholder="Buscar por t&iacute;tulo o palabras clave">
+                    <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por t&iacute;tulo o palabras clave" data-live-search-input data-live-search-target="documentos-lista" autocomplete="off">
                 </div>
                 <button type="submit" class="btn btn-primary">Buscar</button>
+                <span class="year-filter">
+                    <span class="add-on" aria-hidden="true"><i class="fa fa-filter"></i></span>
+                    <select name="anio" class="auto-submit-select" aria-label="Filtrar por año">
+                        <option value="">Filtrar por año</option>
+                        {% for anio_disponible in anios_disponibles %}
+                            <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if busqueda or anio %}
                     <a href="{% url 'documentos:lista' %}" class="btn btn-link">Limpiar</a>
                 {% endif %}
@@ -56,29 +65,16 @@
     <div class="row-fluid">
         <div class="span12">
             <div class="documentos-table-box">
-                <table class="table table-striped table-bordered documentos-table">
+                <table id="documentos-lista" class="table table-striped table-bordered documentos-table">
                     <thead>
                     <tr>
-                        <th class="filter-cell">
-                            <form method="get">
-                                <input type="hidden" name="q" value="{{ busqueda }}">
-                                <select name="anio" class="auto-submit-select">
-                                    <option value="">Seleccione un a&ntilde;o</option>
-                                    {% for anio_disponible in anios_disponibles %}
-                                        <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        </th>
                         <th>T&iacute;tulo</th>
                         <th>Descripci&oacute;n</th>
                         <th>A&ntilde;o</th>
+                        <th class="ia-status-column">Le&iacute;do por IA</th>
                         {% if usuario.rol_modulo == 'EDITOR' %}
-                            <th class="ia-status-column">Le&iacute;do por IA</th>
                             <th class="publish-status-column">Publicaci&oacute;n</th>
                             <th class="versioning-status-column">Versionamiento</th>
-                        {% else %}
-                            <th class="latest-version-column">&Uacute;ltima versi&oacute;n</th>
                         {% endif %}
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="actions-column">Acciones</th>
@@ -89,8 +85,7 @@
                     </thead>
                     <tbody>
                     {% for doc in documentos %}
-                        <tr data-documento-id="{{ doc.id_documento }}" {% if usuario.rol_modulo == 'EDITOR' %}data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}"{% endif %}>
-                            <td></td>
+                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}" data-live-search-row data-search-text="{{ doc.titulo }} {{ doc.descripcion|default:'' }} {{ doc.anio|default:'' }}">
                             <td class="title-cell">{{ doc.titulo }}</td>
                             <td class="description-cell">
                                 {% with descripcion=doc.descripcion|default:'' %}
@@ -105,12 +100,12 @@
                                 {% endwith %}
                             </td>
                             <td>{{ doc.anio|default:'-' }}</td>
+                            <td class="ia-status-cell" data-ia-status-cell>
+                                <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
+                                    {{ doc.label_ia|default:'Pendiente' }}
+                                </span>
+                            </td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
-                                <td class="ia-status-cell" data-ia-status-cell>
-                                    <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
-                                        {{ doc.label_ia|default:'Pendiente' }}
-                                    </span>
-                                </td>
                                 <td class="publish-status-cell">
                                     <span class="publish-status-badge {% if doc.publicado %}is-published{% else %}is-unpublished{% endif %}">
                                         {{ doc.publicado_texto|default:'No publicado' }}
@@ -142,9 +137,6 @@
                                     </div>
                                 </td>
                             {% else %}
-                                <td class="latest-version-cell">
-                                    <span class="latest-version-badge">{{ doc.ultima_version_texto|default:'No disponible' }}</span>
-                                </td>
                                 <td class="download-cell">
                                     <a class="btn btn-success btn-mini" href="{% url 'documentos:visor' id_documento=doc.id_documento %}">
                                         <i class="fa fa-download"></i> Descargar
@@ -154,9 +146,12 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}6{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
+                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}7{% else %}5{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
                         </tr>
                     {% endfor %}
+                    <tr class="live-search-empty" data-live-search-empty hidden>
+                        <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}7{% else %}5{% endif %}" class="text-center empty">No se encontraron documentos que coincidan con la búsqueda.</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
@@ -531,5 +526,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260811-bety-chat-focus"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260813-live-search"></script>
 {% endblock %}
