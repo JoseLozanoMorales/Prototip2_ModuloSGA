@@ -22,7 +22,7 @@ from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
 USUARIO_SIMULADO = {
-    "id_usuario_externo": 1001,
+    "id_usuario_externo": 100,
     "id_perfil_externo": 2,
     "id_grupo_externo": 10,
     "id_tipo_periodo_externo": 2,

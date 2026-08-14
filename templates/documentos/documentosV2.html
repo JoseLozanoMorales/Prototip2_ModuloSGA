@@ -79,7 +79,7 @@
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="actions-column">Acciones</th>
                         {% else %}
-                            <th class="actions-column">Descarga</th>
+                            <th class="actions-column">Documento</th>
                         {% endif %}
                     </tr>
                     </thead>
@@ -132,14 +132,14 @@
                                                 </form>
                                             {% endif %}
                                             <a href="#modal-eliminar-{{ doc.id_documento }}"><i class="fa fa-trash"></i> Eliminar</a>
-                                            <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-download"></i> Descargar</a>
+                                            <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-eye"></i> Ver documento</a>
                                         </div>
                                     </div>
                                 </td>
                             {% else %}
                                 <td class="download-cell">
                                     <a class="btn btn-success btn-mini" href="{% url 'documentos:visor' id_documento=doc.id_documento %}">
-                                        <i class="fa fa-download"></i> Descargar
+                                        <i class="fa fa-eye"></i> Ver documento
                                     </a>
                                 </td>
                             {% endif %}
