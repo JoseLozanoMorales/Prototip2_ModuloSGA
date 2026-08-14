@@ -96,6 +96,7 @@
                         {% if usuario.rol_modulo == 'EDITOR' %}
                             <th class="actions-column">Acciones</th>
                         {% else %}
+                            <th class="latest-version-column">&Uacute;ltima versi&oacute;n</th>
                             <th class="actions-column">Documento</th>
                         {% endif %}
                     </tr>
@@ -155,8 +156,11 @@
                                     </div>
                                 </td>
                             {% else %}
+                                <td class="latest-version-cell">
+                                    <span class="latest-version-badge">{{ doc.ultima_version_texto|default:'No disponible' }}</span>
+                                </td>
                                 <td class="download-cell">
-                                    <a class="btn btn-success btn-mini" href="{% url 'documentos:visor' id_documento=doc.id_documento %}">
+                                    <a class="btn btn-success btn-mini" href="{% url 'documentos:visor' id_documento=doc.id_documento %}{% if doc.id_version_consulta %}?version={{ doc.id_version_consulta }}{% endif %}">
                                         <i class="fa fa-eye"></i> Ver documento
                                     </a>
                                 </td>
@@ -164,11 +168,11 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}5{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
+                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}6{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
                         </tr>
                     {% endfor %}
                     <tr class="live-search-empty" data-live-search-empty hidden>
-                        <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}5{% endif %}" class="text-center empty">No se encontraron documentos que coincidan con la búsqueda.</td>
+                        <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}6{% endif %}" class="text-center empty">No se encontraron documentos que coincidan con la búsqueda.</td>
                     </tr>
                     </tbody>
                 </table>

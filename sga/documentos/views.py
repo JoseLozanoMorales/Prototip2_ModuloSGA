@@ -427,27 +427,36 @@ def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
     if solo_publicadas and _publicacion_habilitada():
         filtro_publicacion = "AND COALESCE(publicado, FALSE) = TRUE"
 
+    orden_version = "numero_version DESC, id_version DESC"
+    if solo_publicadas:
+        orden_version = (
+            "CASE WHEN COALESCE(estado, 'INACTIVO') = 'VIGENTE' THEN 0 ELSE 1 END, "
+            "numero_version DESC, id_version DESC"
+        )
+
     ids_documentos = [documento["id_documento"] for documento in documentos]
     filas = _consultar_filas(
         f"""
         SELECT DISTINCT ON (id_documento)
                id_documento,
+               id_version,
                numero_version
         FROM doc_versions
         WHERE id_documento = ANY(%s)
           AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
           {filtro_publicacion}
-        ORDER BY id_documento, numero_version DESC, id_version DESC;
+        ORDER BY id_documento, {orden_version};
         """,
         [ids_documentos],
     )
-    ultima_version_por_documento = {
-        fila["id_documento"]: fila.get("numero_version") for fila in filas
-    }
+    ultima_version_por_documento = {fila["id_documento"]: fila for fila in filas}
     for documento in documentos:
-        numero_version = ultima_version_por_documento.get(documento["id_documento"])
+        version = ultima_version_por_documento.get(documento["id_documento"]) or {}
+        id_version = version.get("id_version")
+        numero_version = version.get("numero_version")
         if numero_version is None:
             numero_version = documento.get("numero_version_vigente")
+        documento["id_version_consulta"] = id_version
         documento["ultima_version"] = numero_version
         documento["ultima_version_texto"] = (
             f"Versión {numero_version}" if numero_version else "No disponible"
@@ -1456,16 +1465,34 @@ def _reservar_reintento_ia(id_documento, id_version):
     return bool(filas and filas[0]["reservado"])
 
 
+def _mensaje_ia_con_advertencias(mensaje, advertencias):
+    mensaje = str(mensaje or "")
+    advertencias = [str(advertencia) for advertencia in advertencias if advertencia]
+    if not advertencias:
+        return mensaje
+    return f"{mensaje} Advertencias: {' '.join(advertencias)}"
+
+
 def _procesar_ia_documento_segundo_plano(
     id_documento,
     titulo,
     datos_archivo,
     contexto_version,
     contexto_accesos,
+    contexto_version_anterior=None,
 ):
     close_old_connections()
     id_version = contexto_version.get("id_version")
     respuesta_ia = {}
+    advertencias = []
+    try:
+        _notificar_version_anterior_no_vigente(
+            contexto_version_anterior,
+            contexto_version,
+        )
+    except RuntimeError as error_chroma_vigencia:
+        advertencias.append(str(error_chroma_vigencia))
+
     try:
         respuesta_ia = _llamar_ia_documentos(datos_archivo, contexto_accesos)
         porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
@@ -1479,7 +1506,7 @@ def _procesar_ia_documento_segundo_plano(
             id_version,
             ESTADO_IA_OBSERVADO,
             porcentaje_texto,
-            error,
+            _mensaje_ia_con_advertencias(error, advertencias),
         )
         close_old_connections()
         return
@@ -1489,12 +1516,12 @@ def _procesar_ia_documento_segundo_plano(
             id_version,
             ESTADO_IA_ERROR,
             None,
-            error,
+            _mensaje_ia_con_advertencias(error, advertencias),
         )
         close_old_connections()
         return
 
-    mensaje = "Analisis de IA completado."
+    mensaje = _mensaje_ia_con_advertencias("Analisis de IA completado.", advertencias)
     try:
         respuesta_chroma = _guardar_documento_chroma(
             id_documento,
@@ -1526,6 +1553,7 @@ def _iniciar_analisis_ia_segundo_plano(
     datos_archivo,
     contexto_version,
     contexto_accesos,
+    contexto_version_anterior=None,
 ):
     id_version = contexto_version.get("id_version")
     _actualizar_estado_ia_version(
@@ -1537,7 +1565,14 @@ def _iniciar_analisis_ia_segundo_plano(
     )
     hilo = threading.Thread(
         target=_procesar_ia_documento_segundo_plano,
-        args=(id_documento, titulo, datos_archivo, contexto_version, contexto_accesos),
+        args=(
+            id_documento,
+            titulo,
+            datos_archivo,
+            contexto_version,
+            contexto_accesos,
+            contexto_version_anterior,
+        ),
         daemon=True,
     )
     hilo.start()
@@ -2979,19 +3014,13 @@ def agregar_version_documento(request, id_documento):
             version_nueva_chroma,
             version_anterior_chroma,
         )
-        try:
-            _notificar_version_anterior_no_vigente(
-                version_anterior_chroma,
-                version_nueva_chroma,
-            )
-        except RuntimeError as error_chroma_vigencia:
-            messages.warning(request, str(error_chroma_vigencia))
         _iniciar_analisis_ia_segundo_plano(
             id_documento,
             documento.get("titulo") or "",
             datos_archivo,
             contexto_version,
             contexto_accesos,
+            version_anterior_chroma,
         )
         messages.success(
             request,
