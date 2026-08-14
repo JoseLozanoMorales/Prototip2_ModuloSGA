@@ -558,6 +558,11 @@
     max-width: 720px;
 }
 
+.modal-publication {
+    max-width: 980px;
+    width: min(980px, calc(100vw - 44px));
+}
+
 .modal-edit-with-preview {
     max-width: 1420px;
     width: min(1420px, calc(100vw - 88px));
@@ -578,6 +583,7 @@
 .delete-question,
 .publish-modal-body {
     padding: 22px;
+    overflow-x: auto;
 }
 
 .description-modal-body h3 {
@@ -599,7 +605,9 @@
 }
 
 .publish-versions-table {
+    table-layout: fixed;
     margin-bottom: 0;
+    width: 100%;
 }
 
 .publish-versions-table th,
@@ -608,9 +616,30 @@
     vertical-align: middle;
 }
 
+.publish-versions-table th:nth-child(1),
+.publish-versions-table td:nth-child(1) {
+    width: 90px;
+}
+
+.publish-versions-table th:nth-child(2),
+.publish-versions-table td:nth-child(2) {
+    width: 90px;
+}
+
+.publish-versions-table th:nth-child(3),
 .publish-versions-table td:nth-child(3) {
+    width: 95px;
+}
+
+.publish-versions-table th:nth-child(4),
+.publish-versions-table td:nth-child(4) {
     overflow-wrap: anywhere;
     text-align: left;
+}
+
+.publish-versions-table th:nth-child(5),
+.publish-versions-table td:nth-child(5) {
+    width: 150px;
 }
 
 .publish-check {

@@ -1570,6 +1570,7 @@ def _obtener_versiones(id_documento, solo_publicadas=False):
         [id_documento],
     )
     _adjuntar_publicacion_versiones(id_documento, versiones)
+    _adjuntar_estado_ia_versiones(id_documento, versiones)
     if solo_publicadas and _publicacion_habilitada():
         versiones = [version for version in versiones if version.get("publicado")]
     if not versiones:
@@ -1594,6 +1595,83 @@ def _adjuntar_publicacion_versiones(id_documento, versiones):
     publicados = {fila["id_version"]: bool(fila["publicado"]) for fila in filas}
     for version in versiones:
         version["publicado"] = publicados.get(version["id_version"], False)
+
+
+def _version_esta_vigente(version):
+    return bool(version.get("vigente") or version.get("estado") == "VIGENTE")
+
+
+def _adjuntar_estado_ia_versiones(id_documento, versiones):
+    if not versiones:
+        return
+
+    if not _columna_existe("doc_versions", "estado_ia"):
+        for version in versiones:
+            version["estado_ia"] = ESTADO_IA_PENDIENTE
+            version["requiere_lectura_ia_publicacion"] = _version_esta_vigente(version)
+            version["label_ia"] = (
+                ESTADOS_IA_DOCUMENTO[ESTADO_IA_PENDIENTE]["label"]
+                if version["requiere_lectura_ia_publicacion"]
+                else "No Leído"
+            )
+            version["bloqueada_publicacion_ia"] = (
+                version["requiere_lectura_ia_publicacion"]
+                and not version.get("publicado")
+            )
+        return
+
+    ids_versiones = [version["id_version"] for version in versiones]
+    filas = _consultar_filas(
+        """
+        SELECT id_version, COALESCE(estado_ia, %s) AS estado_ia
+        FROM doc_versions
+        WHERE id_documento = %s
+          AND id_version = ANY(%s);
+        """,
+        [ESTADO_IA_PENDIENTE, id_documento, ids_versiones],
+    )
+    estados = {
+        fila["id_version"]: _normalizar_estado_ia(fila.get("estado_ia"))
+        for fila in filas
+    }
+    for version in versiones:
+        estado = estados.get(version["id_version"], ESTADO_IA_PENDIENTE)
+        requiere_lectura_ia = _version_esta_vigente(version)
+        version["estado_ia"] = estado
+        version["requiere_lectura_ia_publicacion"] = requiere_lectura_ia
+        version["label_ia"] = (
+            ESTADOS_IA_DOCUMENTO[estado]["label"] if requiere_lectura_ia else "No Leído"
+        )
+        version["bloqueada_publicacion_ia"] = (
+            requiere_lectura_ia
+            and not version.get("publicado")
+            and estado != ESTADO_IA_LEIDO
+        )
+
+
+def _validar_publicacion_versiones_por_ia(versiones, ids_publicados):
+    versiones_por_id = {int(version["id_version"]): version for version in versiones}
+    bloqueadas = []
+    for id_version in ids_publicados:
+        version = versiones_por_id.get(int(id_version))
+        if not version:
+            continue
+        if version.get("publicado"):
+            continue
+        if not _version_esta_vigente(version):
+            continue
+        if _normalizar_estado_ia(version.get("estado_ia")) != ESTADO_IA_LEIDO:
+            bloqueadas.append(version)
+
+    if bloqueadas:
+        detalle = ", ".join(
+            f"versión {version.get('numero_version') or version['id_version']}"
+            for version in bloqueadas
+        )
+        raise ValueError(
+            "No se puede publicar una versión vigente si la lectura de IA aún no es positiva "
+            f"para: {detalle}."
+        )
 
 
 def _obtener_versiones_visibles(id_documento):
@@ -2644,6 +2722,7 @@ def publicar_versiones_documento(request, id_documento):
         ids_invalidos = ids_publicados - ids_disponibles
         if ids_invalidos:
             raise ValueError("Una o mas versiones seleccionadas no pertenecen al documento.")
+        _validar_publicacion_versiones_por_ia(versiones, ids_publicados)
 
         with transaction.atomic():
             _guardar_publicacion_versiones(id_documento, ids_publicados, usuario)
