@@ -10,6 +10,9 @@ from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
 from django.conf import settings
+from django.contrib.admin.models import DELETION, LogEntry
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
 from django.db import DatabaseError, close_old_connections, connection
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -22,7 +25,7 @@ from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
 USUARIO_SIMULADO = {
-    "id_usuario_externo": 100,
+    "id_usuario_externo": 1001,
     "id_perfil_externo": 2,
     "id_grupo_externo": 10,
     "id_tipo_periodo_externo": 2,
@@ -39,6 +42,7 @@ TIPOS_DOCUMENTO = (
     "Ordenes",
     "Modelos",
     "Procedimiento",
+    "Videos",
 )
 
 ESTADO_IA_PENDIENTE = "PENDIENTE"
@@ -99,9 +103,18 @@ def lista_documentos(request):
     sessionid = _obtener_sessionid_chat(request)
     catalogos_acceso = _catalogos_acceso()
     busqueda = request.GET.get("q", "").strip()
-    anio = request.GET.get("anio", "").strip()
+    filtros_seleccionados = {
+        "anio": request.GET.get("anio", "").strip(),
+        "periodo": request.GET.get("periodo", "").strip(),
+        "grupo": request.GET.get("grupo", "").strip(),
+        "perfil": request.GET.get("perfil", "").strip(),
+        "tipo": request.GET.get("tipo", "").strip(),
+    }
+    filtros_disponibles = _filtros_documentos_vacios()
     try:
-        documentos = _listar_documentos_modulo(usuario, busqueda, anio or None)
+        # Los filtros se aplican despues de obtener los documentos visibles para
+        # que cada selector solo muestre valores que realmente existen.
+        documentos = _listar_documentos_modulo(usuario, busqueda, None)
         _adjuntar_publicacion_documentos(documentos)
         if usuario["rol_modulo"] != "EDITOR":
             documentos = _filtrar_documentos_publicados(documentos)
@@ -109,25 +122,24 @@ def lista_documentos(request):
         else:
             _adjuntar_versionamiento_documentos(documentos)
         _adjuntar_estado_ia_documentos(documentos)
+        accesos_por_documento = _accesos_por_documento(documentos)
+        filtros_disponibles = _construir_filtros_documentos(
+            documentos,
+            accesos_por_documento,
+            catalogos_acceso,
+        )
+        _validar_filtros_documentos(filtros_seleccionados, filtros_disponibles)
+        documentos = _filtrar_documentos_por_criterios(
+            documentos,
+            accesos_por_documento,
+            filtros_seleccionados,
+        )
         if usuario["rol_modulo"] == "EDITOR":
             _adjuntar_detalles_editor(documentos, catalogos_acceso)
     except (DatabaseError, ValueError) as error:
         # La pÃ¡gina sigue siendo Ãºtil para comprobar el servidor aunque PostgreSQL
         # aÃºn no estÃ© disponible o falten variables en .env.
         error_base_datos = str(error)
-
-    documentos_para_anios = documentos
-    if anio and error_base_datos is None:
-        try:
-            documentos_para_anios = _listar_documentos_modulo(usuario, busqueda, None)
-            _adjuntar_publicacion_documentos(documentos_para_anios)
-            if usuario["rol_modulo"] != "EDITOR":
-                documentos_para_anios = _filtrar_documentos_publicados(documentos_para_anios)
-            _adjuntar_estado_ia_documentos(documentos_para_anios)
-        except (DatabaseError, ValueError):
-            documentos_para_anios = documentos
-
-    anios_disponibles = _extraer_anios_disponibles(documentos_para_anios)
 
     return render(
         request,
@@ -136,8 +148,9 @@ def lista_documentos(request):
             "documentos": documentos,
             "usuario": usuario,
             "busqueda": busqueda,
-            "anio": anio,
-            "anios_disponibles": anios_disponibles,
+            "filtros_seleccionados": filtros_seleccionados,
+            "filtros_disponibles": filtros_disponibles,
+            "filtros_activos": any(filtros_seleccionados.values()),
             "fecha_aprobacion_minima": FECHA_APROBACION_MINIMA.isoformat(),
             "fecha_aprobacion_maxima": date.today().isoformat(),
             "error_base_datos": error_base_datos,
@@ -518,6 +531,101 @@ def _extraer_anios_disponibles(documentos):
         {str(documento["anio"]) for documento in documentos if documento.get("anio") is not None},
         reverse=True,
     )
+
+
+def _filtros_documentos_vacios():
+    return {"anios": [], "periodos": [], "grupos": [], "perfiles": [], "tipos": []}
+
+
+def _accesos_por_documento(documentos):
+    if not documentos:
+        return {}
+    ids_documentos = [documento["id_documento"] for documento in documentos]
+    accesos = _consultar_filas(
+        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [ids_documentos]
+    )
+    resultado = {id_documento: [] for id_documento in ids_documentos}
+    for acceso in accesos:
+        resultado.setdefault(acceso["id_documento"], []).append(acceso)
+    return resultado
+
+
+def _opciones_filtro_acceso(accesos_por_documento, campo, catalogo):
+    nombres = _nombres_catalogo(catalogo)
+    valores = {
+        acceso.get(campo)
+        for accesos in accesos_por_documento.values()
+        for acceso in accesos
+    }
+    opciones = []
+    for valor in sorted(valores, key=lambda item: (item is not None, str(item))):
+        opciones.append(
+            {
+                "id": "__todos__" if valor is None else str(valor),
+                "nombre": nombres.get(valor, str(valor)),
+            }
+        )
+    return opciones
+
+
+def _construir_filtros_documentos(documentos, accesos_por_documento, catalogos_acceso):
+    return {
+        "anios": _extraer_anios_disponibles(documentos),
+        "tipos": sorted({documento.get("tipo") for documento in documentos if documento.get("tipo")}),
+        "perfiles": _opciones_filtro_acceso(
+            accesos_por_documento, "id_perfil_externo", catalogos_acceso["perfiles"]
+        ),
+        "grupos": _opciones_filtro_acceso(
+            accesos_por_documento, "id_grupo_externo", catalogos_acceso["grupos"]
+        ),
+        "periodos": _opciones_filtro_acceso(
+            accesos_por_documento,
+            "id_tipo_periodo_externo",
+            catalogos_acceso["tipos_periodo"],
+        ),
+    }
+
+
+def _validar_filtros_documentos(filtros, disponibles):
+    opciones = {
+        "anio": set(disponibles["anios"]),
+        "tipo": set(disponibles["tipos"]),
+        "perfil": {opcion["id"] for opcion in disponibles["perfiles"]},
+        "grupo": {opcion["id"] for opcion in disponibles["grupos"]},
+        "periodo": {opcion["id"] for opcion in disponibles["periodos"]},
+    }
+    for campo, valor in filtros.items():
+        if valor and valor not in opciones[campo]:
+            raise ValueError("El valor seleccionado no existe en los documentos disponibles.")
+
+
+def _documento_tiene_acceso(accesos, campo, valor):
+    valor = None if valor == "__todos__" else int(valor)
+    return any(acceso.get(campo) == valor for acceso in accesos)
+
+
+def _filtrar_documentos_por_criterios(documentos, accesos_por_documento, filtros):
+    resultado = []
+    for documento in documentos:
+        if filtros["anio"] and str(documento.get("anio")) != filtros["anio"]:
+            continue
+        if filtros["tipo"] and documento.get("tipo") != filtros["tipo"]:
+            continue
+        accesos = accesos_por_documento.get(documento["id_documento"], [])
+        if filtros["perfil"] and not _documento_tiene_acceso(
+            accesos, "id_perfil_externo", filtros["perfil"]
+        ):
+            continue
+        if filtros["grupo"] and not _documento_tiene_acceso(
+            accesos, "id_grupo_externo", filtros["grupo"]
+        ):
+            continue
+        if filtros["periodo"] and not _documento_tiene_acceso(
+            accesos, "id_tipo_periodo_externo", filtros["periodo"]
+        ):
+            continue
+        resultado.append(documento)
+    return resultado
 
 
 def _capacidades_base():
@@ -1918,7 +2026,85 @@ def _restaurar_version_logica(id_documento, id_version):
     _sincronizar_versionamiento_documento(id_documento)
 
 
-def _eliminar_documento_fisico(id_documento, motivo, usuario):
+def _registrar_auditoria_django(
+    usuario,
+    usuario_django,
+    id_documento,
+    accion,
+    motivo,
+    resumen,
+    mensaje=None,
+):
+    """Registra la auditoría documental usando la bitácora estándar de Django."""
+    usuario_id = (
+        getattr(usuario_django, "pk", None)
+        if getattr(usuario_django, "is_authenticated", False)
+        else None
+    )
+    if not usuario_id:
+        modelo_usuario = get_user_model()
+        usuario_id = (
+            modelo_usuario.objects.filter(
+                pk=usuario.get("id_usuario_externo")
+            ).values_list("pk", flat=True).first()
+            or modelo_usuario.objects.order_by("pk").values_list("pk", flat=True).first()
+        )
+    if not usuario_id:
+        raise ValueError("No se pudo identificar el usuario de Django para la auditoría.")
+
+    tipo_contenido, _ = ContentType.objects.get_or_create(
+        app_label="documentos",
+        model="documento",
+    )
+    titulo = str(resumen.get("titulo") or f"Documento {id_documento}")
+    LogEntry.objects.create(
+        user_id=usuario_id,
+        content_type=tipo_contenido,
+        object_id=str(id_documento),
+        object_repr=titulo[:200],
+        action_flag=DELETION,
+        change_message=mensaje or json.dumps(
+            {
+                "accion": accion,
+                "motivo": motivo,
+                "datos_anteriores": resumen,
+            },
+            ensure_ascii=False,
+        ),
+    )
+
+
+def _registrar_historial_eliminacion(
+    id_documento,
+    titulo,
+    motivo,
+    usuario,
+    total_versiones,
+    id_version=None,
+    numero_version=None,
+    versiones_eliminadas=None,
+):
+    _ejecutar_procedimiento(
+        """
+        INSERT INTO historial_eliminaciones
+            (id_documento, id_version, titulo_documento, numero_version,
+             nombre_usuario, motivo_eliminacion, total_versiones, versiones_eliminadas)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb);
+        """,
+        [
+            id_documento,
+            id_version,
+            titulo,
+            numero_version,
+            usuario.get("nombre_usuario") or "Usuario",
+            motivo,
+            total_versiones,
+            json.dumps(versiones_eliminadas or [], ensure_ascii=False),
+        ],
+    )
+
+
+def _eliminar_documento_fisico(id_documento, motivo, usuario, usuario_django):
     """Elimina de la base un documento que ya se encuentra en la papelera."""
     with transaction.atomic():
         filas = _consultar_filas(
@@ -1966,22 +2152,36 @@ def _eliminar_documento_fisico(id_documento, motivo, usuario):
             ],
         }
 
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            usuario_django,
+            id_documento,
+            "ELIMINACION_DEFINITIVA",
+            motivo,
+            resumen,
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} "
+                f"ha eliminado el documento {documento.get('titulo') or id_documento} "
+                f"y todas sus versiones. Motivo de eliminación: {motivo}. "
+                f"Versiones eliminadas: {len(versiones)}"
+            ),
+        )
+        _registrar_historial_eliminacion(
+            id_documento,
+            documento.get("titulo") or "",
+            motivo,
+            usuario,
+            len(versiones),
+            versiones_eliminadas=[
+                {
+                    "id_version": version.get("id_version"),
+                    "numero_version": version.get("numero_version"),
+                    "archivo_nombre": version.get("archivo_nombre"),
+                }
+                for version in versiones
+            ],
+        )
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO documento_auditoria
-                    (id_documento, id_usuario_externo, nombre_usuario, accion,
-                     mensaje, datos_anteriores)
-                VALUES (%s, %s, %s, 'ELIMINACION_DEFINITIVA', %s, %s::jsonb);
-                """,
-                [
-                    id_documento,
-                    usuario["id_usuario_externo"],
-                    usuario.get("nombre_usuario", ""),
-                    motivo,
-                    json.dumps(resumen, ensure_ascii=False),
-                ],
-            )
             cursor.execute(
                 "UPDATE docs SET id_version_vigente = NULL WHERE id_documento = %s;",
                 [id_documento],
@@ -2011,15 +2211,17 @@ def _eliminar_archivo_version_fisico(version):
         ruta_heredada.unlink()
 
 
-def _eliminar_version_fisica(id_documento, id_version, motivo, usuario):
+def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_django):
     """Elimina permanentemente una versión que ya se encuentra en la papelera."""
     with transaction.atomic():
         filas = _consultar_filas(
             """
-            SELECT id_version, id_documento, numero_version, archivo_nombre,
-                   archivo_path, uuid_version, fecha_eliminacion, motivo_eliminacion
-            FROM doc_versions
-            WHERE id_documento = %s AND id_version = %s
+            SELECT v.id_version, v.id_documento, v.numero_version, v.archivo_nombre,
+                   v.archivo_path, v.uuid_version, v.fecha_eliminacion,
+                   v.motivo_eliminacion, d.titulo
+            FROM doc_versions v
+            JOIN docs d ON d.id_documento = v.id_documento
+            WHERE v.id_documento = %s AND v.id_version = %s
             FOR UPDATE;
             """,
             [id_documento, id_version],
@@ -2036,29 +2238,37 @@ def _eliminar_version_fisica(id_documento, id_version, motivo, usuario):
         resumen = {
             "id_documento": id_documento,
             "id_version_eliminada": id_version,
+            "titulo": version.get("titulo"),
             "numero_version": version.get("numero_version"),
             "archivo_nombre": version.get("archivo_nombre"),
             "uuid_version": str(version.get("uuid_version") or ""),
             "motivo_baja_logica": version.get("motivo_eliminacion"),
             "motivo_eliminacion_definitiva": motivo,
         }
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            usuario_django,
+            id_documento,
+            "ELIMINACION_DEFINITIVA_VERSION",
+            motivo,
+            resumen,
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado la versión "
+                f"{version.get('numero_version')} del documento "
+                f"{version.get('titulo') or id_documento}. Motivo de eliminación: {motivo}. "
+                "Versiones eliminadas: 1"
+            ),
+        )
+        _registrar_historial_eliminacion(
+            id_documento,
+            version.get("titulo") or "",
+            motivo,
+            usuario,
+            1,
+            id_version=id_version,
+            numero_version=version.get("numero_version"),
+        )
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO documento_auditoria
-                    (id_documento, id_version, id_usuario_externo, nombre_usuario, accion,
-                     mensaje, datos_anteriores)
-                VALUES (%s, %s, %s, %s, 'ELIMINACION_DEFINITIVA_VERSION', %s, %s::jsonb);
-                """,
-                [
-                    id_documento,
-                    id_version,
-                    usuario["id_usuario_externo"],
-                    usuario.get("nombre_usuario", ""),
-                    motivo,
-                    json.dumps(resumen, ensure_ascii=False),
-                ],
-            )
             cursor.execute(
                 "UPDATE docs SET id_version_vigente = NULL WHERE id_version_vigente = %s;",
                 [id_version],
@@ -2066,6 +2276,55 @@ def _eliminar_version_fisica(id_documento, id_version, motivo, usuario):
             cursor.execute("DELETE FROM doc_versions WHERE id_version = %s;", [id_version])
 
     return version
+
+
+# TEMPORAL: esta copia permite probar eliminaciones cuando el módulo usa el
+# usuario simulado y aún no existe una sesión o usuario real de Django.
+# Debe eliminarse al conectar el módulo con la autenticación real.
+def _registrar_auditoria_django_pruebas(
+    usuario,
+    usuario_django,
+    id_documento,
+    accion,
+    motivo,
+    resumen,
+    mensaje=None,
+):
+    """Versión temporal de auditoría compatible con el usuario simulado."""
+    usuario_id = (
+        getattr(usuario_django, "pk", None)
+        if getattr(usuario_django, "is_authenticated", False)
+        else None
+    )
+    if not usuario_id:
+        modelo_usuario = get_user_model()
+        campo_usuario = modelo_usuario.USERNAME_FIELD
+        nombre_usuario_pruebas = "auditoria_documentos_pruebas"
+        usuario_pruebas, _ = modelo_usuario.objects.get_or_create(
+            **{campo_usuario: nombre_usuario_pruebas}
+        )
+        usuario_id = usuario_pruebas.pk
+
+    tipo_contenido, _ = ContentType.objects.get_or_create(
+        app_label="documentos",
+        model="documento",
+    )
+    titulo = str(resumen.get("titulo") or f"Documento {id_documento}")
+    LogEntry.objects.create(
+        user_id=usuario_id,
+        content_type=tipo_contenido,
+        object_id=str(id_documento),
+        object_repr=titulo[:200],
+        action_flag=DELETION,
+        change_message=mensaje or json.dumps(
+            {
+                "accion": accion,
+                "motivo": motivo,
+                "datos_anteriores": resumen,
+            },
+            ensure_ascii=False,
+        ),
+    )
 
 
 def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
@@ -2295,6 +2554,37 @@ def papelera_documentos(request):
 
     busqueda = request.GET.get("q", "").strip()
     anio = request.GET.get("anio", "").strip()
+    vista_historial = request.GET.get("vista") == "historial"
+    if vista_historial:
+        try:
+            historial_eliminaciones = _consultar_filas(
+                """
+                SELECT id_historial, id_documento, id_version, titulo_documento,
+                       numero_version, nombre_usuario, motivo_eliminacion,
+                       total_versiones, COALESCE(versiones_eliminadas, '[]'::jsonb)
+                           AS versiones_eliminadas, fecha_eliminacion
+                FROM historial_eliminaciones
+                ORDER BY fecha_eliminacion DESC, id_historial DESC;
+                """,
+                [],
+            )
+            for eliminacion in historial_eliminaciones:
+                versiones = eliminacion.get("versiones_eliminadas") or []
+                eliminacion["versiones_eliminadas"] = (
+                    json.loads(versiones) if isinstance(versiones, str) else versiones
+                )
+        except DatabaseError as error:
+            messages.error(request, f"No se pudo consultar el historial: {error}")
+            historial_eliminaciones = []
+        return render(
+            request,
+            "documentos/papelera.html",
+            {
+                "usuario": usuario,
+                "vista_historial": True,
+                "historial_eliminaciones": historial_eliminaciones,
+            },
+        )
     documentos = []
     try:
         documentos = _listar_papelera_fallback(busqueda, anio or None)
@@ -2373,7 +2663,12 @@ def eliminar_documento_definitivamente(request, id_documento):
         return redirect("documentos:papelera")
 
     try:
-        versiones = _eliminar_documento_fisico(id_documento, motivo, usuario)
+        versiones = _eliminar_documento_fisico(
+            id_documento,
+            motivo,
+            usuario,
+            request.user,
+        )
         archivos_no_eliminados = []
         rutas_procesadas = set()
         for version in versiones:
@@ -2415,7 +2710,13 @@ def eliminar_version_definitivamente(request, id_documento, id_version):
         return redirect("documentos:papelera")
 
     try:
-        version = _eliminar_version_fisica(id_documento, id_version, motivo, usuario)
+        version = _eliminar_version_fisica(
+            id_documento,
+            id_version,
+            motivo,
+            usuario,
+            request.user,
+        )
         try:
             _eliminar_archivo_version_fisico(version)
         except (OSError, ValueError):

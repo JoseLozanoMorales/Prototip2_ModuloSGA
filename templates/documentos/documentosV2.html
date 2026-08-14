@@ -41,23 +41,39 @@
                 </div>
             {% endif %}
             <form method="get" class="form-inline documentos-search">
+                {% if filtros_seleccionados.anio %}<input type="hidden" name="anio" value="{{ filtros_seleccionados.anio }}">{% endif %}
+                {% if filtros_seleccionados.periodo %}<input type="hidden" name="periodo" value="{{ filtros_seleccionados.periodo }}">{% endif %}
+                {% if filtros_seleccionados.grupo %}<input type="hidden" name="grupo" value="{{ filtros_seleccionados.grupo }}">{% endif %}
+                {% if filtros_seleccionados.perfil %}<input type="hidden" name="perfil" value="{{ filtros_seleccionados.perfil }}">{% endif %}
+                {% if filtros_seleccionados.tipo %}<input type="hidden" name="tipo" value="{{ filtros_seleccionados.tipo }}">{% endif %}
                 <div class="input-prepend">
                     <span class="add-on"><i class="fa fa-search"></i></span>
                     <input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar por t&iacute;tulo o palabras clave" data-live-search-input data-live-search-target="documentos-lista" autocomplete="off">
                 </div>
                 <button type="submit" class="btn btn-primary">Buscar</button>
-                <span class="year-filter">
-                    <span class="add-on" aria-hidden="true"><i class="fa fa-filter"></i></span>
-                    <select name="anio" class="auto-submit-select" aria-label="Filtrar por año">
-                        <option value="">Filtrar por año</option>
-                        {% for anio_disponible in anios_disponibles %}
-                            <option value="{{ anio_disponible }}" {% if anio == anio_disponible %}selected{% endif %}>{{ anio_disponible }}</option>
-                        {% endfor %}
-                    </select>
-                </span>
-                {% if busqueda or anio %}
+                <a href="#modal-filtros" class="btn {% if filtros_activos %}btn-info{% endif %}"><i class="fa fa-filter"></i> Filtrar</a>
+                {% if busqueda or filtros_activos %}
                     <a href="{% url 'documentos:lista' %}" class="btn btn-link">Limpiar</a>
                 {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-filtros" class="modal-layer">
+        <div class="modal-card modal-medium">
+            <div class="modal-header"><h2>Filtrar documentos</h2></div>
+            <form method="get" class="document-form">
+                <input type="hidden" name="q" value="{{ busqueda }}">
+                <div class="description-modal-body">
+                    <div class="form-row two-columns">
+                        <label><strong>Año</strong><select name="anio"><option value="">Todos</option>{% for valor in filtros_disponibles.anios %}<option value="{{ valor }}" {% if filtros_seleccionados.anio == valor %}selected{% endif %}>{{ valor }}</option>{% endfor %}</select></label>
+                        <label><strong>Periodo</strong><select name="periodo"><option value="">Todos</option>{% for opcion in filtros_disponibles.periodos %}<option value="{{ opcion.id }}" {% if filtros_seleccionados.periodo == opcion.id %}selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label><strong>Grupo</strong><select name="grupo"><option value="">Todos</option>{% for opcion in filtros_disponibles.grupos %}<option value="{{ opcion.id }}" {% if filtros_seleccionados.grupo == opcion.id %}selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label><strong>Perfil</strong><select name="perfil"><option value="">Todos</option>{% for opcion in filtros_disponibles.perfiles %}<option value="{{ opcion.id }}" {% if filtros_seleccionados.perfil == opcion.id %}selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}</select></label>
+                        <label><strong>Tipo de documento</strong><select name="tipo"><option value="">Todos</option>{% for tipo in filtros_disponibles.tipos %}<option value="{{ tipo }}" {% if filtros_seleccionados.tipo == tipo %}selected{% endif %}>{{ tipo }}</option>{% endfor %}</select></label>
+                    </div>
+                </div>
+                <div class="modal-footer"><a href="#" class="btn">Cancelar</a><a href="{% url 'documentos:lista' %}{% if busqueda %}?q={{ busqueda|urlencode }}{% endif %}" class="btn">Limpiar filtros</a><button type="submit" class="btn btn-primary">Aplicar filtros</button></div>
             </form>
         </div>
     </div>
