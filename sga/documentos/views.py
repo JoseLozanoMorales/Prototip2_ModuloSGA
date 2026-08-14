@@ -32,6 +32,14 @@ USUARIO_SIMULADO = {
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
 PDF_TEXTO_MINIMO_CARACTERES = 200
+TIPOS_DOCUMENTO = (
+    "Manual",
+    "Reglamento",
+    "Guías",
+    "Ordenes",
+    "Modelos",
+    "Procedimiento",
+)
 
 ESTADO_IA_PENDIENTE = "PENDIENTE"
 ESTADO_IA_LEIDO = "LEIDO"
@@ -139,6 +147,7 @@ def lista_documentos(request):
             "perfiles_acceso": catalogos_acceso["perfiles"],
             "grupos_acceso": catalogos_acceso["grupos"],
             "tipos_periodo_acceso": catalogos_acceso["tipos_periodo"],
+            "tipos_documento": TIPOS_DOCUMENTO,
         },
     )
 
@@ -444,7 +453,7 @@ def _sincronizar_versionamiento_documento(id_documento):
 def _listar_documentos_modulo(usuario, busqueda, anio):
     return _consultar_filas(
         """
-        SELECT listado.*
+        SELECT listado.*, d.tipo
         FROM fn_listar_documentos_modulo(%s, %s, %s, %s, %s, %s) AS listado
         JOIN docs d ON d.id_documento = listado.id_documento
         WHERE d.fecha_eliminacion IS NULL;
@@ -1523,8 +1532,9 @@ def _validar_titulo_unico(titulo, id_documento=None):
 def _consultar_documento_accion(id_documento):
     filas = _consultar_filas(
         """
-        SELECT *
-        FROM fn_obtener_documento_para_accion(%s);
+        SELECT documento.*, d.tipo
+        FROM fn_obtener_documento_para_accion(%s) AS documento
+        JOIN docs d ON d.id_documento = documento.id_documento;
         """,
         [id_documento],
     )
@@ -2031,6 +2041,19 @@ def _crear_documento_base(titulo, descripcion, palabras_clave, fecha_aprobacion,
     return resultado["id_documento"]
 
 
+def _validar_tipo_documento(tipo):
+    if tipo not in TIPOS_DOCUMENTO:
+        raise ValueError("El tipo de documento no es válido.")
+    return tipo
+
+
+def _actualizar_tipo_documento(id_documento, tipo):
+    _ejecutar_procedimiento(
+        "UPDATE docs SET tipo = %s WHERE id_documento = %s;",
+        [tipo, id_documento],
+    )
+
+
 def _editar_documento_base(id_documento, titulo, descripcion, palabras_clave, fecha_aprobacion, id_version, usuario):
     _ejecutar_procedimiento(
         """
@@ -2341,6 +2364,7 @@ def crear_documento(request):
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
         palabras_clave = request.POST.get("palabras_clave", "").strip()
+        tipo = _validar_tipo_documento(request.POST.get("tipo", "").strip())
         fecha_aprobacion = _fecha_formulario(
             request.POST.get("fecha_aprobacion"),
             requerido=True,
@@ -2365,6 +2389,7 @@ def crear_documento(request):
                 datos_archivo,
                 usuario,
             )
+            _actualizar_tipo_documento(id_documento, tipo)
             _insertar_accesos_documento(id_documento, accesos, usuario)
             _sincronizar_estado_versiones(id_documento)
             _sincronizar_versionamiento_documento(id_documento)
@@ -2399,6 +2424,7 @@ def editar_documento(request, id_documento):
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
         palabras_clave = request.POST.get("palabras_clave", "").strip()
+        tipo = _validar_tipo_documento(request.POST.get("tipo", "").strip())
         fecha_aprobacion = _fecha_formulario(
             request.POST.get("fecha_aprobacion"),
             requerido=True,
@@ -2461,6 +2487,7 @@ def editar_documento(request, id_documento):
                 id_version,
                 usuario,
             )
+            _actualizar_tipo_documento(id_documento, tipo)
             _reemplazar_accesos_documento(id_documento, accesos, usuario)
             if puede_cambiar_estado_version:
                 _cambiar_estado_version_directo(id_documento, id_version, estado_version)

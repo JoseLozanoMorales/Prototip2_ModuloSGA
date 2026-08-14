@@ -70,6 +70,7 @@
                     <tr>
                         <th>T&iacute;tulo</th>
                         <th>Descripci&oacute;n</th>
+                        <th>Tipo</th>
                         <th>A&ntilde;o</th>
                         <th class="ia-status-column">Le&iacute;do por IA</th>
                         {% if usuario.rol_modulo == 'EDITOR' %}
@@ -85,7 +86,7 @@
                     </thead>
                     <tbody>
                     {% for doc in documentos %}
-                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}" data-live-search-row data-search-text="{{ doc.titulo }} {{ doc.descripcion|default:'' }} {{ doc.anio|default:'' }}">
+                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}" data-live-search-row data-search-text="{{ doc.titulo }} {{ doc.descripcion|default:'' }} {{ doc.tipo|default:'' }} {{ doc.anio|default:'' }}">
                             <td class="title-cell">{{ doc.titulo }}</td>
                             <td class="description-cell">
                                 {% with descripcion=doc.descripcion|default:'' %}
@@ -99,6 +100,7 @@
                                     {% endif %}
                                 {% endwith %}
                             </td>
+                            <td>{{ doc.tipo|default:'-' }}</td>
                             <td>{{ doc.anio|default:'-' }}</td>
                             <td class="ia-status-cell" data-ia-status-cell>
                                 <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
@@ -146,7 +148,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}7{% else %}5{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
+                            <td colspan="{% if usuario.rol_modulo == 'EDITOR' %}8{% else %}6{% endif %}" class="text-center empty">No hay documentos legales para mostrar.</td>
                         </tr>
                     {% endfor %}
                     <tr class="live-search-empty" data-live-search-empty hidden>
@@ -185,6 +187,15 @@
                         <label>
                             <strong>Fecha de aprobaci&oacute;n</strong>
                             <input type="date" name="fecha_aprobacion" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                        </label>
+                        <label>
+                            <strong>Tipo</strong>
+                            <select name="tipo" required>
+                                <option value="" disabled selected>Seleccione un tipo</option>
+                                {% for tipo_documento in tipos_documento %}
+                                    <option value="{{ tipo_documento }}">{{ tipo_documento }}</option>
+                                {% endfor %}
+                            </select>
                         </label>
                     </div>
                     <div class="form-row">
@@ -269,6 +280,14 @@
                                     <label>
                                         <strong>Fecha de aprobaci&oacute;n</strong>
                                         <input type="date" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                                    </label>
+                                    <label>
+                                        <strong>Tipo</strong>
+                                        <select name="tipo" required>
+                                            {% for tipo_documento in tipos_documento %}
+                                                <option value="{{ tipo_documento }}" {% if doc.tipo == tipo_documento %}selected{% endif %}>{{ tipo_documento }}</option>
+                                            {% endfor %}
+                                        </select>
                                     </label>
                                 </div>
                                 <div class="form-row two-columns">
