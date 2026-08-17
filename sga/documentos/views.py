@@ -1,5 +1,7 @@
 ﻿import json
 import re
+import logging
+import ssl
 import threading
 import urllib.error
 import urllib.request
@@ -24,6 +26,9 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
+
+logger = logging.getLogger(__name__)
+
 USUARIO_SIMULADO = {
     "id_usuario_externo": 1001,
     "id_perfil_externo": 2,
@@ -917,15 +922,15 @@ def _campos_multipart_accesos(contexto_accesos):
     tipos_periodo = contexto_accesos["tipos_periodo"]
     metadata_accesos = _metadata_accesos(contexto_accesos)
     campos = [
-        ("metadata", json.dumps(metadata_accesos, ensure_ascii=False)),
-        ("perfiles_acceso", json.dumps(perfiles, ensure_ascii=False)),
-        ("grupos_acceso", json.dumps(grupos, ensure_ascii=False)),
-        ("tipos_periodo_acceso", json.dumps(tipos_periodo, ensure_ascii=False)),
-        ("perfiles_acceso_ids", json.dumps(_ids_opciones_acceso(perfiles), ensure_ascii=False)),
-        ("grupos_acceso_ids", json.dumps(_ids_opciones_acceso(grupos), ensure_ascii=False)),
+        ("metadata", json.dumps(metadata_accesos, ensure_ascii=False, default=str)),
+        ("perfiles_acceso", json.dumps(perfiles, ensure_ascii=False, default=str)),
+        ("grupos_acceso", json.dumps(grupos, ensure_ascii=False, default=str)),
+        ("tipos_periodo_acceso", json.dumps(tipos_periodo, ensure_ascii=False, default=str)),
+        ("perfiles_acceso_ids", json.dumps(_ids_opciones_acceso(perfiles), ensure_ascii=False, default=str)),
+        ("grupos_acceso_ids", json.dumps(_ids_opciones_acceso(grupos), ensure_ascii=False, default=str)),
         (
             "tipos_periodo_acceso_ids",
-            json.dumps(_ids_opciones_acceso(tipos_periodo), ensure_ascii=False),
+            json.dumps(_ids_opciones_acceso(tipos_periodo), ensure_ascii=False, default=str),
         ),
     ]
     campos.extend(("id_perfil_externo", opcion["id"]) for opcion in perfiles)
@@ -973,7 +978,7 @@ def _items_campos_multipart(campos):
 
 def _formatear_valor_multipart(valor):
     if isinstance(valor, (dict, list, tuple)):
-        return json.dumps(valor, ensure_ascii=False)
+        return json.dumps(valor, ensure_ascii=False, default=str)
     return "" if valor is None else str(valor)
 
 
@@ -1108,8 +1113,14 @@ def _leer_json_http(respuesta):
         ) from error
 
 
+def _contexto_ssl_ia():
+    if getattr(settings, "IA_SSL_VERIFY", True):
+        return None
+    return ssl._create_unverified_context()
+
+
 def _publicar_json(url, payload):
-    datos = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    datos = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
     solicitud = urllib.request.Request(
         url,
         data=datos,
@@ -1117,7 +1128,11 @@ def _publicar_json(url, payload):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(solicitud, timeout=settings.IA_DOCUMENTOS_TIMEOUT) as respuesta:
+        with urllib.request.urlopen(
+            solicitud,
+            timeout=settings.IA_DOCUMENTOS_TIMEOUT,
+            context=_contexto_ssl_ia(),
+        ) as respuesta:
             return _leer_json_http(respuesta)
     except urllib.error.HTTPError as error:
         contenido = _leer_json_http(error)
@@ -1160,7 +1175,11 @@ def _publicar_multipart(url, campos, archivos):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(solicitud, timeout=settings.IA_DOCUMENTOS_TIMEOUT) as respuesta:
+        with urllib.request.urlopen(
+            solicitud,
+            timeout=settings.IA_DOCUMENTOS_TIMEOUT,
+            context=_contexto_ssl_ia(),
+        ) as respuesta:
             return _leer_json_http(respuesta)
     except urllib.error.HTTPError as error:
         contenido = _leer_json_http(error)
@@ -1172,11 +1191,10 @@ def _publicar_multipart(url, campos, archivos):
 
 def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
     url = f"{settings.IA_DOCUMENTOS_BASE_URL}{settings.IA_DOCUMENTOS_ANALIZAR_PATH}"
-    campos_accesos = _campos_multipart_accesos(contexto_accesos)
     try:
         contenido = _publicar_multipart(
             url,
-            campos_accesos,
+            [],
             {
                 "archivo": {
                     "filename": datos_archivo["archivo_nombre"],
@@ -1186,10 +1204,9 @@ def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
             },
         )
     except RuntimeError as error:
-        campos = ", ".join(_nombres_campos_multipart(campos_accesos))
         raise RuntimeError(
             f"No se pudo conectar con la IA documental en {url}. "
-            f"Campos enviados: {campos}. Error: {error}"
+            f"Campos enviados: archivo. Error: {error}"
         ) from error
 
     return contenido
@@ -1283,7 +1300,7 @@ def _lista_a_json_texto(valor):
         return ""
     if isinstance(valor, str):
         return valor
-    return json.dumps(valor, ensure_ascii=False)
+    return json.dumps(valor, ensure_ascii=False, default=str)
 
 
 def _bool_a_texto(valor):
@@ -1520,6 +1537,21 @@ def _procesar_ia_documento_segundo_plano(
         )
         close_old_connections()
         return
+    except Exception as error:
+        logger.exception(
+            "Error inesperado al analizar con IA el documento %s, version %s.",
+            id_documento,
+            id_version,
+        )
+        _actualizar_estado_ia_version(
+            id_documento,
+            id_version,
+            ESTADO_IA_ERROR,
+            None,
+            _mensaje_ia_con_advertencias(error, advertencias),
+        )
+        close_old_connections()
+        return
 
     mensaje = _mensaje_ia_con_advertencias("Analisis de IA completado.", advertencias)
     try:
@@ -1535,6 +1567,13 @@ def _procesar_ia_documento_segundo_plano(
         fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
         mensaje = f"{mensaje} ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}."
     except RuntimeError as error_chroma:
+        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
+    except Exception as error_chroma:
+        logger.exception(
+            "Error inesperado al actualizar ChromaDB para el documento %s, version %s.",
+            id_documento,
+            id_version,
+        )
         mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
 
     _actualizar_estado_ia_version(
@@ -1663,6 +1702,28 @@ def _notificar_version_anterior_no_vigente(contexto_anterior, contexto_actual=No
     if uuid_anterior and uuid_anterior != uuid_actual:
         return _quitar_vigencia_chroma(uuid_anterior)
     return {}
+
+
+def _notificar_version_anterior_no_vigente_segundo_plano(contexto_anterior, contexto_actual=None):
+    uuid_anterior = _texto_uuid((contexto_anterior or {}).get("uuid_version"))
+    uuid_actual = _texto_uuid((contexto_actual or {}).get("uuid_version"))
+    if not uuid_anterior or uuid_anterior == uuid_actual:
+        return
+
+    def notificar():
+        close_old_connections()
+        try:
+            _notificar_version_anterior_no_vigente(contexto_anterior, contexto_actual)
+        except RuntimeError:
+            logger.exception(
+                "No se pudo quitar la vigencia en ChromaDB para la version %s.",
+                uuid_anterior,
+            )
+        finally:
+            close_old_connections()
+
+    hilo = threading.Thread(target=notificar, daemon=True)
+    hilo.start()
 
 
 def _validar_titulo_unico(titulo, id_documento=None):
@@ -3090,20 +3151,25 @@ def eliminar_documento(request, id_documento):
                 id_documento,
                 vigente=True,
             )
-            try:
-                _notificar_version_anterior_no_vigente(
-                    version_vigente_anterior_chroma,
-                    version_vigente_actual_chroma,
-                )
-            except RuntimeError as error_chroma_vigencia:
-                messages.warning(request, str(error_chroma_vigencia))
+            _notificar_version_anterior_no_vigente_segundo_plano(
+                version_vigente_anterior_chroma,
+                version_vigente_actual_chroma,
+            )
             messages.success(request, "Versión eliminada lógicamente.")
         elif alcance == "documento":
             if _documento_tiene_version_publicada(id_documento):
                 raise ValueError(
                     "Para eliminar el documento, primero debe quitar la publicación de todas sus versiones."
                 )
+            version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
+                id_documento,
+                vigente=True,
+            )
             _eliminar_documento_logico(id_documento, motivo, usuario)
+            _notificar_version_anterior_no_vigente_segundo_plano(
+                version_vigente_anterior_chroma,
+                {},
+            )
             messages.success(request, "Documento eliminado lógicamente.")
         else:
             raise ValueError("El alcance de eliminación no es válido.")
