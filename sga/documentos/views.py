@@ -2113,12 +2113,27 @@ def _restaurar_documento_logico(id_documento, usuario):
 
 
 def _restaurar_version_logica(id_documento, id_version):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_restaurar_version_documento_logico(%s, %s);
-        """,
-        [id_documento, id_version],
-    )
+    # Una versión puede restaurarse cuando su documento completo está en la
+    # papelera. En ese caso, además de recuperar la versión, se debe retirar
+    # la baja lógica del documento; de lo contrario la consulta principal lo
+    # excluye por ``docs.fecha_eliminacion IS NOT NULL``.
+    with transaction.atomic():
+        _ejecutar_procedimiento(
+            """
+            CALL sp_restaurar_version_documento_logico(%s, %s);
+            """,
+            [id_documento, id_version],
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE docs
+                SET fecha_eliminacion = NULL,
+                    motivo_eliminacion = NULL
+                WHERE id_documento = %s;
+                """,
+                [id_documento],
+            )
     _sincronizar_versionamiento_documento(id_documento)
 
 
@@ -2405,6 +2420,89 @@ def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_
             cursor.execute("DELETE FROM doc_versions WHERE id_version = %s;", [id_version])
 
     return version
+
+
+def _eliminar_versiones_fisicas(id_documento, ids_versiones, motivo, usuario, usuario_django):
+    """Elimina definitivamente varias versiones que permanecen en la papelera."""
+    ids_versiones = list(dict.fromkeys(ids_versiones))
+    if not ids_versiones:
+        raise ValueError("Seleccione al menos una versión para eliminar.")
+
+    with transaction.atomic():
+        versiones = _consultar_filas(
+            """
+            SELECT v.id_version, v.id_documento, v.numero_version, v.archivo_nombre,
+                   v.archivo_path, v.uuid_version, v.fecha_eliminacion,
+                   v.motivo_eliminacion, v.estado, d.titulo
+            FROM doc_versions v
+            JOIN docs d ON d.id_documento = v.id_documento
+            WHERE v.id_documento = %s AND v.id_version = ANY(%s)
+            FOR UPDATE;
+            """,
+            [id_documento, ids_versiones],
+        )
+        if len(versiones) != len(ids_versiones):
+            raise ValueError("Una o más versiones no pertenecen al documento.")
+        if any(str(version.get("estado") or "").upper() != "ELIMINADO" for version in versiones):
+            raise ValueError("Solo se pueden eliminar definitivamente versiones que estén en la papelera.")
+
+        titulo = versiones[0].get("titulo") or str(id_documento)
+        resumen = {
+            "id_documento": id_documento,
+            "titulo": titulo,
+            "motivo_eliminacion_definitiva": motivo,
+            "versiones": [
+                {
+                    "id_version": version["id_version"],
+                    "numero_version": version.get("numero_version"),
+                    "archivo_nombre": version.get("archivo_nombre"),
+                    "uuid_version": str(version.get("uuid_version") or ""),
+                }
+                for version in versiones
+            ],
+        }
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            usuario_django,
+            id_documento,
+            "ELIMINACION_DEFINITIVA_VERSIONES",
+            motivo,
+            resumen,
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado definitivamente "
+                f"{len(versiones)} versiones del documento {titulo}. "
+                f"Motivo de eliminación: {motivo}."
+            ),
+        )
+        _registrar_historial_eliminacion(
+            id_documento,
+            titulo,
+            motivo,
+            usuario,
+            len(versiones),
+            versiones_eliminadas=[
+                {
+                    "id_version": version["id_version"],
+                    "numero_version": version.get("numero_version"),
+                    "archivo_nombre": version.get("archivo_nombre"),
+                }
+                for version in versiones
+            ],
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE docs SET id_version_vigente = NULL
+                WHERE id_documento = %s AND id_version_vigente = ANY(%s);
+                """,
+                [id_documento, ids_versiones],
+            )
+            cursor.execute(
+                "DELETE FROM doc_versions WHERE id_documento = %s AND id_version = ANY(%s);",
+                [id_documento, ids_versiones],
+            )
+
+    return versiones
 
 
 # TEMPORAL: esta copia permite probar eliminaciones cuando el módulo usa el
@@ -2896,6 +2994,47 @@ def eliminar_version_definitivamente(request, id_documento, id_version):
             messages.success(request, "Versión eliminada definitivamente.")
     except (DatabaseError, ValueError) as error:
         messages.error(request, f"No se pudo eliminar definitivamente la versión: {error}")
+    return redirect("documentos:papelera")
+
+
+@require_POST
+def eliminar_versiones_definitivamente(request, id_documento):
+    """Elimina en una sola operación las versiones seleccionadas de la papelera."""
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    motivo = request.POST.get("motivo_eliminacion_definitiva", "").strip()
+    try:
+        ids_versiones = _ids_enteros_formulario(request, "id_version")
+        if len(motivo) < 5:
+            raise ValueError(
+                "El motivo de eliminación definitiva es obligatorio y debe tener al menos 5 caracteres."
+            )
+        versiones = _eliminar_versiones_fisicas(
+            id_documento,
+            ids_versiones,
+            motivo,
+            usuario,
+            request.user,
+        )
+        archivos_no_eliminados = []
+        for version in versiones:
+            try:
+                _eliminar_archivo_version_fisico(version)
+            except (OSError, ValueError):
+                archivos_no_eliminados.append(str(version.get("archivo_path") or ""))
+
+        if archivos_no_eliminados:
+            messages.warning(
+                request,
+                f"Se eliminaron {len(versiones)} versiones, pero no se pudieron borrar "
+                "todos sus archivos físicos. Revisa el almacenamiento.",
+            )
+        else:
+            messages.success(request, f"Se eliminaron definitivamente {len(versiones)} versiones.")
+    except (DatabaseError, ValueError) as error:
+        messages.error(request, f"No se pudieron eliminar las versiones: {error}")
     return redirect("documentos:papelera")
 
 

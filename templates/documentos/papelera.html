@@ -192,11 +192,11 @@
                     <div class="modal-header"><h2>Versiones eliminadas: {{ grupo.principal.titulo }}</h2></div>
                     <div class="description-modal-body">
                         <table class="table table-striped table-bordered documentos-table">
-                            <thead><tr><th>Versi&oacute;n</th><th>Archivo</th><th>Fecha eliminaci&oacute;n</th><th>Acciones</th></tr></thead>
+                            <thead><tr><th><input type="checkbox" data-select-all-versions="{{ grupo.id_documento }}" title="Seleccionar todas"> Versi&oacute;n</th><th>Archivo</th><th>Fecha eliminaci&oacute;n</th><th>Acciones</th></tr></thead>
                             <tbody>
                             {% for version in grupo.versiones_eliminadas %}
                                 <tr>
-                                    <td>Versi&oacute;n {{ version.numero_version }}</td>
+                                    <td><input type="checkbox" name="id_version" value="{{ version.id_version }}" form="form-eliminar-versiones-{{ grupo.id_documento }}" data-version-checkbox="{{ grupo.id_documento }}"> Versi&oacute;n {{ version.numero_version }}</td>
                                     <td>{{ version.archivo_nombre|default:'-' }}</td>
                                     <td>{{ version.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
                                     <td class="actions-cell">
@@ -211,7 +211,28 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a></div>
+                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a><a href="#modal-eliminar-versiones-definitivamente-{{ grupo.id_documento }}" class="btn btn-danger">Eliminar versiones seleccionadas</a></div>
+                </div>
+            </div>
+            <div id="modal-eliminar-versiones-definitivamente-{{ grupo.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Eliminar versiones definitivamente</h2></div>
+                    <form id="form-eliminar-versiones-{{ grupo.id_documento }}" action="{% url 'documentos:eliminar_versiones_definitivamente' id_documento=grupo.id_documento %}" method="post" class="document-form">
+                        {% csrf_token %}
+                        <div class="delete-question">
+                            <h3>&iquest;Seguro que deseas eliminar las versiones seleccionadas?</h3>
+                            <p><strong>{{ grupo.principal.titulo }}</strong></p>
+                            <p class="delete-note">Solo se eliminarán las versiones marcadas. Esta acción no se puede deshacer.</p>
+                            <label>
+                                <strong>Motivo de eliminación definitiva</strong>
+                                <textarea name="motivo_eliminacion_definitiva" required minlength="5" placeholder="Explique por qué deben eliminarse las versiones"></textarea>
+                            </label>
+                        </div>
+                        <div class="modal-footer modal-footer-center">
+                            <a href="#" class="btn">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Eliminar seleccionadas</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         {% endif %}
@@ -296,6 +317,14 @@
                     if (viewer && !viewer.getAttribute('src')) {
                         viewer.setAttribute('src', link.getAttribute('data-trash-preview-url') + '#toolbar=1&view=FitH');
                     }
+                });
+            });
+            document.querySelectorAll('[data-select-all-versions]').forEach(function (selector) {
+                selector.addEventListener('change', function () {
+                    var documentId = selector.getAttribute('data-select-all-versions');
+                    document.querySelectorAll('[data-version-checkbox="' + documentId + '"]').forEach(function (checkbox) {
+                        checkbox.checked = selector.checked;
+                    });
                 });
             });
         });
