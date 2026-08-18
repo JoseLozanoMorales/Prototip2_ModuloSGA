@@ -15,6 +15,11 @@ urlpatterns = [
     path("visor/<int:id_documento>/", views.visor_pdf, name="visor"),
     path("visor/<int:id_documento>/pdf/<int:id_version>/", views.servir_pdf, name="pdf"),
     path("papelera/", views.papelera_documentos, name="papelera"),
+    path(
+        "papelera/<int:id_documento>/versiones/<int:id_version>/ver/",
+        views.servir_pdf_version_papelera,
+        name="pdf_version_papelera",
+    ),
     path("<int:id_documento>/restaurar/", views.restaurar_documento, name="restaurar"),
     path(
         "<int:id_documento>/eliminar-definitivamente/",

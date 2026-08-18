@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
 from django.conf import settings
-from django.contrib.admin.models import DELETION, LogEntry
+from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
@@ -2200,6 +2200,32 @@ def _registrar_historial_eliminacion(
     )
 
 
+def _mensaje_edicion_documento(usuario, titulo, cambios):
+    mensaje = f"{usuario.get('nombre_usuario') or 'Usuario'} ha editado el documento {titulo}."
+    if len(cambios) == 1:
+        return f"{mensaje} Cambio realizado: {cambios[0]}."
+    if cambios:
+        return f"{mensaje} Cambios realizados: {', '.join(cambios)}."
+    return mensaje
+
+
+def _fecha_comparable(valor):
+    return str(valor or "")[:10]
+
+
+def _valor_auditoria(valor, limite=120):
+    texto = " ".join(str(valor or "Sin valor").split())
+    return texto if len(texto) <= limite else f"{texto[:limite - 3]}..."
+
+
+def _resumen_accesos_auditoria(contexto):
+    partes = []
+    for campo, etiqueta in (("perfiles", "perfiles"), ("grupos", "grupos"), ("tipos_periodo", "periodos")):
+        nombres = ", ".join(opcion["nombre"] for opcion in contexto.get(campo, []))
+        partes.append(f"{etiqueta}: {nombres or 'Todos'}")
+    return "; ".join(partes)
+
+
 def _eliminar_documento_fisico(id_documento, motivo, usuario, usuario_django):
     """Elimina de la base un documento que ya se encuentra en la papelera."""
     with transaction.atomic():
@@ -2363,6 +2389,13 @@ def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_
             1,
             id_version=id_version,
             numero_version=version.get("numero_version"),
+            versiones_eliminadas=[
+                {
+                    "id_version": id_version,
+                    "numero_version": version.get("numero_version"),
+                    "archivo_nombre": version.get("archivo_nombre"),
+                }
+            ],
         )
         with connection.cursor() as cursor:
             cursor.execute(
@@ -2385,6 +2418,7 @@ def _registrar_auditoria_django_pruebas(
     motivo,
     resumen,
     mensaje=None,
+    action_flag=DELETION,
 ):
     """Versión temporal de auditoría compatible con el usuario simulado."""
     usuario_id = (
@@ -2411,7 +2445,7 @@ def _registrar_auditoria_django_pruebas(
         content_type=tipo_contenido,
         object_id=str(id_documento),
         object_repr=titulo[:200],
-        action_flag=DELETION,
+        action_flag=action_flag,
         change_message=mensaje or json.dumps(
             {
                 "accion": accion,
@@ -2630,6 +2664,43 @@ def servir_pdf(request, id_documento, id_version):
     if not nombre_archivo.lower().endswith(".pdf"):
         raise Http404("El archivo asociado no es un PDF válido.")
 
+    try:
+        contenido = _leer_pdf_version(version)
+    except ValueError as error:
+        raise Http404(str(error)) from error
+
+    respuesta = FileResponse(BytesIO(contenido), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'inline; filename="{nombre_archivo}"'
+    respuesta["Cache-Control"] = "private, no-store"
+    return respuesta
+
+
+@xframe_options_sameorigin
+def servir_pdf_version_papelera(request, id_documento, id_version):
+    """Permite a los editores previsualizar un PDF eliminado sin restaurarlo."""
+    usuario = _obtener_usuario_modulo()
+    if usuario["rol_modulo"] != "EDITOR":
+        raise Http404("No tienes permisos para ver esta versión.")
+
+    filas = _consultar_filas(
+        """
+        SELECT archivo_nombre, archivo_path
+        FROM doc_versions
+        WHERE id_documento = %s
+          AND id_version = %s
+          AND fecha_eliminacion IS NOT NULL;
+        """,
+        [id_documento, id_version],
+    )
+    if not filas:
+        raise Http404("La versión eliminada no está disponible.")
+
+    version = filas[0]
+    nombre_archivo = Path(
+        str(version.get("archivo_nombre") or version.get("archivo_path") or "")
+    ).name
+    if not nombre_archivo.lower().endswith(".pdf"):
+        raise Http404("El archivo asociado no es un PDF válido.")
     try:
         contenido = _leer_pdf_version(version)
     except ValueError as error:
@@ -2868,6 +2939,18 @@ def crear_documento(request):
             _insertar_accesos_documento(id_documento, accesos, usuario)
             _sincronizar_estado_versiones(id_documento)
             _sincronizar_versionamiento_documento(id_documento)
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            request.user,
+            id_documento,
+            "CREACION_DOCUMENTO",
+            "",
+            {"titulo": titulo, "tipo": tipo, "fecha_aprobacion": str(fecha_aprobacion)},
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} ha creado el documento {titulo}."
+            ),
+            action_flag=ADDITION,
+        )
         version_nueva = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(version_nueva)
         _iniciar_analisis_ia_segundo_plano(
@@ -2916,18 +2999,40 @@ def editar_documento(request, id_documento):
             )
         if not titulo:
             raise ValueError("El titulo del documento es obligatorio.")
+        cambios = []
+        if titulo != (documento.get("titulo") or ""):
+            cambios.append(f"Título: '{_valor_auditoria(documento.get('titulo'))}' → '{_valor_auditoria(titulo)}'")
+        if descripcion != (documento.get("descripcion") or ""):
+            cambios.append(f"Descripción: '{_valor_auditoria(documento.get('descripcion'))}' → '{_valor_auditoria(descripcion)}'")
+        if palabras_clave != (documento.get("palabras_clave") or ""):
+            cambios.append(f"Palabras clave: '{_valor_auditoria(documento.get('palabras_clave'))}' → '{_valor_auditoria(palabras_clave)}'")
+        if tipo != (documento.get("tipo") or ""):
+            cambios.append(f"Tipo de documento: '{_valor_auditoria(documento.get('tipo'))}' → '{_valor_auditoria(tipo)}'")
+        if _fecha_comparable(fecha_aprobacion) != _fecha_comparable(
+            documento.get("fecha_aprobacion")
+        ):
+            cambios.append(f"Fecha de aprobación: '{_fecha_comparable(documento.get('fecha_aprobacion'))}' → '{_fecha_comparable(fecha_aprobacion)}'")
 
         versiones = _obtener_versiones(id_documento)
         version_seleccionada = _seleccionar_version(versiones, id_version)
+        if id_version != documento.get("id_version_vigente"):
+            cambios.append(f"Versión vigente: '{documento.get('numero_version_vigente') or documento.get('id_version_vigente')}' → '{version_seleccionada.get('numero_version')}'")
+        if estado_version != version_seleccionada.get("estado"):
+            cambios.append(f"Estado de versión: '{version_seleccionada.get('estado')}' → '{estado_version}'")
         if puede_cambiar_estado_version:
             _validar_cambio_vigencia_version(versiones, id_version, estado_version)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
+        accesos_anteriores = _contexto_accesos_documento(id_documento)
+        if accesos_anteriores != contexto_accesos:
+            cambios.append(f"Permisos de acceso: '{_resumen_accesos_auditoria(accesos_anteriores)}' → '{_resumen_accesos_auditoria(contexto_accesos)}'")
         version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
             id_documento,
             vigente=True,
         )
         archivo = request.FILES.get("archivo")
+        if archivo:
+            cambios.append(f"Archivo PDF: reemplazado por '{archivo.name}'")
         if archivo and not _columna_existe("doc_versions", "archivo_path"):
             raise ValueError(
                 "El reemplazo de archivos no esta disponible en esta base de datos."
@@ -2968,6 +3073,25 @@ def editar_documento(request, id_documento):
                 _cambiar_estado_version_directo(id_documento, id_version, estado_version)
             if datos_archivo:
                 _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario)
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            request.user,
+            id_documento,
+            "EDICION_DOCUMENTO",
+            "",
+            {
+                "titulo": titulo,
+                "tipo": tipo,
+                "id_version": id_version,
+                "estado_version": estado_version,
+                "archivo_reemplazado": bool(datos_archivo),
+                "cambios": cambios,
+            },
+            mensaje=(
+                _mensaje_edicion_documento(usuario, titulo, cambios)
+            ),
+            action_flag=CHANGE,
+        )
         version_vigente_actual_chroma = _obtener_contexto_version_chroma(
             id_documento,
             vigente=True,
@@ -3070,6 +3194,19 @@ def agregar_version_documento(request, id_documento):
             fecha_aprobacion,
             usuario,
         )
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            request.user,
+            id_documento,
+            "NUEVA_VERSION",
+            "",
+            {"titulo": documento.get("titulo"), "descripcion_cambio": descripcion_cambio},
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} ha agregado una nueva versión "
+                f"al documento {documento.get('titulo') or id_documento}."
+            ),
+            action_flag=CHANGE,
+        )
         version_nueva_chroma = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(
             version_nueva_chroma,
@@ -3101,7 +3238,7 @@ def publicar_versiones_documento(request, id_documento):
         return redirect("documentos:lista")
 
     try:
-        _obtener_documento_para_edicion(id_documento)
+        documento = _obtener_documento_para_edicion(id_documento)
         versiones = _obtener_versiones(id_documento)
         ids_disponibles = {int(version["id_version"]) for version in versiones}
         retirar_todas = request.POST.get("accion_publicacion") == "retirar_todas"
@@ -3117,6 +3254,19 @@ def publicar_versiones_documento(request, id_documento):
 
         with transaction.atomic():
             _guardar_publicacion_versiones(id_documento, ids_publicados, usuario)
+        _registrar_auditoria_django_pruebas(
+            usuario,
+            request.user,
+            id_documento,
+            "CAMBIO_PUBLICACION",
+            "",
+            {"titulo": documento.get("titulo"), "versiones_publicadas": sorted(ids_publicados)},
+            mensaje=(
+                f"{usuario.get('nombre_usuario') or 'Usuario'} ha actualizado la publicación "
+                f"del documento {documento.get('titulo') or id_documento}."
+            ),
+            action_flag=CHANGE,
+        )
         if retirar_todas:
             messages.success(request, "Publicación del documento retirada correctamente.")
         else:

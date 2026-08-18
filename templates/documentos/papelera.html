@@ -45,7 +45,7 @@
                                 <td class="title-cell">{{ eliminacion.titulo_documento|default:'-' }}</td>
                                 <td>
                                     {% if eliminacion.versiones_eliminadas %}
-                                        <button type="button" class="btn btn-mini trash-versions-toggle" data-history-versions-toggle="{{ eliminacion.id_historial }}" data-version-count="{{ eliminacion.versiones_eliminadas|length }}" aria-expanded="false"><i class="fa fa-chevron-down"></i> Ver {{ eliminacion.versiones_eliminadas|length }} versiones</button>
+                                        <a href="#modal-historial-versiones-{{ eliminacion.id_historial }}" class="btn btn-mini"><i class="fa fa-list"></i> Ver {{ eliminacion.versiones_eliminadas|length }} versiones</a>
                                     {% elif eliminacion.numero_version %}
                                         Versi&oacute;n {{ eliminacion.numero_version }}
                                     {% else %}-{% endif %}
@@ -55,14 +55,6 @@
                                 <td>{{ eliminacion.total_versiones }}</td>
                                 <td>{{ eliminacion.fecha_eliminacion|date:"d/m/Y H:i" }}</td>
                             </tr>
-                            {% for version in eliminacion.versiones_eliminadas %}
-                                <tr class="trash-version-row" data-history-version-row="{{ eliminacion.id_historial }}" hidden>
-                                    <td class="title-cell"><span class="trash-version-indent"><i class="fa fa-level-up fa-rotate-90"></i> {{ eliminacion.titulo_documento }}</span></td>
-                                    <td>Versi&oacute;n {{ version.numero_version|default:'-' }}</td>
-                                    <td colspan="2">{{ version.archivo_nombre|default:'Sin archivo registrado' }}</td>
-                                    <td>-</td><td>-</td>
-                                </tr>
-                            {% endfor %}
                         {% empty %}
                             <tr><td colspan="6" class="text-center empty">No hay eliminaciones definitivas registradas.</td></tr>
                         {% endfor %}
@@ -71,6 +63,22 @@
                 </div>
             </div>
         </div>
+        {% for eliminacion in historial_eliminaciones %}
+            {% if eliminacion.versiones_eliminadas %}
+                <div id="modal-historial-versiones-{{ eliminacion.id_historial }}" class="modal-layer">
+                    <div class="modal-card modal-medium">
+                        <div class="modal-header"><h2>Versiones eliminadas: {{ eliminacion.titulo_documento }}</h2></div>
+                        <div class="description-modal-body">
+                            <table class="table table-striped table-bordered documentos-table">
+                                <thead><tr><th>Versi&oacute;n</th><th>Archivo</th></tr></thead>
+                                <tbody>{% for version in eliminacion.versiones_eliminadas %}<tr><td>Versi&oacute;n {{ version.numero_version|default:'-' }}</td><td>{{ version.archivo_nombre|default:'Sin archivo registrado' }}</td></tr>{% endfor %}</tbody>
+                            </table>
+                        </div>
+                        <div class="modal-footer"><a href="#" class="btn">Cerrar</a></div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
     {% else %}
 
     <div class="row-fluid documentos-filters">
@@ -140,11 +148,9 @@
                         <tr>
                             <td>{% if grupo.documento_eliminado %}DOCUMENTO{% else %}VERSIONES{% endif %}</td>
                             <td class="title-cell">{{ item.titulo }}</td>
-                            <td>
-                                {% if grupo.versiones_eliminadas %}
-                                    <button type="button" class="btn btn-mini trash-versions-toggle" data-trash-versions-toggle="{{ grupo.id_documento }}" data-version-count="{{ grupo.versiones_eliminadas|length }}" aria-expanded="false">
-                                        <i class="fa fa-chevron-down"></i> Ver {{ grupo.versiones_eliminadas|length }} versiones
-                                    </button>
+                                <td>
+                                    {% if grupo.versiones_eliminadas %}
+                                    <a href="#modal-papelera-versiones-{{ grupo.id_documento }}" class="btn btn-mini"><i class="fa fa-list"></i> Ver {{ grupo.versiones_eliminadas|length }} versiones</a>
                                 {% else %}
                                     -
                                 {% endif %}
@@ -167,30 +173,6 @@
                                 {% endif %}
                             </td>
                         </tr>
-                        {% for version in grupo.versiones_eliminadas %}
-                            <tr class="trash-version-row" data-trash-version-row="{{ grupo.id_documento }}" hidden>
-                                <td>VERSI&Oacute;N</td>
-                                <td class="title-cell"><span class="trash-version-indent"><i class="fa fa-level-up fa-rotate-90"></i> {{ version.titulo }}</span></td>
-                                <td>Versi&oacute;n {{ version.numero_version }}</td>
-                                <td>{{ version.archivo_nombre|default:'-' }}</td>
-                                <td>{{ version.anio|default:'-' }}</td>
-                                <td>{{ version.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
-                                <td>{{ version.motivo_eliminacion|default:'-' }}</td>
-                                <td class="actions-cell">
-                                    {% if capacidades.puede_restaurar_version %}
-                                    <form action="{% url 'documentos:restaurar_version' id_documento=version.id_documento id_version=version.id_version %}" method="post">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-success btn-mini">Restaurar</button>
-                                    </form>
-                                    <a href="#modal-eliminar-version-definitivamente-{{ version.id_version }}" class="btn btn-danger btn-mini">
-                                        Eliminar definitivamente
-                                    </a>
-                                    {% else %}
-                                        <span class="muted">No disponible</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
                         {% endwith %}
                     {% empty %}
                         <tr>
@@ -202,6 +184,38 @@
             </div>
         </div>
     </div>
+
+    {% for grupo in grupos_papelera %}
+        {% if grupo.versiones_eliminadas %}
+            <div id="modal-papelera-versiones-{{ grupo.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-large">
+                    <div class="modal-header"><h2>Versiones eliminadas: {{ grupo.principal.titulo }}</h2></div>
+                    <div class="description-modal-body">
+                        <table class="table table-striped table-bordered documentos-table">
+                            <thead><tr><th>Versi&oacute;n</th><th>Archivo</th><th>Fecha eliminaci&oacute;n</th><th>Acciones</th></tr></thead>
+                            <tbody>
+                            {% for version in grupo.versiones_eliminadas %}
+                                <tr>
+                                    <td>Versi&oacute;n {{ version.numero_version }}</td>
+                                    <td>{{ version.archivo_nombre|default:'-' }}</td>
+                                    <td>{{ version.fecha_eliminacion|date:"d/m/Y H:i"|default:'-' }}</td>
+                                    <td class="actions-cell">
+                                        <a class="btn btn-info btn-mini" href="#modal-preview-version-{{ version.id_version }}" data-trash-preview-url="{% url 'documentos:pdf_version_papelera' id_documento=version.id_documento id_version=version.id_version %}"><i class="fa fa-eye"></i> Ver</a>
+                                        {% if capacidades.puede_restaurar_version %}
+                                            <form action="{% url 'documentos:restaurar_version' id_documento=version.id_documento id_version=version.id_version %}" method="post">{% csrf_token %}<button type="submit" class="btn btn-success btn-mini">Restaurar</button></form>
+                                            <a href="#modal-eliminar-version-definitivamente-{{ version.id_version }}" class="btn btn-danger btn-mini">Eliminar definitivamente</a>
+                                        {% else %}<span class="muted">No disponible</span>{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a></div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
 
     {% for item in documentos %}
         {% if item.tipo_item == 'DOCUMENTO' %}
@@ -252,6 +266,15 @@
                     </form>
                 </div>
             </div>
+            <div id="modal-preview-version-{{ item.id_version }}" class="modal-layer">
+                <div class="modal-card modal-edit-with-preview">
+                    <div class="modal-header"><h2>{{ item.titulo }} — Versi&oacute;n {{ item.numero_version }}</h2></div>
+                    <div class="pdf-viewer-pane">
+                        <iframe class="edit-pdf-frame" data-trash-pdf-viewer data-version-id="{{ item.id_version }}" title="Vista previa de {{ item.titulo }}"></iframe>
+                    </div>
+                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a></div>
+                </div>
+            </div>
         {% endif %}
     {% endfor %}
 
@@ -266,26 +289,13 @@
     <script src="{% static 'js/visor_pdf.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('[data-trash-versions-toggle]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    var idDocumento = button.getAttribute('data-trash-versions-toggle');
-                    var expandido = button.getAttribute('aria-expanded') === 'true';
-                    document.querySelectorAll('[data-trash-version-row="' + idDocumento + '"]').forEach(function (fila) {
-                        fila.hidden = expandido;
-                    });
-                    button.setAttribute('aria-expanded', String(!expandido));
-                    button.innerHTML = '<i class="fa fa-chevron-' + (expandido ? 'down' : 'up') + '"></i> ' + (expandido ? 'Ver ' : 'Ocultar ') + button.getAttribute('data-version-count') + ' versiones';
-                });
-            });
-            document.querySelectorAll('[data-history-versions-toggle]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    var idHistorial = button.getAttribute('data-history-versions-toggle');
-                    var expandido = button.getAttribute('aria-expanded') === 'true';
-                    document.querySelectorAll('[data-history-version-row="' + idHistorial + '"]').forEach(function (fila) {
-                        fila.hidden = expandido;
-                    });
-                    button.setAttribute('aria-expanded', String(!expandido));
-                    button.innerHTML = '<i class="fa fa-chevron-' + (expandido ? 'down' : 'up') + '"></i> ' + (expandido ? 'Ver ' : 'Ocultar ') + button.getAttribute('data-version-count') + ' versiones';
+            document.querySelectorAll('[data-trash-preview-url]').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    var idVersion = link.getAttribute('href').replace('#modal-preview-version-', '');
+                    var viewer = document.querySelector('[data-trash-pdf-viewer][data-version-id="' + idVersion + '"]');
+                    if (viewer && !viewer.getAttribute('src')) {
+                        viewer.setAttribute('src', link.getAttribute('data-trash-preview-url') + '#toolbar=1&view=FitH');
+                    }
                 });
             });
         });
