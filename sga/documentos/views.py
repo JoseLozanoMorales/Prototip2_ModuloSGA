@@ -126,7 +126,10 @@ def lista_documentos(request):
             _adjuntar_ultima_version_documentos(documentos, solo_publicadas=True)
         else:
             _adjuntar_versionamiento_documentos(documentos)
-        _adjuntar_estado_ia_documentos(documentos)
+        _adjuntar_estado_ia_documentos(
+            documentos,
+            solo_publicadas=usuario["rol_modulo"] != "EDITOR",
+        )
         accesos_por_documento = _accesos_por_documento(documentos)
         filtros_disponibles = _construir_filtros_documentos(
             documentos,
@@ -251,7 +254,7 @@ def _datos_estado_ia(estado, porcentaje_texto=None, mensaje=""):
     }
 
 
-def _adjuntar_estado_ia_documentos(documentos):
+def _adjuntar_estado_ia_documentos(documentos, solo_publicadas=False):
     if not documentos:
         return
 
@@ -267,18 +270,35 @@ def _adjuntar_estado_ia_documentos(documentos):
         return
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    filas = _consultar_filas(
-        """
-        SELECT *
-        FROM fn_obtener_estados_ia_documentos(%s, %s, %s, %s);
-        """,
-        [
-            ids_documentos,
-            ESTADO_IA_OBSERVADO,
-            ESTADO_IA_PENDIENTE,
-            estado_sin_vigente["mensaje_ia"],
-        ],
-    )
+    if solo_publicadas and _publicacion_habilitada():
+        filas = _consultar_filas(
+            """
+            SELECT DISTINCT ON (id_documento)
+                   id_documento,
+                   COALESCE(estado_ia, %s) AS estado_ia,
+                   porcentaje_texto_ia,
+                   COALESCE(mensaje_ia, '') AS mensaje_ia
+            FROM doc_versions
+            WHERE id_documento = ANY(%s)
+              AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
+              AND COALESCE(publicado, FALSE) = TRUE
+            ORDER BY id_documento, numero_version DESC, id_version DESC;
+            """,
+            [ESTADO_IA_PENDIENTE, ids_documentos],
+        )
+    else:
+        filas = _consultar_filas(
+            """
+            SELECT *
+            FROM fn_obtener_estados_ia_documentos(%s, %s, %s, %s);
+            """,
+            [
+                ids_documentos,
+                ESTADO_IA_OBSERVADO,
+                ESTADO_IA_PENDIENTE,
+                estado_sin_vigente["mensaje_ia"],
+            ],
+        )
     estados = {
         fila["id_documento"]: _datos_estado_ia(
             fila.get("estado_ia"),
@@ -288,7 +308,8 @@ def _adjuntar_estado_ia_documentos(documentos):
         for fila in filas
     }
     for documento in documentos:
-        documento.update(estados.get(documento["id_documento"], estado_por_defecto))
+        estado_fallback = estado_sin_vigente if solo_publicadas else estado_por_defecto
+        documento.update(estados.get(documento["id_documento"], estado_fallback))
 
 
 def estado_analisis_ia_documentos(request):
@@ -308,7 +329,10 @@ def estado_analisis_ia_documentos(request):
             for documento in documentos_visibles
             if documento.get("id_documento") in ids_solicitados
         ]
-        _adjuntar_estado_ia_documentos(documentos)
+        _adjuntar_estado_ia_documentos(
+            documentos,
+            solo_publicadas=usuario["rol_modulo"] != "EDITOR",
+        )
     except ValueError as error:
         return JsonResponse({"error": str(error)}, status=400)
     except DatabaseError as error:
@@ -433,11 +457,6 @@ def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
         filtro_publicacion = "AND COALESCE(publicado, FALSE) = TRUE"
 
     orden_version = "numero_version DESC, id_version DESC"
-    if solo_publicadas:
-        orden_version = (
-            "CASE WHEN COALESCE(estado, 'INACTIVO') = 'VIGENTE' THEN 0 ELSE 1 END, "
-            "numero_version DESC, id_version DESC"
-        )
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
     filas = _consultar_filas(
@@ -1280,6 +1299,28 @@ def _anio_fecha(valor):
     return str(valor.year) if hasattr(valor, "year") else str(valor)[:4]
 
 
+def _obtener_estado_version(id_documento, id_version):
+    if not id_documento or not id_version:
+        return ""
+    filas = _consultar_filas(
+        """
+        SELECT COALESCE(estado, '') AS estado
+        FROM doc_versions
+        WHERE id_documento = %s AND id_version = %s;
+        """,
+        [id_documento, id_version],
+    )
+    return _texto_comparable((filas[0] if filas else {}).get("estado")).upper()
+
+
+def _resolver_estado_vigencia_payload(id_documento, contexto_version):
+    contexto_version = contexto_version or {}
+    estado = _texto_comparable(contexto_version.get("estado")).upper()
+    if estado:
+        return estado
+    return _obtener_estado_version(id_documento, contexto_version.get("id_version")) or "VIGENTE"
+
+
 def _construir_contexto_reemplazo_version(version_nueva, version_anterior=None):
     version_anterior = version_anterior or {}
     return {
@@ -1287,6 +1328,7 @@ def _construir_contexto_reemplazo_version(version_nueva, version_anterior=None):
         "numero_version": version_nueva.get("numero_version"),
         "fecha_aprobacion": version_nueva.get("fecha_aprobacion"),
         "anio_aprobacion": _anio_fecha(version_nueva.get("fecha_aprobacion")),
+        "estado": version_nueva.get("estado"),
         "uuid_documento": _texto_uuid(version_nueva.get("uuid_documento")),
         "uuid_version": _texto_uuid(version_nueva.get("uuid_version")),
         "id_version_anterior": version_anterior.get("id_version"),
@@ -1314,10 +1356,15 @@ def _construir_payload_chroma(
     respuesta_ia,
     contexto_version=None,
     contexto_accesos=None,
+    tipo_documento=None,
 ):
     interpretacion = _obtener_interpretacion_ia(respuesta_ia)
     contexto_version = contexto_version or {}
     contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
+    estado_vigencia = _resolver_estado_vigencia_payload(id_documento, contexto_version)
+    tipo_documento = _texto_comparable(tipo_documento) or (
+        interpretacion.get("tipo_documento_sugerido") or "GENERAL"
+    )
     anio_documento = (
         contexto_version.get("anio_aprobacion")
         or interpretacion.get("anio_documento_sugerido")
@@ -1335,9 +1382,9 @@ def _construir_payload_chroma(
         "titulo": titulo,
         "texto_extraido": respuesta_ia.get("texto_extraido") or "",
         "reemplazar_existente": True,
-        "tipo_documento": interpretacion.get("tipo_documento_sugerido") or "GENERAL",
+        "tipo_documento": tipo_documento,
         "ambito": interpretacion.get("ambito_sugerido") or "PUBLICO",
-        "estado_vigencia": interpretacion.get("estado_vigencia_sugerido") or "VIGENTE",
+        "estado_vigencia": estado_vigencia,
         "anio_documento": str(anio_documento),
         "rol": interpretacion.get("rol_sugerido") or "GENERAL",
         "carrera": interpretacion.get("carrera_sugerida") or "GENERAL",
@@ -1362,6 +1409,8 @@ def _construir_payload_chroma(
             "id_version": str(contexto_version.get("id_version") or ""),
             "numero_version": str(contexto_version.get("numero_version") or ""),
             "anio_documento": str(anio_documento),
+            "tipo_documento": tipo_documento,
+            "tipo_documento_sugerido_ia": interpretacion.get("tipo_documento_sugerido") or "",
             "uuid_documento": contexto_version.get("uuid_documento") or "",
             "uuid_version": contexto_version.get("uuid_version") or "",
             "id_version_anterior": str(contexto_version.get("id_version_anterior") or ""),
@@ -1409,6 +1458,7 @@ def _guardar_documento_chroma(
     respuesta_ia,
     contexto_version=None,
     contexto_accesos=None,
+    tipo_documento=None,
 ):
     url = f"{settings.IA_CHROMA_BASE_URL}{settings.IA_CHROMA_GUARDAR_PATH}"
     payload = _construir_payload_chroma(
@@ -1418,6 +1468,7 @@ def _guardar_documento_chroma(
         respuesta_ia,
         contexto_version,
         contexto_accesos,
+        tipo_documento,
     )
     try:
         if payload["texto_extraido"]:
@@ -1496,6 +1547,7 @@ def _procesar_ia_documento_segundo_plano(
     datos_archivo,
     contexto_version,
     contexto_accesos,
+    tipo_documento=None,
     contexto_version_anterior=None,
 ):
     close_old_connections()
@@ -1562,6 +1614,7 @@ def _procesar_ia_documento_segundo_plano(
             respuesta_ia,
             contexto_version,
             contexto_accesos,
+            tipo_documento,
         )
         estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
         fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
@@ -1592,6 +1645,7 @@ def _iniciar_analisis_ia_segundo_plano(
     datos_archivo,
     contexto_version,
     contexto_accesos,
+    tipo_documento=None,
     contexto_version_anterior=None,
 ):
     id_version = contexto_version.get("id_version")
@@ -1610,6 +1664,7 @@ def _iniciar_analisis_ia_segundo_plano(
             datos_archivo,
             contexto_version,
             contexto_accesos,
+            tipo_documento,
             contexto_version_anterior,
         ),
         daemon=True,
@@ -1648,6 +1703,7 @@ def reintentar_analisis_ia_documento(request, id_documento):
             datos_archivo,
             contexto_version,
             contexto_accesos,
+            documento.get("tipo") or "",
         )
         messages.success(request, "El analisis de IA se envio nuevamente.")
     except (DatabaseError, ValueError, RuntimeError) as error:
@@ -1777,6 +1833,14 @@ def _obtener_versiones(id_documento, solo_publicadas=False):
     _adjuntar_estado_ia_versiones(id_documento, versiones)
     if solo_publicadas and _publicacion_habilitada():
         versiones = [version for version in versiones if version.get("publicado")]
+    versiones = sorted(
+        versiones,
+        key=lambda version: (
+            version.get("numero_version") or 0,
+            version.get("id_version") or 0,
+        ),
+        reverse=True,
+    )
     if not versiones:
         raise Http404("El documento no tiene versiones disponibles.")
     return versiones
@@ -1812,7 +1876,7 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
     if not _columna_existe("doc_versions", "estado_ia"):
         for version in versiones:
             version["estado_ia"] = ESTADO_IA_PENDIENTE
-            version["requiere_lectura_ia_publicacion"] = _version_esta_vigente(version)
+            version["requiere_lectura_ia_publicacion"] = not version.get("publicado")
             version["label_ia"] = (
                 ESTADOS_IA_DOCUMENTO[ESTADO_IA_PENDIENTE]["label"]
                 if version["requiere_lectura_ia_publicacion"]
@@ -1820,7 +1884,6 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
             )
             version["bloqueada_publicacion_ia"] = (
                 version["requiere_lectura_ia_publicacion"]
-                and not version.get("publicado")
             )
         return
 
@@ -1840,7 +1903,7 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
     }
     for version in versiones:
         estado = estados.get(version["id_version"], ESTADO_IA_PENDIENTE)
-        requiere_lectura_ia = _version_esta_vigente(version)
+        requiere_lectura_ia = not version.get("publicado")
         version["estado_ia"] = estado
         version["requiere_lectura_ia_publicacion"] = requiere_lectura_ia
         version["label_ia"] = (
@@ -1848,7 +1911,6 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
         )
         version["bloqueada_publicacion_ia"] = (
             requiere_lectura_ia
-            and not version.get("publicado")
             and estado != ESTADO_IA_LEIDO
         )
 
@@ -1862,8 +1924,6 @@ def _validar_publicacion_versiones_por_ia(versiones, ids_publicados):
             continue
         if version.get("publicado"):
             continue
-        if not _version_esta_vigente(version):
-            continue
         if _normalizar_estado_ia(version.get("estado_ia")) != ESTADO_IA_LEIDO:
             bloqueadas.append(version)
 
@@ -1873,26 +1933,28 @@ def _validar_publicacion_versiones_por_ia(versiones, ids_publicados):
             for version in bloqueadas
         )
         raise ValueError(
-            "No se puede publicar una versión vigente si la lectura de IA aún no es positiva "
+            "No se puede publicar una versión si la lectura de IA aún no es positiva "
             f"para: {detalle}."
         )
 
 
-def _obtener_versiones_visibles(id_documento):
-    usuario = _obtener_usuario_modulo()
+def _obtener_versiones_visibles(id_documento, usuario=None):
+    usuario = usuario or _obtener_usuario_modulo()
     return _obtener_versiones(
         id_documento,
         solo_publicadas=usuario["rol_modulo"] != "EDITOR",
     )
 
 
-def _seleccionar_version(versiones, id_version):
+def _seleccionar_version(versiones, id_version, preferir_vigente=True):
     if id_version is not None:
         for version in versiones:
             if version["id_version"] == id_version:
                 return version
         raise Http404("La versiÃ³n solicitada no pertenece al documento.")
-    return next((version for version in versiones if version.get("vigente")), versiones[0])
+    if preferir_vigente:
+        return next((version for version in versiones if version.get("vigente")), versiones[0])
+    return versiones[0]
 
 
 def _validar_cambio_vigencia_version(versiones, id_version, estado_version):
@@ -1950,6 +2012,7 @@ def _edicion_mantiene_metadata_actual(
     documento,
     id_documento,
     titulo,
+    tipo,
     descripcion,
     palabras_clave,
     fecha_aprobacion,
@@ -1957,6 +2020,7 @@ def _edicion_mantiene_metadata_actual(
 ):
     return (
         _texto_comparable(titulo) == _texto_comparable(documento.get("titulo"))
+        and _texto_comparable(tipo) == _texto_comparable(documento.get("tipo"))
         and _texto_comparable(descripcion) == _texto_comparable(documento.get("descripcion"))
         and _texto_comparable(palabras_clave) == _texto_comparable(documento.get("palabras_clave"))
         and _fecha_comparable(fecha_aprobacion)
@@ -1980,25 +2044,9 @@ def _validar_edicion_version_vigente(
     if not _version_esta_vigente(version):
         return
 
-    if estado_version != "INACTIVO":
-        raise ValueError(
-            "No se puede editar una version vigente. Primero cambie la version "
-            "a No vigente y guarde los cambios."
-        )
-
-    if archivo or not _edicion_mantiene_metadata_actual(
-        documento,
-        documento["id_documento"],
-        titulo,
-        descripcion,
-        palabras_clave,
-        fecha_aprobacion,
-        accesos,
-    ):
-        raise ValueError(
-            "Para reemplazar el PDF o editar los campos del documento, primero "
-            "guarde la version como No vigente. Luego vuelva a editarla."
-        )
+    # La edición directa de una versión vigente se permite; el guardado relanza
+    # el análisis IA cuando detecta cambios en PDF, metadatos o accesos.
+    return
 
 
 def _eliminar_documento_logico(id_documento, motivo, usuario):
@@ -2664,6 +2712,7 @@ def _agregar_version_directa(id_documento, datos_archivo, descripcion_cambio, fe
     if not version or not version.get("id_version"):
         raise DatabaseError("No se pudo crear la nueva version.")
     _sincronizar_versionamiento_documento(id_documento)
+    return version["id_version"]
 
 
 def _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario):
@@ -2710,6 +2759,46 @@ def _guardar_publicacion_versiones(id_documento, ids_publicados, usuario):
                 """,
                 [id_documento, list(ids_publicados)],
             )
+            cursor.execute(
+                """
+                WITH version_publica_vigente AS (
+                    SELECT id_version
+                    FROM doc_versions
+                    WHERE id_documento = %s
+                      AND id_version = ANY(%s)
+                      AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
+                      AND COALESCE(publicado, FALSE) = TRUE
+                    ORDER BY numero_version DESC, id_version DESC
+                    LIMIT 1
+                )
+                UPDATE doc_versions v
+                SET estado = CASE
+                        WHEN v.id_version = vp.id_version THEN 'VIGENTE'
+                        ELSE 'INACTIVO'
+                    END
+                FROM version_publica_vigente vp
+                WHERE v.id_documento = %s
+                  AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO';
+                """,
+                [id_documento, list(ids_publicados), id_documento],
+            )
+            cursor.execute(
+                """
+                UPDATE docs
+                SET id_version_vigente = (
+                        SELECT id_version
+                        FROM doc_versions
+                        WHERE id_documento = %s
+                          AND id_version = ANY(%s)
+                          AND COALESCE(estado, 'INACTIVO') = 'VIGENTE'
+                          AND COALESCE(publicado, FALSE) = TRUE
+                        ORDER BY numero_version DESC, id_version DESC
+                        LIMIT 1
+                    )
+                WHERE id_documento = %s;
+                """,
+                [id_documento, list(ids_publicados), id_documento],
+            )
         cursor.execute(
             """
             UPDATE docs
@@ -2729,12 +2818,17 @@ def visor_pdf(request, id_documento):
         raise Http404("Versión no válida.") from error
 
     try:
+        usuario = _obtener_usuario_modulo()
         documento = _obtener_documento_visible(id_documento)
-        versiones = _obtener_versiones_visibles(id_documento)
+        versiones = _obtener_versiones_visibles(id_documento, usuario)
     except DatabaseError as error:
         raise Http404("No fue posible consultar el documento.") from error
 
-    version_actual = _seleccionar_version(versiones, id_version)
+    version_actual = _seleccionar_version(
+        versiones,
+        id_version,
+        preferir_vigente=usuario["rol_modulo"] == "EDITOR",
+    )
     return render(
         request,
         "documentos/visor_pdf.html",
@@ -2751,8 +2845,13 @@ def visor_pdf(request, id_documento):
 def servir_pdf(request, id_documento, id_version):
     """Entrega un PDF existente de Flask, restringido al documento y versiÃ³n visibles."""
     try:
+        usuario = _obtener_usuario_modulo()
         _obtener_documento_visible(id_documento)
-        version = _seleccionar_version(_obtener_versiones_visibles(id_documento), id_version)
+        version = _seleccionar_version(
+            _obtener_versiones_visibles(id_documento, usuario),
+            id_version,
+            preferir_vigente=usuario["rol_modulo"] == "EDITOR",
+        )
     except DatabaseError as error:
         raise Http404("No fue posible consultar el archivo.") from error
 
@@ -3098,6 +3197,7 @@ def crear_documento(request):
             datos_archivo,
             contexto_version,
             contexto_accesos,
+            tipo,
         )
         messages.success(
             request,
@@ -3187,6 +3287,16 @@ def editar_documento(request, id_documento):
             fecha_aprobacion,
             accesos,
         )
+        metadata_modificada = not _edicion_mantiene_metadata_actual(
+            documento,
+            id_documento,
+            titulo,
+            tipo,
+            descripcion,
+            palabras_clave,
+            fecha_aprobacion,
+            accesos,
+        )
         _validar_titulo_unico(titulo, id_documento)
         if archivo:
             version_anterior_chroma = _obtener_contexto_version_chroma(
@@ -3242,58 +3352,59 @@ def editar_documento(request, id_documento):
             )
         except RuntimeError as error_chroma_vigencia:
             messages.warning(request, str(error_chroma_vigencia))
-        if datos_archivo:
-            version_nueva_chroma = _obtener_contexto_version_chroma(
-                id_documento,
-                id_version=id_version,
-            )
-            contexto_version = _construir_contexto_reemplazo_version(
-                version_nueva_chroma,
-                version_anterior_chroma,
-            )
-            _iniciar_analisis_ia_segundo_plano(
-                id_documento,
-                titulo,
-                datos_archivo,
-                contexto_version,
-                contexto_accesos,
-            )
-            messages.success(
-                request,
-                "Documento editado correctamente. Analisis de IA en segundo plano.",
-            )
-        else:
-            cambio_version_vigente = (
-                estado_version == "VIGENTE"
-                and version_vigente_actual_chroma.get("id_version") == id_version
-                and _texto_uuid(version_vigente_anterior_chroma.get("uuid_version"))
-                != _texto_uuid(version_vigente_actual_chroma.get("uuid_version"))
-            )
-            if cambio_version_vigente:
-                contexto_version = _construir_contexto_reemplazo_version(
-                    version_vigente_actual_chroma,
-                    version_vigente_anterior_chroma,
-                )
-                try:
-                    _iniciar_analisis_ia_segundo_plano(
+        cambio_version_vigente = (
+            estado_version == "VIGENTE"
+            and version_vigente_actual_chroma.get("id_version") == id_version
+            and _texto_uuid(version_vigente_anterior_chroma.get("uuid_version"))
+            != _texto_uuid(version_vigente_actual_chroma.get("uuid_version"))
+        )
+        version_editada_quedo_vigente = (
+            estado_version == "VIGENTE"
+            and version_vigente_actual_chroma.get("id_version") == id_version
+        )
+        debe_reanalizar_ia = version_editada_quedo_vigente and (
+            bool(datos_archivo) or metadata_modificada or cambio_version_vigente
+        )
+        if debe_reanalizar_ia:
+            try:
+                if datos_archivo:
+                    version_nueva_chroma = _obtener_contexto_version_chroma(
                         id_documento,
-                        titulo,
-                        _datos_archivo_desde_contexto_version(version_vigente_actual_chroma),
-                        contexto_version,
-                        contexto_accesos,
+                        id_version=id_version,
                     )
-                    messages.success(
-                        request,
-                        "Documento editado correctamente. Analisis de IA en segundo plano.",
+                    contexto_version = _construir_contexto_reemplazo_version(
+                        version_nueva_chroma,
+                        version_anterior_chroma,
                     )
-                except (RuntimeError, ValueError) as error_chroma:
-                    messages.warning(
-                        request,
-                        "Documento editado correctamente, pero no se pudo iniciar el "
-                        f"analisis de IA de la version vigente: {error_chroma}",
+                    datos_analisis = datos_archivo
+                else:
+                    contexto_version = _construir_contexto_reemplazo_version(
+                        version_vigente_actual_chroma,
+                        version_vigente_anterior_chroma,
                     )
-            else:
-                messages.success(request, "Documento editado correctamente.")
+                    datos_analisis = _datos_archivo_desde_contexto_version(
+                        version_vigente_actual_chroma
+                    )
+                _iniciar_analisis_ia_segundo_plano(
+                    id_documento,
+                    titulo,
+                    datos_analisis,
+                    contexto_version,
+                    contexto_accesos,
+                    tipo,
+                )
+                messages.success(
+                    request,
+                    "Documento editado correctamente. Analisis de IA en segundo plano.",
+                )
+            except (RuntimeError, ValueError) as error_chroma:
+                messages.warning(
+                    request,
+                    "Documento editado correctamente, pero no se pudo iniciar el "
+                    f"analisis de IA de la version vigente: {error_chroma}",
+                )
+        else:
+            messages.success(request, "Documento editado correctamente.")
     except (DatabaseError, ValueError, RuntimeError) as error:
         if datos_archivo:
             default_storage.delete(datos_archivo["archivo_path"])
@@ -3326,7 +3437,7 @@ def agregar_version_documento(request, id_documento):
         contexto_accesos = _contexto_accesos_documento(id_documento)
         _validar_pdf_texto_minimo(archivo)
         datos_archivo = _guardar_pdf_django(archivo)
-        _agregar_version_directa(
+        id_version_nueva = _agregar_version_directa(
             id_documento,
             datos_archivo,
             descripcion_cambio,
@@ -3346,7 +3457,10 @@ def agregar_version_documento(request, id_documento):
             ),
             action_flag=CHANGE,
         )
-        version_nueva_chroma = _obtener_contexto_version_chroma(id_documento, vigente=True)
+        version_nueva_chroma = _obtener_contexto_version_chroma(
+            id_documento,
+            id_version=id_version_nueva,
+        )
         contexto_version = _construir_contexto_reemplazo_version(
             version_nueva_chroma,
             version_anterior_chroma,
@@ -3357,7 +3471,7 @@ def agregar_version_documento(request, id_documento):
             datos_archivo,
             contexto_version,
             contexto_accesos,
-            version_anterior_chroma,
+            documento.get("tipo") or "",
         )
         messages.success(
             request,
