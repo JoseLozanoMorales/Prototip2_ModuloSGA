@@ -21,16 +21,19 @@
                 </div>
             </div>
         </div>
-        {% if usuario.rol_modulo == 'EDITOR' %}
-            <div class="span4 documentos-actions">
+        <div class="span4 documentos-actions">
+            <button type="button" class="btn btn-primary" aria-label="Ver documento específico">
+                <i class="fa fa-file-text-o"></i> Ver documento
+            </button>
+            {% if usuario.rol_modulo == 'EDITOR' %}
                 <a href="{% url 'documentos:papelera' %}" class="btn">
                     <i class="fa fa-trash"></i> Papelera
                 </a>
                 <a href="#modal-crear" class="btn btn-success">
                     <i class="fa fa-plus"></i> Crear
                 </a>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <div class="row-fluid documentos-filters">
@@ -299,7 +302,7 @@
                                     </label>
                                     <label>
                                         <strong>Fecha de aprobaci&oacute;n</strong>
-                                        <input type="date" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                                        <input type="date" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
                                     </label>
                                     <label>
                                         <strong>Tipo</strong>
@@ -315,7 +318,7 @@
                                         <strong>Versi&oacute;n del documento</strong>
                                         <select name="id_version_vigente" data-version-select required>
                                             {% for version in doc.versiones %}
-                                                <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
+                                                <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-fecha-aprobacion="{{ version.fecha_aprobacion|date:'Y-m-d' }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
                                                     Versi&oacute;n {{ version.numero_version }}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
                                                 </option>
                                             {% endfor %}
@@ -482,7 +485,7 @@
                         <div class="modal-footer">
                             <a href="#" class="btn">Cerrar</a>
                             {% if doc.publicado %}
-                                <button type="submit" name="accion_publicacion" value="retirar_todas" class="btn btn-danger" {% if not capacidades.puede_publicar_version %}disabled{% endif %}>Quitar publicaci&oacute;n</button>
+                                <button type="submit" name="accion_publicacion" value="retirar_todas" class="btn btn-danger" {% if not capacidades.puede_publicar_version %}disabled{% endif %}>Quitar publicaci&oacute;n de todas las versiones</button>
                             {% endif %}
                             <button type="submit" class="btn btn-success" {% if not capacidades.puede_publicar_version %}disabled{% endif %}>Guardar</button>
                         </div>
@@ -570,5 +573,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260813-live-search"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260825-version-date"></script>
 {% endblock %}

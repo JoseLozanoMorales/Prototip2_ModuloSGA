@@ -125,8 +125,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function refreshApprovalDate(select) {
+        const option = select.selectedOptions[0];
+        const form = select.closest('form');
+        const approvalDateInput = form ? form.querySelector('[data-version-approval-date]') : null;
+
+        if (option && approvalDateInput) {
+            approvalDateInput.value = option.dataset.fechaAprobacion || '';
+        }
+    }
+
     function refreshVersionDetails(select) {
         rememberInitialDisabledState(select.closest('form'));
+        refreshApprovalDate(select);
         refreshVersionStatus(select);
         refreshPdfViewer(select);
         refreshEditLock(select);

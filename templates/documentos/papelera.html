@@ -217,7 +217,24 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a><a href="#modal-eliminar-versiones-definitivamente-{{ grupo.id_documento }}" class="btn btn-danger">Eliminar versiones seleccionadas</a></div>
+                    <div class="modal-footer"><a href="#" class="btn">Cerrar</a><a href="#modal-restaurar-versiones-{{ grupo.id_documento }}" class="btn btn-success">Restaurar versiones seleccionadas</a><a href="#modal-eliminar-versiones-definitivamente-{{ grupo.id_documento }}" class="btn btn-danger">Eliminar versiones seleccionadas</a></div>
+                </div>
+            </div>
+            <div id="modal-restaurar-versiones-{{ grupo.id_documento }}" class="modal-layer">
+                <div class="modal-card modal-medium">
+                    <div class="modal-header"><h2>Restaurar versiones seleccionadas</h2></div>
+                    <form id="form-restaurar-versiones-{{ grupo.id_documento }}" action="{% url 'documentos:restaurar_versiones' id_documento=grupo.id_documento %}" method="post" class="document-form" data-restore-versions-form="{{ grupo.id_documento }}">
+                        {% csrf_token %}
+                        <div class="delete-question">
+                            <h3>&iquest;Deseas restaurar las versiones seleccionadas?</h3>
+                            <p><strong>{{ grupo.principal.titulo }}</strong></p>
+                            <p class="delete-note">Solo se restaurar&aacute;n las versiones marcadas.</p>
+                        </div>
+                        <div class="modal-footer modal-footer-center">
+                            <a href="#" class="btn">Cancelar</a>
+                            <button type="submit" class="btn btn-success">Restaurar seleccionadas</button>
+                        </div>
+                    </form>
                 </div>
             </div>
             <div id="modal-eliminar-versiones-definitivamente-{{ grupo.id_documento }}" class="modal-layer">
@@ -330,6 +347,21 @@
                     var documentId = selector.getAttribute('data-select-all-versions');
                     document.querySelectorAll('[data-version-checkbox="' + documentId + '"]').forEach(function (checkbox) {
                         checkbox.checked = selector.checked;
+                    });
+                });
+            });
+            document.querySelectorAll('[data-restore-versions-form]').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                    var documentId = form.getAttribute('data-restore-versions-form');
+                    form.querySelectorAll('input[name="id_version"]').forEach(function (input) {
+                        input.parentNode.removeChild(input);
+                    });
+                    document.querySelectorAll('[data-version-checkbox="' + documentId + '"]:checked').forEach(function (checkbox) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'id_version';
+                        input.value = checkbox.value;
+                        form.appendChild(input);
                     });
                 });
             });

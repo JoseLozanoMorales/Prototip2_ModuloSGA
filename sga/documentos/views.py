@@ -2185,6 +2185,47 @@ def _restaurar_version_logica(id_documento, id_version):
     _sincronizar_versionamiento_documento(id_documento)
 
 
+def _restaurar_versiones_logicas(id_documento, ids_versiones):
+    """Restaura, en una sola operación, versiones seleccionadas de la papelera."""
+    ids_versiones = list(dict.fromkeys(ids_versiones))
+    if not ids_versiones:
+        raise ValueError("Seleccione al menos una versión para restaurar.")
+
+    with transaction.atomic():
+        versiones = _consultar_filas(
+            """
+            SELECT id_version, estado
+            FROM doc_versions
+            WHERE id_documento = %s AND id_version = ANY(%s)
+            FOR UPDATE;
+            """,
+            [id_documento, ids_versiones],
+        )
+        if len(versiones) != len(ids_versiones):
+            raise ValueError("Una o más versiones no pertenecen al documento.")
+        if any(str(version.get("estado") or "").upper() != "ELIMINADO" for version in versiones):
+            raise ValueError("Solo se pueden restaurar versiones que estén en la papelera.")
+
+        for id_version in ids_versiones:
+            _ejecutar_procedimiento(
+                """
+                CALL sp_restaurar_version_documento_logico(%s, %s);
+                """,
+                [id_documento, id_version],
+            )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE docs
+                SET fecha_eliminacion = NULL,
+                    motivo_eliminacion = NULL
+                WHERE id_documento = %s;
+                """,
+                [id_documento],
+            )
+    _sincronizar_versionamiento_documento(id_documento)
+
+
 def _registrar_auditoria_django(
     usuario,
     usuario_django,
@@ -3012,6 +3053,23 @@ def restaurar_version_documento(request, id_documento, id_version):
 
 
 @require_POST
+def restaurar_versiones_documento(request, id_documento):
+    """Restaura las versiones seleccionadas de un documento en la papelera."""
+    usuario = _obtener_usuario_modulo()
+    if usuario["rol_modulo"] != "EDITOR":
+        messages.error(request, "No tienes permisos para restaurar versiones.")
+        return redirect("documentos:lista")
+
+    try:
+        ids_versiones = _ids_enteros_formulario(request, "id_version")
+        _restaurar_versiones_logicas(id_documento, ids_versiones)
+        messages.success(request, f"Se restauraron {len(ids_versiones)} versiones correctamente.")
+    except (DatabaseError, ValueError) as error:
+        messages.error(request, f"No se pudieron restaurar las versiones: {error}")
+    return redirect("documentos:papelera")
+
+
+@require_POST
 def eliminar_documento_definitivamente(request, id_documento):
     """Elimina permanentemente un documento previamente dado de baja lógica."""
     usuario = _requerir_editor(request)
@@ -3265,10 +3323,6 @@ def editar_documento(request, id_documento):
         accesos_anteriores = _contexto_accesos_documento(id_documento)
         if accesos_anteriores != contexto_accesos:
             cambios.append(f"Permisos de acceso: '{_resumen_accesos_auditoria(accesos_anteriores)}' → '{_resumen_accesos_auditoria(contexto_accesos)}'")
-        version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
-            id_documento,
-            vigente=True,
-        )
         archivo = request.FILES.get("archivo")
         if archivo:
             cambios.append(f"Archivo PDF: reemplazado por '{archivo.name}'")
@@ -3286,6 +3340,17 @@ def editar_documento(request, id_documento):
             palabras_clave,
             fecha_aprobacion,
             accesos,
+        )
+        if not cambios:
+            messages.info(
+                request,
+                "No se guardaron cambios porque el documento no fue modificado.",
+            )
+            return redirect("documentos:lista")
+
+        version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
+            id_documento,
+            vigente=True,
         )
         metadata_modificada = not _edicion_mantiene_metadata_actual(
             documento,

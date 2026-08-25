@@ -41,6 +41,11 @@ urlpatterns = [
         views.restaurar_version_documento,
         name="restaurar_version",
     ),
+    path(
+        "<int:id_documento>/versiones/restaurar/",
+        views.restaurar_versiones_documento,
+        name="restaurar_versiones",
+    ),
     path("crear/", views.crear_documento, name="crear"),
     path("<int:id_documento>/editar/", views.editar_documento, name="editar"),
     path("<int:id_documento>/publicar/", views.publicar_versiones_documento, name="publicar"),
