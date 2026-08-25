@@ -250,7 +250,9 @@ document.addEventListener('DOMContentLoaded', function () {
             ? 'Analisis de IA completado'
             : 'Resultado del analisis de IA';
         const details = documento.mensaje_ia || documento.label_ia || 'El documento ya tiene resultado de IA.';
-        const message = (documento.titulo ? documento.titulo + ': ' : '') + details;
+        const message = documento.estado_ia === 'LEIDO'
+            ? ('El documento ' + (documento.titulo || 'seleccionado') + ' fue analizado por la IA exitosamente.')
+            : ((documento.titulo ? documento.titulo + ': ' : '') + details);
 
         let stack = document.querySelector('[data-ia-toast-stack]');
         if (!stack) {

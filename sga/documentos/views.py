@@ -1208,12 +1208,14 @@ def _publicar_multipart(url, campos, archivos):
         raise RuntimeError(str(error.reason)) from error
 
 
-def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
+def _llamar_ia_documentos(datos_archivo, contexto_accesos=None, tipo_documento=None):
     url = f"{settings.IA_DOCUMENTOS_BASE_URL}{settings.IA_DOCUMENTOS_ANALIZAR_PATH}"
     try:
         contenido = _publicar_multipart(
             url,
-            [],
+            {
+                "tipo_documento": _texto_comparable(tipo_documento),
+            },
             {
                 "archivo": {
                     "filename": datos_archivo["archivo_nombre"],
@@ -1225,7 +1227,7 @@ def _llamar_ia_documentos(datos_archivo, contexto_accesos=None):
     except RuntimeError as error:
         raise RuntimeError(
             f"No se pudo conectar con la IA documental en {url}. "
-            f"Campos enviados: archivo. Error: {error}"
+            f"Campos enviados: archivo, tipo_documento. Error: {error}"
         ) from error
 
     return contenido
@@ -1563,7 +1565,11 @@ def _procesar_ia_documento_segundo_plano(
         advertencias.append(str(error_chroma_vigencia))
 
     try:
-        respuesta_ia = _llamar_ia_documentos(datos_archivo, contexto_accesos)
+        respuesta_ia = _llamar_ia_documentos(
+            datos_archivo,
+            contexto_accesos,
+            tipo_documento,
+        )
         porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
     except ValueError as error:
         try:
@@ -1616,9 +1622,9 @@ def _procesar_ia_documento_segundo_plano(
             contexto_accesos,
             tipo_documento,
         )
-        estado_chroma = respuesta_chroma.get("estado_procesamiento", "PROCESADO")
-        fragmentos = respuesta_chroma.get("fragmentos_generados", 0)
-        mensaje = f"{mensaje} ChromaDB: {estado_chroma}, fragmentos generados: {fragmentos}."
+        mensaje = (
+            f"El documento {titulo} fue analizado por la IA exitosamente."
+        )
     except RuntimeError as error_chroma:
         mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
     except Exception as error_chroma:
