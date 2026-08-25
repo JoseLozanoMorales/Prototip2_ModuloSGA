@@ -135,6 +135,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function markPreviewedVersionForSave(control) {
+        const form = control.closest('form');
+        const versionSelect = form ? form.querySelector('[data-version-select]') : null;
+        const statusSelect = form ? form.querySelector('[data-version-status-select]') : null;
+        const approvalDateInput = form ? form.querySelector('[data-version-approval-date]') : null;
+        const savedVersionId = form ? form.querySelector('[data-saved-version-id]') : null;
+        const savedStatus = form ? form.querySelector('[data-saved-version-status]') : null;
+        const savedApprovalDate = form ? form.querySelector('[data-saved-approval-date]') : null;
+
+        if (!form || !versionSelect || !savedVersionId || !savedStatus || !savedApprovalDate) {
+            return;
+        }
+
+        savedVersionId.value = versionSelect.value;
+        savedStatus.value = statusSelect ? statusSelect.value : 'VIGENTE';
+        savedApprovalDate.value = approvalDateInput ? approvalDateInput.value : '';
+    }
+
     function refreshVersionDetails(select) {
         rememberInitialDisabledState(select.closest('form'));
         refreshApprovalDate(select);
@@ -412,6 +430,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         select.addEventListener('input', function () {
             refreshVersionDetails(select);
+        });
+    });
+    document.querySelectorAll('[data-version-status-select]').forEach(function (select) {
+        select.addEventListener('change', function () {
+            markPreviewedVersionForSave(select);
+        });
+    });
+    document.querySelectorAll('[data-version-approval-date]').forEach(function (input) {
+        input.addEventListener('change', function () {
+            markPreviewedVersionForSave(input);
         });
     });
     refreshActiveModalPdf();

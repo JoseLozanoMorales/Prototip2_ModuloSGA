@@ -302,7 +302,8 @@
                                     </label>
                                     <label>
                                         <strong>Fecha de aprobaci&oacute;n</strong>
-                                        <input type="date" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                                        <input type="hidden" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" data-saved-approval-date>
+                                        <input type="date" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
                                     </label>
                                     <label>
                                         <strong>Tipo</strong>
@@ -316,7 +317,8 @@
                                 <div class="form-row two-columns">
                                     <label>
                                         <strong>Versi&oacute;n del documento</strong>
-                                        <select name="id_version_vigente" data-version-select required>
+                                        <input type="hidden" name="id_version_vigente" value="{{ doc.id_version_vigente }}" data-saved-version-id>
+                                        <select data-version-select required>
                                             {% for version in doc.versiones %}
                                                 <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-fecha-aprobacion="{{ version.fecha_aprobacion|date:'Y-m-d' }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
                                                     Versi&oacute;n {{ version.numero_version }}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
@@ -326,15 +328,13 @@
                                     </label>
                                     <label>
                                         <strong>Estado de la versi&oacute;n</strong>
-                                        <select name="estado_version" data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
+                                        <input type="hidden" name="estado_version" value="{{ doc.estado }}" data-saved-version-status>
+                                        <select data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
                                             <option value="VIGENTE" {% if doc.estado == 'VIGENTE' %}selected{% endif %}>Vigente</option>
                                             {% if capacidades.puede_cambiar_estado_version %}
                                                 <option value="INACTIVO" {% if doc.estado == 'INACTIVO' %}selected{% endif %}>No vigente</option>
                                             {% endif %}
                                         </select>
-                                        {% if not capacidades.puede_cambiar_estado_version %}
-                                            <input type="hidden" name="estado_version" value="VIGENTE">
-                                        {% endif %}
                                     </label>
                                 </div>
                                 <div class="upload-row">
@@ -573,5 +573,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260825-version-date"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260825-preview-version"></script>
 {% endblock %}
