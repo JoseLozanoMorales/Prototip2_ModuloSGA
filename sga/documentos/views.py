@@ -3568,6 +3568,17 @@ def publicar_versiones_documento(request, id_documento):
         ids_invalidos = ids_publicados - ids_disponibles
         if ids_invalidos:
             raise ValueError("Una o mas versiones seleccionadas no pertenecen al documento.")
+        ids_publicados_actuales = {
+            version["id_version"]
+            for version in versiones
+            if version.get("publicado")
+        }
+        if ids_publicados == ids_publicados_actuales:
+            messages.info(
+                request,
+                "No se guardaron cambios porque la publicación no fue modificada.",
+            )
+            return redirect("documentos:lista")
         _validar_publicacion_versiones_por_ia(versiones, ids_publicados)
 
         with transaction.atomic():

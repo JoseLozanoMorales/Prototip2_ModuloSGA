@@ -146,7 +146,7 @@
                                         <div class="menu-box" hidden>
                                             <a href="#modal-editar-{{ doc.id_documento }}"><i class="fa fa-pencil"></i> Editar</a>
                                             <a href="#modal-version-{{ doc.id_documento }}"><i class="fa fa-files-o"></i> Agregar nueva versi&oacute;n</a>
-                                            <a href="#modal-publicar-{{ doc.id_documento }}"><i class="fa fa-check-square-o"></i> {% if doc.publicado %}Quitar publicaci&oacute;n{% else %}Gestionar publicaci&oacute;n{% endif %}</a>
+                                            <a href="#modal-publicar-{{ doc.id_documento }}"><i class="fa fa-check-square-o"></i> Gestionar publicaci&oacute;n</a>
                                             {% if doc.estado_ia != 'LEIDO' %}
                                                 <form class="menu-action-form" action="{% url 'documentos:reintentar_analisis_ia' id_documento=doc.id_documento %}" method="post">
                                                     {% csrf_token %}
