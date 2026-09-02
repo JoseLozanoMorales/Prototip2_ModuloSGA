@@ -379,49 +379,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initBetyIframe() {
-        const container = document.getElementById('bety-iframe-container');
-        const iframe = document.getElementById('bety-chat-iframe');
-        const origenPermitido = 'http://16.58.71.138:8000';
+        document.addEventListener('DOMContentLoaded', function () {
+                const container = document.getElementById('bety-iframe-container');
+                const origenPermitido = 'https://bettyaiuteq.duckdns.org';
 
-        if (!container) {
-            return;
-        }
+                if (!container) {
+                    return;
+                }
 
-        const abrirChat = function () {
-            container.classList.add('abierto');
-        };
+                window.addEventListener('message', function (event) {
+                    if (event.origin !== origenPermitido) {
+                        return;
+                    }
 
-        if (iframe) {
-            iframe.addEventListener('focus', abrirChat);
-        }
+                    if (!event.data || !event.data.tipo) {
+                        return;
+                    }
 
-        container.addEventListener('click', function () {
-            if (!container.classList.contains('abierto')) {
-                abrirChat();
-            }
-        });
+                    if (event.data.tipo === 'BETY_CHAT_ABIERTO') {
+                        container.classList.add('abierto');
+                    }
 
-        window.addEventListener('blur', function () {
-            if (document.activeElement === iframe && !container.classList.contains('abierto')) {
-                abrirChat();
-            }
-        });
-
-        window.addEventListener('message', function (event) {
-            const data = parseBetyMessageData(event.data);
-
-            if (event.origin !== origenPermitido || !data || !data.tipo) {
-                return;
-            }
-
-            if (data.tipo === 'BETY_CHAT_ABIERTO') {
-                container.classList.add('abierto');
-            }
-
-            if (data.tipo === 'BETY_CHAT_CERRADO') {
-                container.classList.remove('abierto');
-            }
-        });
+                    if (event.data.tipo === 'BETY_CHAT_CERRADO') {
+                        container.classList.remove('abierto');
+                    }
+                });
+            });
     }
 
     document.querySelectorAll('[data-selected-box]').forEach(refreshPlaceholder);
