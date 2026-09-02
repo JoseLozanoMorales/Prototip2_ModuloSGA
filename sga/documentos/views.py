@@ -19,6 +19,7 @@ from django.contrib import messages
 from django.db import DatabaseError, close_old_connections
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -55,6 +56,11 @@ TIPOS_DOCUMENTO = (
     "Procedimiento",
     "Videos",
 )
+# Preparado para habilitar la clasificación cuando el módulo maneje más tipos.
+# Todos los registros del módulo son documentos legales. Mientras el selector
+# esté deshabilitado se usa una categoría admitida por chk_docs_tipo.
+TIPO_DOCUMENTO_PREDETERMINADO = "Manual"
+SELECTOR_TIPO_DOCUMENTO_HABILITADO = False
 
 ESTADO_IA_PENDIENTE = "PENDIENTE"
 ESTADO_IA_LEIDO = "LEIDO"
@@ -175,6 +181,7 @@ def lista_documentos(request):
             "grupos_acceso": catalogos_acceso["grupos"],
             "tipos_periodo_acceso": catalogos_acceso["tipos_periodo"],
             "tipos_documento": TIPOS_DOCUMENTO,
+            "selector_tipo_documento_habilitado": SELECTOR_TIPO_DOCUMENTO_HABILITADO,
         },
     )
 
@@ -1001,7 +1008,7 @@ def _extraer_texto_pdf_subido(archivo):
 
 def _validar_pdf_texto_minimo(archivo):
     texto = _extraer_texto_pdf_subido(archivo)
-    caracteres = len(re.sub(r"\s+", "", texto or ""))
+    caracteres = _contar_caracteres_texto(texto)
     if caracteres < PDF_TEXTO_MINIMO_CARACTERES:
         raise ValueError(
             "El PDF debe contener al menos "
@@ -1009,6 +1016,11 @@ def _validar_pdf_texto_minimo(archivo):
             f"se detectaron {caracteres}. Verifique que no sea un PDF netamente escaneado."
         )
     return caracteres
+
+
+def _contar_caracteres_texto(texto):
+    """Cuenta contenido real, sin hacer que espacios y saltos inflen el total."""
+    return len(re.sub(r"\s+", "", texto or ""))
 
 
 def _guardar_pdf_django(archivo):
@@ -1196,6 +1208,16 @@ def _obtener_porcentaje_texto_ia(contenido):
 def _validar_porcentaje_texto_ia(contenido):
     porcentaje_texto = _obtener_porcentaje_texto_ia(contenido)
     if porcentaje_texto < settings.IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO:
+        # El porcentaje remoto suele representar la ocupacion visual o la
+        # proporcion de paginas con texto. Portadas, tablas, firmas e imagenes
+        # pueden reducirlo aunque el PDF sea perfectamente util para busqueda.
+        # Si la IA logro extraer suficiente texto, no debemos descartarlo por
+        # ese indicador secundario.
+        caracteres_extraidos = _contar_caracteres_texto(
+            contenido.get("texto_extraido")
+        )
+        if caracteres_extraidos >= PDF_TEXTO_MINIMO_CARACTERES:
+            return porcentaje_texto
         raise ValueError(
             "El documento tiene un bajo porcentaje de texto "
             f"({porcentaje_texto:g}%). Minimo requerido: "
@@ -1244,6 +1266,23 @@ def _resolver_estado_vigencia_payload(id_documento, contexto_version):
     return _obtener_estado_version(id_documento, contexto_version.get("id_version")) or "VIGENTE"
 
 
+def _construir_url_pdf_vigente(request, id_documento, contexto_version):
+    """Construye el enlace directo solo para la version que actualmente es vigente."""
+    # IMPORTANTE: en produccion, el host de la solicitud debe corresponder a la
+    # direccion publica real desde la que se serviran los archivos PDF.
+    contexto_version = contexto_version or {}
+    id_version = contexto_version.get("id_version")
+    if not id_version:
+        return ""
+    if _resolver_estado_vigencia_payload(id_documento, contexto_version) != "VIGENTE":
+        return ""
+    ruta = reverse(
+        "documentos:pdf",
+        kwargs={"id_documento": id_documento, "id_version": id_version},
+    )
+    return request.build_absolute_uri(ruta)
+
+
 def _construir_contexto_reemplazo_version(version_nueva, version_anterior=None):
     version_anterior = version_anterior or {}
     return {
@@ -1280,6 +1319,7 @@ def _construir_payload_chroma(
     contexto_version=None,
     contexto_accesos=None,
     tipo_documento=None,
+    documento_url="",
 ):
     interpretacion = _obtener_interpretacion_ia(respuesta_ia)
     contexto_version = contexto_version or {}
@@ -1294,6 +1334,11 @@ def _construir_payload_chroma(
         or ""
     )
     metadata_accesos = _metadata_accesos(contexto_accesos)
+    metadata_documento_url = (
+        {"documento_url": documento_url}
+        if estado_vigencia == "VIGENTE" and documento_url
+        else {}
+    )
     payload = {
         "id_documento": str(id_documento),
         "id_version": contexto_version.get("id_version") or "",
@@ -1341,6 +1386,7 @@ def _construir_payload_chroma(
             "uuid_version_anterior": contexto_version.get("uuid_version_anterior") or "",
             "porcentaje_texto": respuesta_ia.get("porcentaje_texto"),
             "porcentaje_imagenes": respuesta_ia.get("porcentaje_imagenes"),
+            **metadata_documento_url,
             **metadata_accesos,
         },
         "paginas": respuesta_ia.get("paginas") or 0,
@@ -1382,6 +1428,7 @@ def _guardar_documento_chroma(
     contexto_version=None,
     contexto_accesos=None,
     tipo_documento=None,
+    documento_url="",
 ):
     url = f"{settings.IA_CHROMA_BASE_URL}{settings.IA_CHROMA_GUARDAR_PATH}"
     payload = _construir_payload_chroma(
@@ -1392,6 +1439,7 @@ def _guardar_documento_chroma(
         contexto_version,
         contexto_accesos,
         tipo_documento,
+        documento_url,
     )
     try:
         if payload["texto_extraido"]:
@@ -1461,6 +1509,7 @@ def _procesar_ia_documento_segundo_plano(
     contexto_accesos,
     tipo_documento=None,
     contexto_version_anterior=None,
+    documento_url="",
 ):
     close_old_connections()
     id_version = contexto_version.get("id_version")
@@ -1531,6 +1580,7 @@ def _procesar_ia_documento_segundo_plano(
             contexto_version,
             contexto_accesos,
             tipo_documento,
+            documento_url,
         )
         mensaje = (
             f"El documento {titulo} fue analizado por la IA exitosamente."
@@ -1563,6 +1613,7 @@ def _iniciar_analisis_ia_segundo_plano(
     contexto_accesos,
     tipo_documento=None,
     contexto_version_anterior=None,
+    documento_url="",
 ):
     id_version = contexto_version.get("id_version")
     _actualizar_estado_ia_version(
@@ -1582,6 +1633,7 @@ def _iniciar_analisis_ia_segundo_plano(
             contexto_accesos,
             tipo_documento,
             contexto_version_anterior,
+            documento_url,
         ),
         daemon=True,
     )
@@ -1620,6 +1672,9 @@ def reintentar_analisis_ia_documento(request, id_documento):
             contexto_version,
             contexto_accesos,
             documento.get("tipo") or "",
+            documento_url=_construir_url_pdf_vigente(
+                request, id_documento, contexto_version
+            ),
         )
         messages.success(request, "El analisis de IA se envio nuevamente.")
     except (DatabaseError, ValueError, RuntimeError) as error:
@@ -2401,6 +2456,13 @@ def _validar_tipo_documento(tipo):
     return tipo
 
 
+def _tipo_documento_formulario(tipo_solicitado="", tipo_actual=""):
+    """Resuelve el tipo sin perder soporte para reactivar el selector."""
+    if SELECTOR_TIPO_DOCUMENTO_HABILITADO:
+        return _validar_tipo_documento((tipo_solicitado or "").strip())
+    return tipo_actual or TIPO_DOCUMENTO_PREDETERMINADO
+
+
 def _actualizar_tipo_documento(id_documento, tipo):
     services.actualizar_tipo_documento(id_documento, tipo)
 
@@ -2791,7 +2853,7 @@ def crear_documento(request):
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
         palabras_clave = request.POST.get("palabras_clave", "").strip()
-        tipo = _validar_tipo_documento(request.POST.get("tipo", "").strip())
+        tipo = _tipo_documento_formulario(request.POST.get("tipo", ""))
         fecha_aprobacion = _fecha_formulario(
             request.POST.get("fecha_aprobacion"),
             requerido=True,
@@ -2841,6 +2903,9 @@ def crear_documento(request):
             contexto_version,
             contexto_accesos,
             tipo,
+            documento_url=_construir_url_pdf_vigente(
+                request, id_documento, contexto_version
+            ),
         )
         messages.success(
             request,
@@ -2864,7 +2929,6 @@ def editar_documento(request, id_documento):
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
         palabras_clave = request.POST.get("palabras_clave", "").strip()
-        tipo = _validar_tipo_documento(request.POST.get("tipo", "").strip())
         fecha_aprobacion = _fecha_formulario(
             request.POST.get("fecha_aprobacion"),
             requerido=True,
@@ -2874,6 +2938,10 @@ def editar_documento(request, id_documento):
         if estado_version not in {"VIGENTE", "INACTIVO"}:
             raise ValueError("El estado de la versión no es válido.")
         documento = _obtener_documento_para_edicion(id_documento)
+        tipo = _tipo_documento_formulario(
+            request.POST.get("tipo", ""),
+            documento.get("tipo") or TIPO_DOCUMENTO_PREDETERMINADO,
+        )
         puede_cambiar_estado_version = _columna_existe("doc_versions", "estado")
         if estado_version != "VIGENTE" and not puede_cambiar_estado_version:
             raise ValueError(
@@ -3042,6 +3110,9 @@ def editar_documento(request, id_documento):
                     contexto_version,
                     contexto_accesos,
                     tipo,
+                    documento_url=_construir_url_pdf_vigente(
+                        request, id_documento, contexto_version
+                    ),
                 )
                 messages.success(
                     request,
@@ -3122,6 +3193,9 @@ def agregar_version_documento(request, id_documento):
             contexto_version,
             contexto_accesos,
             documento.get("tipo") or "",
+            documento_url=_construir_url_pdf_vigente(
+                request, id_documento, contexto_version
+            ),
         )
         messages.success(
             request,

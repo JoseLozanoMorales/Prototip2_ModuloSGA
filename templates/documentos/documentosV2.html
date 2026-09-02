@@ -211,15 +211,17 @@
                             <strong>Fecha de aprobaci&oacute;n</strong>
                             <input type="date" name="fecha_aprobacion" min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
                         </label>
-                        <label>
-                            <strong>Tipo</strong>
-                            <select name="tipo" required>
-                                <option value="" disabled selected>Seleccione un tipo</option>
-                                {% for tipo_documento in tipos_documento %}
-                                    <option value="{{ tipo_documento }}">{{ tipo_documento }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
+                        {% if selector_tipo_documento_habilitado %}
+                            <label>
+                                <strong>Tipo</strong>
+                                <select name="tipo" required>
+                                    <option value="" disabled selected>Seleccione un tipo</option>
+                                    {% for tipo_documento in tipos_documento %}
+                                        <option value="{{ tipo_documento }}">{{ tipo_documento }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        {% endif %}
                     </div>
                     <div class="form-row">
                         <label>
@@ -305,14 +307,16 @@
                                         <input type="hidden" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" data-saved-approval-date>
                                         <input type="date" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
                                     </label>
-                                    <label>
-                                        <strong>Tipo</strong>
-                                        <select name="tipo" required>
-                                            {% for tipo_documento in tipos_documento %}
-                                                <option value="{{ tipo_documento }}" {% if doc.tipo == tipo_documento %}selected{% endif %}>{{ tipo_documento }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </label>
+                                    {% if selector_tipo_documento_habilitado %}
+                                        <label>
+                                            <strong>Tipo</strong>
+                                            <select name="tipo" required>
+                                                {% for tipo_documento in tipos_documento %}
+                                                    <option value="{{ tipo_documento }}" {% if doc.tipo == tipo_documento %}selected{% endif %}>{{ tipo_documento }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                    {% endif %}
                                 </div>
                                 <div class="form-row two-columns">
                                     <label>
