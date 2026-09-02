@@ -16,16 +16,22 @@ from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
-from django.db import DatabaseError, close_old_connections, connection
+from django.db import DatabaseError, close_old_connections
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.utils import timezone
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from sga.models import PerfilUsuario, Periodo
+from .models import (
+    AccesoDocumento, Documento, EditorModulo, HistorialEliminacion,
+    VersionDocumento,
+)
+from . import repositories, selectors, services
 
 logger = logging.getLogger(__name__)
 
@@ -174,27 +180,18 @@ def lista_documentos(request):
 
 
 def pendiente_de_migrar(request, *args, **kwargs):
-    """Placeholder temporal para flujos todavÃ­a atendidos por Flask."""
+    """Placeholder temporal para flujos todavía atendidos por Flask."""
     return HttpResponse("Pendiente de migrar desde Flask a Django.", status=501)
 
 
-def _consultar_filas(sql, parametros):
-    """Ejecuta una consulta de lectura y devuelve filas como diccionarios."""
-    with connection.cursor() as cursor:
-        cursor.execute(sql, parametros)
-        columnas = [columna[0] for columna in cursor.description]
-        return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
-
-
 def _obtener_usuario_modulo():
-    """Obtiene el rol del usuario simulado desde la misma funcion de Flask."""
+    """Obtiene el rol del usuario simulado desde la tabla de editores."""
     usuario = dict(USUARIO_SIMULADO)
     try:
-        filas = _consultar_filas(
-            "SELECT fn_usuario_es_editor(%s) AS editor;",
-            [usuario["id_usuario_externo"]],
-        )
-        usuario["rol_modulo"] = "EDITOR" if filas and filas[0]["editor"] else "LECTOR"
+        es_editor = EditorModulo.objects.filter(
+            id_usuario_externo=usuario["id_usuario_externo"], activo=True
+        ).exists()
+        usuario["rol_modulo"] = "EDITOR" if es_editor else "LECTOR"
     except DatabaseError:
         usuario["rol_modulo"] = "LECTOR"
     return usuario
@@ -207,30 +204,9 @@ def _obtener_sessionid_chat(request):
     return request.session.session_key
 
 
-def _ejecutar_procedimiento(sql, parametros):
-    """Ejecuta un procedimiento heredado; Django confirma por autocommit."""
-    with connection.cursor() as cursor:
-        cursor.execute(sql, parametros)
-
-
-def _ejecutar_procedimiento_y_obtener_fila(sql, parametros):
-    """Ejecuta un procedimiento con parÃ¡metros OUT y devuelve su fila."""
-    with connection.cursor() as cursor:
-        cursor.execute(sql, parametros)
-        columnas = [columna[0] for columna in cursor.description]
-        fila = cursor.fetchone()
-        return dict(zip(columnas, fila)) if fila else None
-
-
 def _columna_existe(tabla, columna):
     try:
-        filas = _consultar_filas(
-            """
-            SELECT fn_columna_existe(%s, %s) AS existe;
-            """,
-            [tabla, columna],
-        )
-        return bool(filas and filas[0]["existe"])
+        return repositories.columna_existe(tabla, columna)
     except DatabaseError:
         return False
 
@@ -271,34 +247,43 @@ def _adjuntar_estado_ia_documentos(documentos, solo_publicadas=False):
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
     if solo_publicadas and _publicacion_habilitada():
-        filas = _consultar_filas(
-            """
-            SELECT DISTINCT ON (id_documento)
-                   id_documento,
-                   COALESCE(estado_ia, %s) AS estado_ia,
-                   porcentaje_texto_ia,
-                   COALESCE(mensaje_ia, '') AS mensaje_ia
-            FROM doc_versions
-            WHERE id_documento = ANY(%s)
-              AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
-              AND COALESCE(publicado, FALSE) = TRUE
-            ORDER BY id_documento, numero_version DESC, id_version DESC;
-            """,
-            [ESTADO_IA_PENDIENTE, ids_documentos],
+        filas = VersionDocumento.objects.activas().publicadas().filter(
+            documento_id__in=ids_documentos
+        ).order_by(
+            "documento_id", "-numero_version", "-id_version"
+        ).distinct("documento_id").values(
+            "documento_id", "estado_ia", "porcentaje_texto_ia", "mensaje_ia"
         )
+        filas = [
+            {
+                "id_documento": fila["documento_id"],
+                "estado_ia": fila.get("estado_ia") or ESTADO_IA_PENDIENTE,
+                "porcentaje_texto_ia": fila.get("porcentaje_texto_ia"),
+                "mensaje_ia": fila.get("mensaje_ia") or "",
+            }
+            for fila in filas
+        ]
     else:
-        filas = _consultar_filas(
-            """
-            SELECT *
-            FROM fn_obtener_estados_ia_documentos(%s, %s, %s, %s);
-            """,
-            [
-                ids_documentos,
-                ESTADO_IA_OBSERVADO,
-                ESTADO_IA_PENDIENTE,
-                estado_sin_vigente["mensaje_ia"],
-            ],
-        )
+        estados_vigentes = selectors.estados_ia_documentos(ids_documentos)
+        filas = []
+        for id_documento in ids_documentos:
+            version = estados_vigentes.get(id_documento)
+            filas.append(
+                {
+                    "id_documento": id_documento,
+                    "estado_ia": (
+                        version.get("estado_ia") or ESTADO_IA_PENDIENTE
+                        if version else ESTADO_IA_OBSERVADO
+                    ),
+                    "porcentaje_texto_ia": (
+                        version.get("porcentaje_texto_ia") if version else None
+                    ),
+                    "mensaje_ia": (
+                        version.get("mensaje_ia") or ""
+                        if version else estado_sin_vigente["mensaje_ia"]
+                    ),
+                }
+            )
     estados = {
         fila["id_documento"]: _datos_estado_ia(
             fila.get("estado_ia"),
@@ -404,15 +389,15 @@ def _adjuntar_publicacion_documentos(documentos):
         return
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    filas = _consultar_filas(
-        """
-        SELECT * FROM fn_obtener_publicacion_documentos(%s);
-        """,
-        [ids_documentos],
+    publicados = set(
+        VersionDocumento.objects.activas()
+        .publicadas()
+        .filter(documento_id__in=ids_documentos)
+        .values_list("documento_id", flat=True)
+        .distinct()
     )
-    publicados = {fila["id_documento"]: bool(fila["publicado"]) for fila in filas}
     for documento in documentos:
-        publicado = publicados.get(documento["id_documento"], False)
+        publicado = documento["id_documento"] in publicados
         documento["publicado"] = publicado
         documento["publicado_texto"] = "Publicado" if publicado else "No publicado"
 
@@ -428,16 +413,11 @@ def _adjuntar_versionamiento_documentos(documentos):
         return
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    filas = _consultar_filas(
-        """
-        SELECT * FROM fn_obtener_versionamiento_documentos(%s);
-        """,
-        [ids_documentos],
+    versionamiento_por_documento = dict(
+        Documento.objects.filter(pk__in=ids_documentos).values_list(
+            "id_documento", "tiene_versionamiento"
+        )
     )
-    versionamiento_por_documento = {
-        fila["id_documento"]: bool(fila["tiene_versionamiento"])
-        for fila in filas
-    }
     for documento in documentos:
         tiene_versionamiento = versionamiento_por_documento.get(
             documento["id_documento"], False
@@ -452,28 +432,20 @@ def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
     if not documentos:
         return
 
-    filtro_publicacion = ""
-    if solo_publicadas and _publicacion_habilitada():
-        filtro_publicacion = "AND COALESCE(publicado, FALSE) = TRUE"
-
-    orden_version = "numero_version DESC, id_version DESC"
-
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    filas = _consultar_filas(
-        f"""
-        SELECT DISTINCT ON (id_documento)
-               id_documento,
-               id_version,
-               numero_version
-        FROM doc_versions
-        WHERE id_documento = ANY(%s)
-          AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
-          {filtro_publicacion}
-        ORDER BY id_documento, {orden_version};
-        """,
-        [ids_documentos],
+    versiones = VersionDocumento.objects.activas().filter(
+        documento_id__in=ids_documentos
     )
-    ultima_version_por_documento = {fila["id_documento"]: fila for fila in filas}
+    if solo_publicadas and _publicacion_habilitada():
+        versiones = versiones.publicadas()
+    filas = versiones.order_by(
+        "documento_id", "-numero_version", "-id_version"
+    ).distinct("documento_id").values(
+        "documento_id", "id_version", "numero_version"
+    )
+    ultima_version_por_documento = {
+        fila["documento_id"]: fila for fila in filas
+    }
     for documento in documentos:
         version = ultima_version_por_documento.get(documento["id_documento"]) or {}
         id_version = version.get("id_version")
@@ -488,30 +460,12 @@ def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
 
 
 def _sincronizar_versionamiento_documento(id_documento):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_sincronizar_versionamiento_documento(%s);
-        """,
-        [id_documento],
-    )
+    services.sincronizar_versionamiento(id_documento)
 
 
 def _listar_documentos_modulo(usuario, busqueda, anio):
-    return _consultar_filas(
-        """
-        SELECT listado.*, d.tipo
-        FROM fn_listar_documentos_modulo(%s, %s, %s, %s, %s, %s) AS listado
-        JOIN docs d ON d.id_documento = listado.id_documento
-        WHERE d.fecha_eliminacion IS NULL;
-        """,
-        [
-            usuario["id_usuario_externo"],
-            usuario["id_perfil_externo"],
-            usuario["id_grupo_externo"],
-            usuario["id_tipo_periodo_externo"],
-            busqueda or "",
-            _anio_entero(anio),
-        ],
+    return repositories.listar_documentos_modulo(
+        usuario, busqueda, _anio_entero(anio)
     )
 
 
@@ -519,12 +473,7 @@ def _listar_papelera_fallback(busqueda, anio):
     """Lista cada documento y versión eliminada como un elemento independiente."""
     texto_busqueda = (busqueda or "").strip()
     anio_consulta = _anio_entero(anio)
-    return _consultar_filas(
-        """
-        SELECT * FROM fn_listar_papelera_documentos(%s, %s);
-        """,
-        [texto_busqueda, anio_consulta],
-    )
+    return repositories.listar_papelera(texto_busqueda, anio_consulta)
 
 
 def _agrupar_papelera_por_documento(elementos):
@@ -574,11 +523,10 @@ def _accesos_por_documento(documentos):
     if not documentos:
         return {}
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    accesos = _consultar_filas(
-        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [ids_documentos]
-    )
+    accesos = selectors.accesos_de_documentos(ids_documentos)
     resultado = {id_documento: [] for id_documento in ids_documentos}
     for acceso in accesos:
+        acceso["id_documento"] = acceso.pop("documento_id")
         resultado.setdefault(acceso["id_documento"], []).append(acceso)
     return resultado
 
@@ -701,11 +649,10 @@ def _adjuntar_detalles_editor(documentos, catalogos_acceso):
         return
 
     ids_documentos = [documento["id_documento"] for documento in documentos]
-    accesos = _consultar_filas(
-        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [ids_documentos]
-    )
+    accesos = selectors.accesos_de_documentos(ids_documentos)
     accesos_por_documento = {}
     for acceso in accesos:
+        acceso["id_documento"] = acceso.pop("documento_id")
         accesos_por_documento.setdefault(acceso["id_documento"], []).append(acceso)
 
     for documento in documentos:
@@ -915,9 +862,7 @@ def _contexto_accesos_formulario(request):
 
 
 def _contexto_accesos_documento(id_documento):
-    accesos = _consultar_filas(
-        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [[id_documento]]
-    )
+    accesos = selectors.accesos_de_documento(id_documento)
     return _contexto_accesos(
         _valores_unicos_acceso(accesos, "id_perfil_externo"),
         _valores_unicos_acceso(accesos, "id_grupo_externo"),
@@ -1265,30 +1210,12 @@ def _obtener_interpretacion_ia(contenido):
 
 
 def _obtener_contexto_version_chroma(id_documento, id_version=None, vigente=None):
-    filas = _consultar_filas(
-        """
-        SELECT *
-        FROM fn_obtener_contexto_version_chroma(%s, %s, %s);
-        """,
-        [id_documento, id_version, vigente],
-    )
-    contexto = filas[0] if filas else {}
-    if contexto.get("id_version"):
-        contexto["fecha_aprobacion"] = _obtener_fecha_aprobacion_version(
-            id_documento,
-            contexto["id_version"],
-        )
-    return contexto
+    return selectors.contexto_version_chroma(id_documento, id_version, vigente)
 
 
 def _obtener_fecha_aprobacion_version(id_documento, id_version):
-    filas = _consultar_filas(
-        """
-        SELECT fn_obtener_fecha_aprobacion_version(%s, %s) AS fecha_aprobacion;
-        """,
-        [id_documento, id_version],
-    )
-    return filas[0]["fecha_aprobacion"] if filas else None
+    contexto = selectors.contexto_version_chroma(id_documento, id_version)
+    return contexto.get("fecha_aprobacion")
 
 
 def _texto_uuid(valor):
@@ -1304,15 +1231,9 @@ def _anio_fecha(valor):
 def _obtener_estado_version(id_documento, id_version):
     if not id_documento or not id_version:
         return ""
-    filas = _consultar_filas(
-        """
-        SELECT COALESCE(estado, '') AS estado
-        FROM doc_versions
-        WHERE id_documento = %s AND id_version = %s;
-        """,
-        [id_documento, id_version],
-    )
-    return _texto_comparable((filas[0] if filas else {}).get("estado")).upper()
+    return _texto_comparable(
+        selectors.estado_version(id_documento, id_version)
+    ).upper()
 
 
 def _resolver_estado_vigencia_payload(id_documento, contexto_version):
@@ -1503,36 +1424,25 @@ def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_t
     ):
         return
 
-    _ejecutar_procedimiento(
-        """
-        CALL sp_actualizar_estado_ia_version(%s, %s, %s, %s, %s);
-        """,
-        [
-            id_documento,
-            id_version,
-            _normalizar_estado_ia(estado),
-            porcentaje_texto,
-            str(mensaje or "")[:1000],
-        ],
+    services.actualizar_estado_ia(
+        id_documento,
+        id_version,
+        _normalizar_estado_ia(estado),
+        porcentaje_texto,
+        str(mensaje or "")[:1000],
     )
 
 
 def _reservar_reintento_ia(id_documento, id_version):
     """Reserva de forma atomica un reintento y evita dos analisis simultaneos."""
-    filas = _consultar_filas(
-        """
-        SELECT fn_reservar_reintento_ia(%s, %s, %s, %s, %s, %s) AS reservado;
-        """,
-        [
-            id_documento,
-            id_version,
-            ESTADO_IA_PENDIENTE,
-            "Reintento de analisis de IA pendiente.",
-            ESTADO_IA_LEIDO,
-            settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
-        ],
+    return services.reservar_reintento_ia(
+        id_documento,
+        id_version,
+        ESTADO_IA_PENDIENTE,
+        "Reintento de analisis de IA pendiente.",
+        ESTADO_IA_LEIDO,
+        settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
     )
-    return bool(filas and filas[0]["reservado"])
 
 
 def _mensaje_ia_con_advertencias(mensaje, advertencias):
@@ -1789,22 +1699,11 @@ def _notificar_version_anterior_no_vigente_segundo_plano(contexto_anterior, cont
 
 
 def _validar_titulo_unico(titulo, id_documento=None):
-    _ejecutar_procedimiento(
-        "SELECT fn_validar_titulo_documento_unico(%s, %s);",
-        [titulo, id_documento],
-    )
+    services.validar_titulo_unico(titulo, id_documento)
 
 
 def _consultar_documento_accion(id_documento):
-    filas = _consultar_filas(
-        """
-        SELECT documento.*, d.tipo
-        FROM fn_obtener_documento_para_accion(%s) AS documento
-        JOIN docs d ON d.id_documento = documento.id_documento;
-        """,
-        [id_documento],
-    )
-    return filas[0] if filas else None
+    return selectors.documento_para_accion(id_documento)
 
 
 def _obtener_documento_para_edicion(id_documento):
@@ -1828,13 +1727,10 @@ def _obtener_documento_visible(id_documento):
 
 
 def _obtener_versiones(id_documento, solo_publicadas=False):
-    versiones = _consultar_filas(
-        """
-        SELECT *
-        FROM fn_obtener_versiones_documento(%s);
-        """,
-        [id_documento],
-    )
+    versiones = selectors.versiones_activas(id_documento)
+    for version in versiones:
+        version["id_documento"] = id_documento
+        version["vigente"] = version.get("estado") == "VIGENTE"
     _adjuntar_publicacion_versiones(id_documento, versiones)
     _adjuntar_estado_ia_versiones(id_documento, versiones)
     if solo_publicadas and _publicacion_habilitada():
@@ -1857,15 +1753,9 @@ def _adjuntar_publicacion_versiones(id_documento, versiones):
         return
 
     ids_versiones = [version["id_version"] for version in versiones]
-    filas = _consultar_filas(
-        """
-        SELECT id_version, COALESCE(publicado, FALSE) AS publicado
-        FROM doc_versions
-        WHERE id_documento = %s
-          AND id_version = ANY(%s);
-        """,
-        [id_documento, ids_versiones],
-    )
+    filas = VersionDocumento.objects.filter(
+        documento_id=id_documento, pk__in=ids_versiones
+    ).values("id_version", "publicado")
     publicados = {fila["id_version"]: bool(fila["publicado"]) for fila in filas}
     for version in versiones:
         version["publicado"] = publicados.get(version["id_version"], False)
@@ -1894,15 +1784,9 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
         return
 
     ids_versiones = [version["id_version"] for version in versiones]
-    filas = _consultar_filas(
-        """
-        SELECT id_version, COALESCE(estado_ia, %s) AS estado_ia
-        FROM doc_versions
-        WHERE id_documento = %s
-          AND id_version = ANY(%s);
-        """,
-        [ESTADO_IA_PENDIENTE, id_documento, ids_versiones],
-    )
+    filas = VersionDocumento.objects.filter(
+        documento_id=id_documento, pk__in=ids_versiones
+    ).values("id_version", "estado_ia")
     estados = {
         fila["id_version"]: _normalizar_estado_ia(fila.get("estado_ia"))
         for fila in filas
@@ -1997,9 +1881,7 @@ def _texto_comparable(valor):
 
 
 def _accesos_documento_combinaciones(id_documento):
-    accesos = _consultar_filas(
-        "SELECT * FROM fn_obtener_accesos_documentos(%s);", [[id_documento]]
-    )
+    accesos = selectors.accesos_de_documento(id_documento)
     return {
         (
             acceso.get("id_perfil_externo"),
@@ -2056,114 +1938,33 @@ def _validar_edicion_version_vigente(
 
 
 def _eliminar_documento_logico(id_documento, motivo, usuario):
-    with transaction.atomic():
-        # La baja lógica retira automáticamente la vigencia. La publicación
-        # es la única condición que debe resolver el editor previamente.
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE docs SET id_version_vigente = NULL WHERE id_documento = %s;",
-                [id_documento],
-            )
-            cursor.execute(
-                """
-                UPDATE doc_versions
-                SET estado = 'INACTIVO'
-                WHERE id_documento = %s AND estado = 'VIGENTE';
-                """,
-                [id_documento],
-            )
-        _ejecutar_procedimiento(
-            """
-            CALL sp_eliminar_documento_logico(%s, %s, %s);
-            """,
-            [id_documento, motivo, usuario["id_usuario_externo"]],
-        )
+    services.eliminar_documento_logicamente(
+        id_documento, motivo, usuario["id_usuario_externo"]
+    )
 
 
 def _documento_tiene_version_publicada(id_documento, id_version=None):
     if not _publicacion_habilitada():
         return False
 
-    parametros = [id_documento]
-    filtro_version = ""
-    if id_version is not None:
-        filtro_version = "AND id_version = %s"
-        parametros.append(id_version)
-    filas = _consultar_filas(
-        f"""
-        SELECT EXISTS (
-            SELECT 1
-            FROM doc_versions
-            WHERE id_documento = %s
-              {filtro_version}
-              AND COALESCE(publicado, FALSE) = TRUE
-        ) AS tiene_publicada;
-        """,
-        parametros,
+    versiones = VersionDocumento.objects.filter(
+        documento_id=id_documento, publicado=True
     )
-    return bool(filas and filas[0]["tiene_publicada"])
+    if id_version is not None:
+        versiones = versiones.filter(pk=id_version)
+    return versiones.exists()
 
 
 def _eliminar_version_logica(id_documento, id_version, motivo, usuario):
-    with transaction.atomic():
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT id_version
-                FROM doc_versions
-                WHERE id_documento = %s
-                  AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
-                FOR UPDATE;
-                """,
-                [id_documento],
-            )
-            ids_versiones = {fila[0] for fila in cursor.fetchall()}
-            if id_version not in ids_versiones:
-                raise ValueError("La versión seleccionada no pertenece al documento.")
-            if len(ids_versiones) <= 1:
-                raise ValueError(
-                    "No se puede eliminar la única versión del documento. "
-                    "Para enviarlo a la papelera, elimine el documento completo."
-                )
-            cursor.execute(
-                """
-                UPDATE docs
-                SET id_version_vigente = NULL
-                WHERE id_documento = %s AND id_version_vigente = %s;
-                """,
-                [id_documento, id_version],
-            )
-            cursor.execute(
-                """
-                UPDATE doc_versions
-                SET estado = 'INACTIVO'
-                WHERE id_documento = %s AND id_version = %s AND estado = 'VIGENTE';
-                """,
-                [id_documento, id_version],
-            )
-        _ejecutar_procedimiento(
-            """
-            CALL sp_eliminar_version_documento_logico(%s, %s, %s, %s, %s);
-            """,
-            [
-                id_documento,
-                id_version,
-                motivo,
-                usuario["id_usuario_externo"],
-                usuario.get("nombre_usuario", ""),
-            ],
-        )
-    _sincronizar_versionamiento_documento(id_documento)
+    services.eliminar_version_logicamente(
+        id_documento, id_version, motivo, usuario["id_usuario_externo"]
+    )
 
 
 def _restaurar_documento_logico(id_documento, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_restaurar_documento_logico(%s, %s);
-        """,
-        [id_documento, usuario["id_usuario_externo"]],
+    services.restaurar_documento_logicamente(
+        id_documento, usuario["id_usuario_externo"]
     )
-    _sincronizar_versionamiento_documento(id_documento)
 
 
 def _restaurar_version_logica(id_documento, id_version):
@@ -2171,24 +1972,7 @@ def _restaurar_version_logica(id_documento, id_version):
     # papelera. En ese caso, además de recuperar la versión, se debe retirar
     # la baja lógica del documento; de lo contrario la consulta principal lo
     # excluye por ``docs.fecha_eliminacion IS NOT NULL``.
-    with transaction.atomic():
-        _ejecutar_procedimiento(
-            """
-            CALL sp_restaurar_version_documento_logico(%s, %s);
-            """,
-            [id_documento, id_version],
-        )
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE docs
-                SET fecha_eliminacion = NULL,
-                    motivo_eliminacion = NULL
-                WHERE id_documento = %s;
-                """,
-                [id_documento],
-            )
-    _sincronizar_versionamiento_documento(id_documento)
+    services.restaurar_version_logicamente(id_documento, id_version)
 
 
 def _restaurar_versiones_logicas(id_documento, ids_versiones):
@@ -2197,39 +1981,7 @@ def _restaurar_versiones_logicas(id_documento, ids_versiones):
     if not ids_versiones:
         raise ValueError("Seleccione al menos una versión para restaurar.")
 
-    with transaction.atomic():
-        versiones = _consultar_filas(
-            """
-            SELECT id_version, estado
-            FROM doc_versions
-            WHERE id_documento = %s AND id_version = ANY(%s)
-            FOR UPDATE;
-            """,
-            [id_documento, ids_versiones],
-        )
-        if len(versiones) != len(ids_versiones):
-            raise ValueError("Una o más versiones no pertenecen al documento.")
-        if any(str(version.get("estado") or "").upper() != "ELIMINADO" for version in versiones):
-            raise ValueError("Solo se pueden restaurar versiones que estén en la papelera.")
-
-        for id_version in ids_versiones:
-            _ejecutar_procedimiento(
-                """
-                CALL sp_restaurar_version_documento_logico(%s, %s);
-                """,
-                [id_documento, id_version],
-            )
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE docs
-                SET fecha_eliminacion = NULL,
-                    motivo_eliminacion = NULL
-                WHERE id_documento = %s;
-                """,
-                [id_documento],
-            )
-    _sincronizar_versionamiento_documento(id_documento)
+    services.restaurar_versiones_logicamente(id_documento, ids_versiones)
 
 
 def _registrar_auditoria_django(
@@ -2290,23 +2042,16 @@ def _registrar_historial_eliminacion(
     numero_version=None,
     versiones_eliminadas=None,
 ):
-    _ejecutar_procedimiento(
-        """
-        INSERT INTO historial_eliminaciones
-            (id_documento, id_version, titulo_documento, numero_version,
-             nombre_usuario, motivo_eliminacion, total_versiones, versiones_eliminadas)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb);
-        """,
-        [
-            id_documento,
-            id_version,
-            titulo,
-            numero_version,
-            usuario.get("nombre_usuario") or "Usuario",
-            motivo,
-            total_versiones,
-            json.dumps(versiones_eliminadas or [], ensure_ascii=False),
-        ],
+    HistorialEliminacion.objects.create(
+        id_documento=id_documento,
+        id_version=id_version,
+        titulo_documento=titulo,
+        numero_version=numero_version,
+        nombre_usuario=usuario.get("nombre_usuario") or "Usuario",
+        motivo_eliminacion=motivo,
+        total_versiones=total_versiones,
+        versiones_eliminadas=versiones_eliminadas or [],
+        fecha_eliminacion=timezone.now(),
     )
 
 
@@ -2339,33 +2084,26 @@ def _resumen_accesos_auditoria(contexto):
 def _eliminar_documento_fisico(id_documento, motivo, usuario, usuario_django):
     """Elimina de la base un documento que ya se encuentra en la papelera."""
     with transaction.atomic():
-        filas = _consultar_filas(
-            """
-            SELECT id_documento, titulo, descripcion, uuid_documento,
-                   fecha_eliminacion, motivo_eliminacion
-            FROM docs
-            WHERE id_documento = %s
-            FOR UPDATE;
-            """,
-            [id_documento],
-        )
-        if not filas:
+        documento = Documento.objects.select_for_update().filter(
+            pk=id_documento
+        ).values(
+            "id_documento", "titulo", "descripcion", "uuid_documento",
+            "fecha_eliminacion", "motivo_eliminacion",
+        ).first()
+        if not documento:
             raise ValueError("El documento no existe.")
-
-        documento = filas[0]
         if not documento.get("fecha_eliminacion"):
             raise ValueError(
                 "Solo se puede eliminar definitivamente un documento que esté en la papelera."
             )
 
-        versiones = _consultar_filas(
-            """
-            SELECT id_version, numero_version, archivo_nombre, archivo_path, uuid_version
-            FROM doc_versions
-            WHERE id_documento = %s
-            ORDER BY numero_version;
-            """,
-            [id_documento],
+        versiones = list(
+            VersionDocumento.objects.filter(documento_id=id_documento)
+            .order_by("numero_version")
+            .values(
+                "id_version", "numero_version", "archivo_nombre",
+                "archivo_path", "uuid_version",
+            )
         )
         resumen = {
             "id_documento_eliminado": id_documento,
@@ -2413,13 +2151,10 @@ def _eliminar_documento_fisico(id_documento, motivo, usuario, usuario_django):
                 for version in versiones
             ],
         )
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE docs SET id_version_vigente = NULL WHERE id_documento = %s;",
-                [id_documento],
-            )
-            cursor.execute("DELETE FROM doc_versions WHERE id_documento = %s;", [id_documento])
-            cursor.execute("DELETE FROM docs WHERE id_documento = %s;", [id_documento])
+        Documento.objects.filter(pk=id_documento).update(version_vigente=None)
+        AccesoDocumento.objects.filter(documento_id=id_documento).delete()
+        VersionDocumento.objects.filter(documento_id=id_documento).delete()
+        Documento.objects.filter(pk=id_documento).delete()
 
     return versiones
 
@@ -2446,22 +2181,17 @@ def _eliminar_archivo_version_fisico(version):
 def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_django):
     """Elimina permanentemente una versión que ya se encuentra en la papelera."""
     with transaction.atomic():
-        filas = _consultar_filas(
-            """
-            SELECT v.id_version, v.id_documento, v.numero_version, v.archivo_nombre,
-                   v.archivo_path, v.uuid_version, v.fecha_eliminacion,
-                   v.motivo_eliminacion, d.titulo
-            FROM doc_versions v
-            JOIN docs d ON d.id_documento = v.id_documento
-            WHERE v.id_documento = %s AND v.id_version = %s
-            FOR UPDATE;
-            """,
-            [id_documento, id_version],
-        )
-        if not filas:
+        version = VersionDocumento.objects.select_for_update().filter(
+            documento_id=id_documento, pk=id_version
+        ).values(
+            "id_version", "documento_id", "numero_version", "archivo_nombre",
+            "archivo_path", "uuid_version", "fecha_eliminacion",
+            "motivo_eliminacion", "documento__titulo",
+        ).first()
+        if not version:
             raise ValueError("La versión no existe o no pertenece al documento.")
-
-        version = filas[0]
+        version["id_documento"] = version.pop("documento_id")
+        version["titulo"] = version.pop("documento__titulo")
         if not version.get("fecha_eliminacion"):
             raise ValueError(
                 "Solo se puede eliminar definitivamente una versión que esté en la papelera."
@@ -2507,12 +2237,10 @@ def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_
                 }
             ],
         )
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE docs SET id_version_vigente = NULL WHERE id_version_vigente = %s;",
-                [id_version],
-            )
-            cursor.execute("DELETE FROM doc_versions WHERE id_version = %s;", [id_version])
+        Documento.objects.filter(version_vigente_id=id_version).update(
+            version_vigente=None
+        )
+        VersionDocumento.objects.filter(pk=id_version).delete()
 
     return version
 
@@ -2524,18 +2252,18 @@ def _eliminar_versiones_fisicas(id_documento, ids_versiones, motivo, usuario, us
         raise ValueError("Seleccione al menos una versión para eliminar.")
 
     with transaction.atomic():
-        versiones = _consultar_filas(
-            """
-            SELECT v.id_version, v.id_documento, v.numero_version, v.archivo_nombre,
-                   v.archivo_path, v.uuid_version, v.fecha_eliminacion,
-                   v.motivo_eliminacion, v.estado, d.titulo
-            FROM doc_versions v
-            JOIN docs d ON d.id_documento = v.id_documento
-            WHERE v.id_documento = %s AND v.id_version = ANY(%s)
-            FOR UPDATE;
-            """,
-            [id_documento, ids_versiones],
+        versiones = list(
+            VersionDocumento.objects.select_for_update().filter(
+                documento_id=id_documento, pk__in=ids_versiones
+            ).values(
+                "id_version", "documento_id", "numero_version", "archivo_nombre",
+                "archivo_path", "uuid_version", "fecha_eliminacion",
+                "motivo_eliminacion", "estado", "documento__titulo",
+            )
         )
+        for version in versiones:
+            version["id_documento"] = version.pop("documento_id")
+            version["titulo"] = version.pop("documento__titulo")
         if len(versiones) != len(ids_versiones):
             raise ValueError("Una o más versiones no pertenecen al documento.")
         if any(str(version.get("estado") or "").upper() != "ELIMINADO" for version in versiones):
@@ -2584,18 +2312,12 @@ def _eliminar_versiones_fisicas(id_documento, ids_versiones, motivo, usuario, us
                 for version in versiones
             ],
         )
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE docs SET id_version_vigente = NULL
-                WHERE id_documento = %s AND id_version_vigente = ANY(%s);
-                """,
-                [id_documento, ids_versiones],
-            )
-            cursor.execute(
-                "DELETE FROM doc_versions WHERE id_documento = %s AND id_version = ANY(%s);",
-                [id_documento, ids_versiones],
-            )
+        Documento.objects.filter(
+            pk=id_documento, version_vigente_id__in=ids_versiones
+        ).update(version_vigente=None)
+        VersionDocumento.objects.filter(
+            documento_id=id_documento, pk__in=ids_versiones
+        ).delete()
 
     return versiones
 
@@ -2650,55 +2372,27 @@ def _registrar_auditoria_django_pruebas(
     )
 
 
-def _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_insertar_acceso_documento(%s, %s, %s, %s, %s);
-        """,
-        [id_documento, perfil, grupo, periodo, usuario["id_usuario_externo"]],
-    )
-
-
 def _insertar_accesos_documento(id_documento, accesos, usuario):
-    for perfil, grupo, periodo in accesos:
-        _insertar_acceso_documento(id_documento, perfil, grupo, periodo, usuario)
+    services.reemplazar_accesos_documento(
+        id_documento, accesos, usuario["id_usuario_externo"]
+    )
 
 
 def _eliminar_accesos_documento(id_documento):
-    _ejecutar_procedimiento(
-        """
-        DELETE FROM documento_acceso
-        WHERE id_documento = %s;
-        """,
-        [id_documento],
-    )
+    AccesoDocumento.objects.filter(documento_id=id_documento).delete()
 
 
 def _reemplazar_accesos_documento(id_documento, accesos, usuario):
-    _eliminar_accesos_documento(id_documento)
-    _insertar_accesos_documento(id_documento, accesos, usuario)
+    services.reemplazar_accesos_documento(
+        id_documento, accesos, usuario["id_usuario_externo"]
+    )
 
 
 def _crear_documento_base(titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo, usuario):
-    resultado = _ejecutar_procedimiento_y_obtener_fila(
-        """
-        SELECT fn_crear_documento_base(%s, %s, %s, %s, %s, %s, %s, %s, %s) AS id_documento;
-        """,
-        [
-            titulo,
-            descripcion,
-            palabras_clave,
-            fecha_aprobacion,
-            datos_archivo["archivo_nombre"],
-            datos_archivo["archivo_path"],
-            datos_archivo["archivo_tipo"],
-            datos_archivo["archivo_tamano"],
-            usuario["id_usuario_externo"],
-        ],
+    return services.crear_documento(
+        titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo,
+        usuario["id_usuario_externo"],
     )
-    if not resultado or not resultado.get("id_documento"):
-        raise DatabaseError("No se pudo crear el documento.")
-    return resultado["id_documento"]
 
 
 def _validar_tipo_documento(tipo):
@@ -2708,74 +2402,30 @@ def _validar_tipo_documento(tipo):
 
 
 def _actualizar_tipo_documento(id_documento, tipo):
-    _ejecutar_procedimiento(
-        "UPDATE docs SET tipo = %s WHERE id_documento = %s;",
-        [tipo, id_documento],
-    )
+    services.actualizar_tipo_documento(id_documento, tipo)
 
 
 def _editar_documento_base(id_documento, titulo, descripcion, palabras_clave, fecha_aprobacion, id_version, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_editar_documento_base(%s, %s, %s, %s, %s, %s, %s);
-        """,
-        [
-            id_documento,
-            titulo,
-            descripcion,
-            palabras_clave,
-            fecha_aprobacion,
-            id_version,
-            usuario["id_usuario_externo"],
-        ],
+    services.editar_documento(
+        id_documento, titulo, descripcion, palabras_clave, fecha_aprobacion,
+        id_version, usuario["id_usuario_externo"],
     )
 
 
 def _cambiar_estado_version_directo(id_documento, id_version, estado_version):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_cambiar_estado_version_documento(%s, %s, %s);
-        """,
-        [id_documento, id_version, estado_version],
-    )
+    services.cambiar_estado_version(id_documento, id_version, estado_version)
 
 
 def _agregar_version_directa(id_documento, datos_archivo, descripcion_cambio, fecha_aprobacion, usuario):
-    version = _ejecutar_procedimiento_y_obtener_fila(
-        """
-        SELECT fn_agregar_version_documento(%s, %s, %s, %s, %s, %s, %s, %s) AS id_version;
-        """,
-        [
-            id_documento,
-            datos_archivo["archivo_nombre"],
-            datos_archivo["archivo_path"],
-            datos_archivo["archivo_tipo"],
-            datos_archivo["archivo_tamano"],
-            descripcion_cambio,
-            fecha_aprobacion,
-            usuario["id_usuario_externo"],
-        ],
+    return services.agregar_version(
+        id_documento, datos_archivo, descripcion_cambio, fecha_aprobacion,
+        usuario["id_usuario_externo"],
     )
-    if not version or not version.get("id_version"):
-        raise DatabaseError("No se pudo crear la nueva version.")
-    _sincronizar_versionamiento_documento(id_documento)
-    return version["id_version"]
 
 
 def _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario):
-    _ejecutar_procedimiento(
-        """
-        CALL sp_reemplazar_archivo_version_documento(%s, %s, %s, %s, %s, %s, %s);
-        """,
-        [
-            id_documento,
-            id_version,
-            datos_archivo["archivo_nombre"],
-            datos_archivo["archivo_path"],
-            datos_archivo["archivo_tipo"],
-            datos_archivo["archivo_tamano"],
-            usuario["id_usuario_externo"],
-        ],
+    services.reemplazar_archivo_version(
+        id_documento, id_version, datos_archivo, usuario["id_usuario_externo"]
     )
 
 
@@ -2785,80 +2435,13 @@ def _guardar_publicacion_versiones(id_documento, ids_publicados, usuario):
             "La publicacion de versiones no esta disponible en esta base de datos."
         )
 
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            UPDATE doc_versions
-            SET publicado = FALSE
-            WHERE id_documento = %s
-              AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO';
-            """,
-            [id_documento],
-        )
-        if ids_publicados:
-            cursor.execute(
-                """
-                UPDATE doc_versions
-                SET publicado = TRUE
-                WHERE id_documento = %s
-                  AND id_version = ANY(%s)
-                  AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO';
-                """,
-                [id_documento, list(ids_publicados)],
-            )
-            cursor.execute(
-                """
-                WITH version_publica_vigente AS (
-                    SELECT id_version
-                    FROM doc_versions
-                    WHERE id_documento = %s
-                      AND id_version = ANY(%s)
-                      AND COALESCE(estado, 'INACTIVO') <> 'ELIMINADO'
-                      AND COALESCE(publicado, FALSE) = TRUE
-                    ORDER BY numero_version DESC, id_version DESC
-                    LIMIT 1
-                )
-                UPDATE doc_versions v
-                SET estado = CASE
-                        WHEN v.id_version = vp.id_version THEN 'VIGENTE'
-                        ELSE 'INACTIVO'
-                    END
-                FROM version_publica_vigente vp
-                WHERE v.id_documento = %s
-                  AND COALESCE(v.estado, 'INACTIVO') <> 'ELIMINADO';
-                """,
-                [id_documento, list(ids_publicados), id_documento],
-            )
-            cursor.execute(
-                """
-                UPDATE docs
-                SET id_version_vigente = (
-                        SELECT id_version
-                        FROM doc_versions
-                        WHERE id_documento = %s
-                          AND id_version = ANY(%s)
-                          AND COALESCE(estado, 'INACTIVO') = 'VIGENTE'
-                          AND COALESCE(publicado, FALSE) = TRUE
-                        ORDER BY numero_version DESC, id_version DESC
-                        LIMIT 1
-                    )
-                WHERE id_documento = %s;
-                """,
-                [id_documento, list(ids_publicados), id_documento],
-            )
-        cursor.execute(
-            """
-            UPDATE docs
-            SET actualizado_por = %s,
-                fecha_actualizacion = NOW()
-            WHERE id_documento = %s;
-            """,
-            [usuario["id_usuario_externo"], id_documento],
-        )
+    services.guardar_publicacion_versiones(
+        id_documento, ids_publicados, usuario["id_usuario_externo"]
+    )
 
 
 def visor_pdf(request, id_documento):
-    """Muestra una versiÃ³n existente sin registrar eventos ni modificar la base."""
+    """Muestra una version existente y registra su apertura para lectores."""
     try:
         id_version = int(request.GET["version"]) if request.GET.get("version") else None
     except ValueError as error:
@@ -2876,6 +2459,12 @@ def visor_pdf(request, id_documento):
         id_version,
         preferir_vigente=usuario["rol_modulo"] == "EDITOR",
     )
+    if usuario["rol_modulo"] == "LECTOR":
+        services.registrar_lectura_documento(
+            id_documento,
+            version_actual["id_version"],
+            usuario,
+        )
     return render(
         request,
         "documentos/visor_pdf.html",
@@ -2926,20 +2515,13 @@ def servir_pdf_version_papelera(request, id_documento, id_version):
     if usuario["rol_modulo"] != "EDITOR":
         raise Http404("No tienes permisos para ver esta versión.")
 
-    filas = _consultar_filas(
-        """
-        SELECT archivo_nombre, archivo_path
-        FROM doc_versions
-        WHERE id_documento = %s
-          AND id_version = %s
-          AND fecha_eliminacion IS NOT NULL;
-        """,
-        [id_documento, id_version],
-    )
-    if not filas:
+    version = VersionDocumento.objects.filter(
+        documento_id=id_documento,
+        pk=id_version,
+        fecha_eliminacion__isnull=False,
+    ).values("archivo_nombre", "archivo_path").first()
+    if not version:
         raise Http404("La versión eliminada no está disponible.")
-
-    version = filas[0]
     nombre_archivo = Path(
         str(version.get("archivo_nombre") or version.get("archivo_path") or "")
     ).name
@@ -2968,16 +2550,13 @@ def papelera_documentos(request):
     vista_historial = request.GET.get("vista") == "historial"
     if vista_historial:
         try:
-            historial_eliminaciones = _consultar_filas(
-                """
-                SELECT id_historial, id_documento, id_version, titulo_documento,
-                       numero_version, nombre_usuario, motivo_eliminacion,
-                       total_versiones, COALESCE(versiones_eliminadas, '[]'::jsonb)
-                           AS versiones_eliminadas, fecha_eliminacion
-                FROM historial_eliminaciones
-                ORDER BY fecha_eliminacion DESC, id_historial DESC;
-                """,
-                [],
+            historial_eliminaciones = list(
+                HistorialEliminacion.objects.values(
+                    "id_historial", "id_documento", "id_version",
+                    "titulo_documento", "numero_version", "nombre_usuario",
+                    "motivo_eliminacion", "total_versiones",
+                    "versiones_eliminadas", "fecha_eliminacion",
+                )
             )
             for eliminacion in historial_eliminaciones:
                 versiones = eliminacion.get("versiones_eliminadas") or []
@@ -3632,6 +3211,21 @@ def eliminar_documento(request, id_documento):
                 vigente=True,
             )
             _eliminar_version_logica(id_documento, id_version, motivo, usuario)
+            _registrar_auditoria_django_pruebas(
+                usuario,
+                request.user,
+                id_documento,
+                "ELIMINACION_VERSION_LOGICA",
+                motivo,
+                {
+                    "titulo": documento.get("titulo"),
+                    "id_version": id_version,
+                },
+                mensaje=(
+                    f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado "
+                    f"lógicamente una versión de {documento.get('titulo') or id_documento}."
+                ),
+            )
             version_vigente_actual_chroma = _obtener_contexto_version_chroma(
                 id_documento,
                 vigente=True,
@@ -3651,6 +3245,18 @@ def eliminar_documento(request, id_documento):
                 vigente=True,
             )
             _eliminar_documento_logico(id_documento, motivo, usuario)
+            _registrar_auditoria_django_pruebas(
+                usuario,
+                request.user,
+                id_documento,
+                "ELIMINACION_DOCUMENTO_LOGICA",
+                motivo,
+                {"titulo": documento.get("titulo")},
+                mensaje=(
+                    f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado "
+                    f"lógicamente el documento {documento.get('titulo') or id_documento}."
+                ),
+            )
             _notificar_version_anterior_no_vigente_segundo_plano(
                 version_vigente_anterior_chroma,
                 {},
