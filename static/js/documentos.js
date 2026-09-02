@@ -69,17 +69,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const locked = (option.dataset.estado || 'INACTIVO') === 'VIGENTE';
+        const locked = (option.dataset.estado || 'BORRADOR') === 'VIGENTE';
         form.classList.toggle('is-version-edit-locked', locked);
 
         form.querySelectorAll('[data-edit-locked-field]').forEach(function (field) {
             field.readOnly = locked;
-            field.title = locked ? 'Primero cambie la version a No vigente y guarde.' : '';
+            field.title = locked ? 'Primero cambie la version a No vigente o borrador y guarde.' : '';
         });
 
         form.querySelectorAll('[data-edit-locked-control]').forEach(function (control) {
             control.disabled = locked || control.dataset.initialDisabled === 'true';
-            control.title = locked ? 'Primero cambie la version a No vigente y guarde.' : '';
+            control.title = locked ? 'Primero cambie la version a No vigente o borrador y guarde.' : '';
         });
 
         form.querySelectorAll('.file-button').forEach(function (label) {
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const estado = option.dataset.estado || 'INACTIVO';
+        const estado = option.dataset.estado || 'BORRADOR';
         const statusOption = Array.from(statusSelect.options).find(function (item) {
             return item.value === estado;
         });
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         savedVersionId.value = versionSelect.value;
-        savedStatus.value = statusSelect ? statusSelect.value : 'VIGENTE';
+        savedStatus.value = statusSelect ? statusSelect.value : 'BORRADOR';
         savedApprovalDate.value = approvalDateInput ? approvalDateInput.value : '';
     }
 

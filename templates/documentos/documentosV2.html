@@ -321,7 +321,7 @@
                                 <div class="form-row two-columns">
                                     <label>
                                         <strong>Versi&oacute;n del documento</strong>
-                                        <input type="hidden" name="id_version_vigente" value="{{ doc.id_version_vigente }}" data-saved-version-id>
+                                        <input type="hidden" name="id_version_vigente" value="{{ doc.id_version_preview }}" data-saved-version-id>
                                         <select data-version-select required>
                                             {% for version in doc.versiones %}
                                                 <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-fecha-aprobacion="{{ version.fecha_aprobacion|date:'Y-m-d' }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
@@ -336,7 +336,8 @@
                                         <select data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
                                             <option value="VIGENTE" {% if doc.estado == 'VIGENTE' %}selected{% endif %}>Vigente</option>
                                             {% if capacidades.puede_cambiar_estado_version %}
-                                                <option value="INACTIVO" {% if doc.estado == 'INACTIVO' %}selected{% endif %}>No vigente</option>
+                                                <option value="BORRADOR" {% if doc.estado == 'BORRADOR' %}selected{% endif %}>Borrador</option>
+                                                <option value="NO_VIGENTE" {% if doc.estado == 'NO_VIGENTE' %}selected{% endif %}>No vigente</option>
                                             {% endif %}
                                         </select>
                                     </label>
@@ -469,7 +470,9 @@
                                 {% for version in doc.versiones %}
                                     <tr>
                                         <td>Versi&oacute;n {{ version.numero_version }}</td>
-                                        <td>{% if version.estado == 'VIGENTE' %}Vigente{% else %}No vigente{% endif %}</td>
+                                        <td>
+                                            {% if version.estado == 'VIGENTE' %}Vigente{% elif version.estado == 'BORRADOR' %}Borrador{% else %}No vigente{% endif %}
+                                        </td>
                                         <td>{{ version.label_ia|default:'Pendiente' }}</td>
                                         <td>{{ version.archivo_nombre|default:'-' }}</td>
                                         <td>

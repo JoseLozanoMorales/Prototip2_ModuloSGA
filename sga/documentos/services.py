@@ -1,7 +1,7 @@
-"""Operaciones de negocio del módulo documental.
+"""Operaciones de negocio del mÃ³dulo documental.
 
 Esta capa no conoce ``request``, mensajes ni plantillas. Las vistas le entregan
-datos ya validados y los servicios coordinan cambios atómicos con el ORM.
+datos ya validados y los servicios coordinan cambios atÃ³micos con el ORM.
 """
 
 from datetime import datetime, time, timedelta
@@ -11,7 +11,16 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
-from .models import AccesoDocumento, Documento, LecturaDocumento, VersionDocumento
+from .models import (
+    AccesoDocumento,
+    Documento,
+    ESTADO_BORRADOR,
+    ESTADO_ELIMINADO,
+    ESTADO_NO_VIGENTE,
+    ESTADO_VIGENTE,
+    LecturaDocumento,
+    VersionDocumento,
+)
 
 
 def registrar_lectura_documento(id_documento, id_version, usuario):
@@ -37,7 +46,7 @@ def validar_titulo_unico(titulo, id_documento=None):
     if id_documento is not None:
         documentos = documentos.exclude(pk=id_documento)
     if documentos.exists():
-        raise ValueError("Ya existe un documento con ese título.")
+        raise ValueError("Ya existe un documento con ese tÃ­tulo.")
 
 
 def actualizar_tipo_documento(id_documento, tipo):
@@ -58,7 +67,7 @@ def crear_documento(
         fecha_creacion=ahora,
         uuid_documento=uuid4(),
     )
-    version = VersionDocumento.objects.create(
+    VersionDocumento.objects.create(
         documento=documento,
         numero_version=1,
         archivo_nombre=datos_archivo["archivo_nombre"],
@@ -71,14 +80,12 @@ def crear_documento(
         subido_por=id_usuario_externo,
         fecha_aprobacion=_fecha_aprobacion_datetime(fecha_aprobacion),
         uuid_version=uuid4(),
-        estado="VIGENTE",
+        estado=ESTADO_BORRADOR,
+        publicado=False,
     )
-    documento.version_vigente = version
     documento.actualizado_por = id_usuario_externo
     documento.fecha_actualizacion = ahora
-    documento.save(
-        update_fields=["version_vigente", "actualizado_por", "fecha_actualizacion"]
-    )
+    documento.save(update_fields=["actualizado_por", "fecha_actualizacion"])
     return documento.id_documento
 
 
@@ -94,23 +101,55 @@ def editar_documento(
     documento.titulo = titulo
     documento.descripcion = descripcion
     documento.palabras_clave = palabras_clave
-    documento.version_vigente = version
+    if version.estado == ESTADO_VIGENTE:
+        documento.version_vigente = version
     documento.actualizado_por = id_usuario_externo
     documento.fecha_actualizacion = timezone.now()
-    documento.save(
-        update_fields=[
-            "titulo", "descripcion", "palabras_clave", "version_vigente",
-            "actualizado_por", "fecha_actualizacion",
-        ]
-    )
+    campos_documento = [
+        "titulo", "descripcion", "palabras_clave",
+        "actualizado_por", "fecha_actualizacion",
+    ]
+    if version.estado == ESTADO_VIGENTE:
+        campos_documento.append("version_vigente")
+    documento.save(update_fields=campos_documento)
     version.fecha_aprobacion = _fecha_aprobacion_datetime(fecha_aprobacion)
     version.save(update_fields=["fecha_aprobacion"])
     AccesoDocumento.objects.filter(documento_id=id_documento).delete()
 
 
+@transaction.atomic
 def cambiar_estado_version(id_documento, id_version, estado):
-    if estado not in {"VIGENTE", "INACTIVO", "ELIMINADO"}:
+    if estado not in {
+        ESTADO_BORRADOR, ESTADO_VIGENTE, ESTADO_NO_VIGENTE, ESTADO_ELIMINADO,
+    }:
         raise ValueError(f"Estado de versión no válido: {estado}")
+
+    version = VersionDocumento.objects.select_for_update().get(
+        documento_id=id_documento, pk=id_version
+    )
+    if estado == ESTADO_VIGENTE:
+        if not version.publicado:
+            raise ValueError("Solo una versión publicada puede pasar a vigente.")
+        if str(version.estado_ia or "").upper() != "LEIDO":
+            raise ValueError(
+                "Solo una versión con análisis IA exitoso puede pasar a vigente."
+            )
+        VersionDocumento.objects.filter(
+            documento_id=id_documento, estado=ESTADO_VIGENTE
+        ).exclude(pk=id_version).update(estado=ESTADO_NO_VIGENTE)
+        Documento.objects.filter(pk=id_documento).update(version_vigente_id=id_version)
+    elif estado == ESTADO_BORRADOR:
+        if version.publicado:
+            raise ValueError("Una versión en borrador no puede permanecer publicada.")
+        if version.estado == ESTADO_VIGENTE:
+            Documento.objects.filter(
+                pk=id_documento, version_vigente_id=id_version
+            ).update(version_vigente=None)
+    elif version.estado == ESTADO_VIGENTE:
+        Documento.objects.filter(
+            pk=id_documento, version_vigente_id=id_version
+        ).update(version_vigente=None)
+
     VersionDocumento.objects.filter(
         documento_id=id_documento, pk=id_version
     ).update(estado=estado)
@@ -127,9 +166,6 @@ def agregar_version(
         .aggregate(maximo=Max("numero_version"))["maximo"]
         or 0
     ) + 1
-    VersionDocumento.objects.filter(
-        documento_id=id_documento, estado="VIGENTE"
-    ).update(estado="INACTIVO")
     ahora = timezone.now()
     version = VersionDocumento.objects.create(
         documento=documento,
@@ -144,14 +180,12 @@ def agregar_version(
         subido_por=id_usuario_externo,
         fecha_aprobacion=_fecha_aprobacion_datetime(fecha_aprobacion),
         uuid_version=uuid4(),
-        estado="VIGENTE",
+        estado=ESTADO_BORRADOR,
+        publicado=False,
     )
-    documento.version_vigente = version
     documento.actualizado_por = id_usuario_externo
     documento.fecha_actualizacion = ahora
-    documento.save(
-        update_fields=["version_vigente", "actualizado_por", "fecha_actualizacion"]
-    )
+    documento.save(update_fields=["actualizado_por", "fecha_actualizacion"])
     sincronizar_versionamiento(id_documento)
     return version.id_version
 
@@ -217,7 +251,7 @@ def reservar_reintento_ia(
 
 
 def reemplazar_accesos_documento(id_documento, accesos, id_usuario_externo):
-    """Reemplaza todas las combinaciones de acceso en una sola transacción."""
+    """Reemplaza todas las combinaciones de acceso en una sola transacciÃ³n."""
     AccesoDocumento.objects.filter(documento_id=id_documento).delete()
     AccesoDocumento.objects.bulk_create(
         [
@@ -236,24 +270,31 @@ def reemplazar_accesos_documento(id_documento, accesos, id_usuario_externo):
 
 @transaction.atomic
 def guardar_publicacion_versiones(id_documento, ids_publicados, id_usuario_externo):
+    ids_publicados = set(ids_publicados)
     versiones = VersionDocumento.objects.select_for_update().activas().filter(
         documento_id=id_documento
     )
-    versiones.update(publicado=False)
+    versiones.filter(pk__in=ids_publicados).update(publicado=True)
+    versiones.exclude(pk__in=ids_publicados).update(publicado=False)
 
+    id_version_vigente = (
+        versiones.filter(pk__in=ids_publicados)
+        .order_by("-numero_version", "-id_version")
+        .values_list("id_version", flat=True)
+        .first()
+    )
+    versiones.filter(publicado=False).exclude(estado=ESTADO_BORRADOR).update(
+        estado=ESTADO_NO_VIGENTE
+    )
     if ids_publicados:
-        seleccionadas = versiones.filter(pk__in=ids_publicados)
-        seleccionadas.update(publicado=True)
-        id_version_vigente = seleccionadas.order_by(
-            "-numero_version", "-id_version"
-        ).values_list("id_version", flat=True).first()
-        versiones.update(estado="INACTIVO")
-        versiones.filter(pk=id_version_vigente).update(estado="VIGENTE")
-        Documento.objects.filter(pk=id_documento).update(
-            version_vigente_id=id_version_vigente
+        versiones.filter(pk__in=ids_publicados).exclude(pk=id_version_vigente).update(
+            estado=ESTADO_NO_VIGENTE
         )
+    if id_version_vigente is not None:
+        versiones.filter(pk=id_version_vigente).update(estado=ESTADO_VIGENTE)
 
     Documento.objects.filter(pk=id_documento).update(
+        version_vigente_id=id_version_vigente,
         actualizado_por=id_usuario_externo,
         fecha_actualizacion=timezone.now(),
     )
@@ -262,8 +303,8 @@ def guardar_publicacion_versiones(id_documento, ids_publicados, id_usuario_exter
 def retirar_vigencia_documento(id_documento):
     Documento.objects.filter(pk=id_documento).update(version_vigente=None)
     VersionDocumento.objects.filter(
-        documento_id=id_documento, estado="VIGENTE"
-    ).update(estado="INACTIVO")
+        documento_id=id_documento, estado=ESTADO_VIGENTE
+    ).update(estado=ESTADO_NO_VIGENTE)
 
 
 def preparar_eliminacion_version(id_documento, id_version):
@@ -275,18 +316,18 @@ def preparar_eliminacion_version(id_documento, id_version):
         .values_list("id_version", flat=True)
     )
     if id_version not in ids_versiones:
-        raise ValueError("La versión seleccionada no pertenece al documento.")
+        raise ValueError("La versiÃ³n seleccionada no pertenece al documento.")
     if len(ids_versiones) <= 1:
         raise ValueError(
-            "No se puede eliminar la única versión del documento. "
+            "No se puede eliminar la Ãºnica versiÃ³n del documento. "
             "Para enviarlo a la papelera, elimine el documento completo."
         )
     Documento.objects.filter(
         pk=id_documento, version_vigente_id=id_version
     ).update(version_vigente=None)
     VersionDocumento.objects.filter(
-        documento_id=id_documento, pk=id_version, estado="VIGENTE"
-    ).update(estado="INACTIVO")
+        documento_id=id_documento, pk=id_version, estado=ESTADO_VIGENTE
+    ).update(estado=ESTADO_NO_VIGENTE)
 
 
 @transaction.atomic
@@ -297,7 +338,7 @@ def eliminar_documento_logicamente(
     Documento.objects.select_for_update().get(pk=id_documento)
     retirar_vigencia_documento(id_documento)
     VersionDocumento.objects.activas().filter(documento_id=id_documento).update(
-        estado="ELIMINADO",
+        estado=ESTADO_ELIMINADO,
         eliminado_por=id_usuario_externo,
         fecha_eliminacion=ahora,
         motivo_eliminacion=motivo,
@@ -321,7 +362,8 @@ def eliminar_version_logicamente(
     VersionDocumento.objects.filter(
         documento_id=id_documento, pk=id_version
     ).update(
-        estado="ELIMINADO",
+        estado=ESTADO_ELIMINADO,
+        publicado=False,
         eliminado_por=id_usuario_externo,
         fecha_eliminacion=ahora,
         motivo_eliminacion=motivo,
@@ -337,10 +379,11 @@ def eliminar_version_logicamente(
 def restaurar_documento_logicamente(id_documento, id_usuario_externo):
     documento = Documento.objects.select_for_update().get(pk=id_documento)
     versiones = VersionDocumento.objects.filter(
-        documento_id=id_documento, estado="ELIMINADO"
+        documento_id=id_documento, estado=ESTADO_ELIMINADO
     )
     versiones.update(
-        estado="INACTIVO",
+        estado=ESTADO_NO_VIGENTE,
+        publicado=False,
         eliminado_por=None,
         fecha_eliminacion=None,
         motivo_eliminacion=None,
@@ -348,7 +391,7 @@ def restaurar_documento_logicamente(id_documento, id_usuario_externo):
     if documento.version_vigente_id:
         VersionDocumento.objects.filter(
             documento_id=id_documento, pk=documento.version_vigente_id
-        ).update(estado="VIGENTE")
+        ).update(estado=ESTADO_VIGENTE, publicado=True)
     documento.eliminado_por = None
     documento.fecha_eliminacion = None
     documento.motivo_eliminacion = None
@@ -366,11 +409,13 @@ def restaurar_documento_logicamente(id_documento, id_usuario_externo):
 @transaction.atomic
 def restaurar_version_logicamente(id_documento, id_version):
     documento = Documento.objects.select_for_update().get(pk=id_documento)
-    estado = "VIGENTE" if documento.version_vigente_id == id_version else "INACTIVO"
+    es_vigente = documento.version_vigente_id == id_version
+    estado = ESTADO_VIGENTE if es_vigente else ESTADO_NO_VIGENTE
     VersionDocumento.objects.filter(
-        documento_id=id_documento, pk=id_version, estado="ELIMINADO"
+        documento_id=id_documento, pk=id_version, estado=ESTADO_ELIMINADO
     ).update(
         estado=estado,
+        publicado=es_vigente,
         eliminado_por=None,
         fecha_eliminacion=None,
         motivo_eliminacion=None,
@@ -385,28 +430,30 @@ def restaurar_version_logicamente(id_documento, id_version):
 def restaurar_versiones_logicamente(id_documento, ids_versiones):
     ids_versiones = list(dict.fromkeys(ids_versiones))
     if not ids_versiones:
-        raise ValueError("Seleccione al menos una versión para restaurar.")
+        raise ValueError("Seleccione al menos una versiÃ³n para restaurar.")
     versiones = list(
         VersionDocumento.objects.select_for_update().filter(
             documento_id=id_documento, pk__in=ids_versiones
         )
     )
     if len(versiones) != len(ids_versiones):
-        raise ValueError("Una o más versiones no pertenecen al documento.")
-    if any(version.estado != "ELIMINADO" for version in versiones):
-        raise ValueError("Solo se pueden restaurar versiones que estén en la papelera.")
+        raise ValueError("Una o mÃ¡s versiones no pertenecen al documento.")
+    if any(version.estado != ESTADO_ELIMINADO for version in versiones):
+        raise ValueError("Solo se pueden restaurar versiones que estÃ©n en la papelera.")
     documento = Documento.objects.select_for_update().get(pk=id_documento)
     for version in versiones:
-        version.estado = (
-            "VIGENTE" if documento.version_vigente_id == version.id_version
-            else "INACTIVO"
-        )
+        es_vigente = documento.version_vigente_id == version.id_version
+        version.estado = ESTADO_VIGENTE if es_vigente else ESTADO_NO_VIGENTE
+        version.publicado = es_vigente
         version.eliminado_por = None
         version.fecha_eliminacion = None
         version.motivo_eliminacion = None
     VersionDocumento.objects.bulk_update(
         versiones,
-        ["estado", "eliminado_por", "fecha_eliminacion", "motivo_eliminacion"],
+        [
+            "estado", "publicado", "eliminado_por",
+            "fecha_eliminacion", "motivo_eliminacion",
+        ],
     )
     documento.fecha_eliminacion = None
     documento.motivo_eliminacion = None

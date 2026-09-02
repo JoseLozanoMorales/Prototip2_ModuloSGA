@@ -1,6 +1,12 @@
-"""Consultas de lectura reutilizables del módulo documental."""
+"""Consultas de lectura reutilizables del mÃ³dulo documental."""
 
-from .models import AccesoDocumento, Documento, VersionDocumento
+from .models import (
+    AccesoDocumento,
+    Documento,
+    ESTADO_BORRADOR,
+    ESTADO_VIGENTE,
+    VersionDocumento,
+)
 
 
 def accesos_de_documentos(ids_documentos):
@@ -57,9 +63,9 @@ def contexto_version_chroma(id_documento, id_version=None, vigente=None):
     if id_version is not None:
         versiones = versiones.filter(pk=id_version)
     if vigente is True:
-        versiones = versiones.filter(estado="VIGENTE")
+        versiones = versiones.filter(estado=ESTADO_VIGENTE)
     elif vigente is False:
-        versiones = versiones.exclude(estado="VIGENTE")
+        versiones = versiones.exclude(estado=ESTADO_VIGENTE)
     version = versiones.select_related("documento").order_by(
         "-fecha_subida", "-id_version"
     ).first()
@@ -71,10 +77,11 @@ def contexto_version_chroma(id_documento, id_version=None, vigente=None):
         "numero_version": version.numero_version,
         "archivo_nombre": version.archivo_nombre,
         "archivo_path": version.archivo_path,
-        "estado": version.estado or "INACTIVO",
+        "estado": version.estado or ESTADO_BORRADOR,
         "uuid_documento": version.documento.uuid_documento,
         "uuid_version": version.uuid_version,
         "fecha_aprobacion": version.fecha_aprobacion,
+        "publicado": bool(version.publicado),
     }
 
 
@@ -84,14 +91,19 @@ def documento_para_accion(id_documento):
     ).first()
     if not documento:
         return None
-    version = documento.version_vigente
+    version = documento.version_vigente or (
+        VersionDocumento.objects.activas()
+        .filter(documento_id=id_documento)
+        .order_by("-numero_version", "-id_version")
+        .first()
+    )
     return {
         "id_documento": documento.id_documento,
         "titulo": documento.titulo,
         "descripcion": documento.descripcion,
         "palabras_clave": documento.palabras_clave,
         "tipo": documento.tipo,
-        "estado": (version.estado if version else "INACTIVO"),
+        "estado": (version.estado if version else ESTADO_BORRADOR),
         "fecha_aprobacion": (version.fecha_aprobacion if version else None),
         "id_version_vigente": documento.version_vigente_id,
         "numero_version_vigente": (version.numero_version if version else None),
@@ -101,10 +113,10 @@ def documento_para_accion(id_documento):
 
 
 def estados_ia_documentos(ids_documentos):
-    """Devuelve la versión vigente más reciente de cada documento solicitado."""
+    """Devuelve la versiÃ³n vigente mÃ¡s reciente de cada documento solicitado."""
     versiones = (
         VersionDocumento.objects.filter(
-            documento_id__in=ids_documentos, estado="VIGENTE"
+            documento_id__in=ids_documentos, estado=ESTADO_VIGENTE
         )
         .order_by("documento_id", "-numero_version", "-id_version")
         .values(
