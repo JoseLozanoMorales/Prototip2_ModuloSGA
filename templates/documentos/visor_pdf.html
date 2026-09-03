@@ -57,7 +57,9 @@
 
                     <div>
                         <strong>Vigencia</strong>
-                        <span>{% if version_actual.estado == "VIGENTE" %}Vigente{% else %}No vigente{% endif %}</span>
+                        <span>
+                            {% if version_actual.estado == "VIGENTE" %}Vigente{% elif version_actual.estado == "BORRADOR" %}Borrador{% else %}No vigente{% endif %}
+                        </span>
                     </div>
                 </form>
 

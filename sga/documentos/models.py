@@ -7,6 +7,11 @@ migraciones de Django intenten crear, alterar o eliminar esas tablas.
 
 from django.db import models
 
+ESTADO_BORRADOR = "BORRADOR"
+ESTADO_VIGENTE = "VIGENTE"
+ESTADO_NO_VIGENTE = "NO_VIGENTE"
+ESTADO_ELIMINADO = "ELIMINADO"
+
 
 class DocumentoQuerySet(models.QuerySet):
     def visibles(self):
@@ -15,13 +20,13 @@ class DocumentoQuerySet(models.QuerySet):
 
 class VersionDocumentoQuerySet(models.QuerySet):
     def activas(self):
-        return self.exclude(estado="ELIMINADO")
+        return self.exclude(estado=ESTADO_ELIMINADO)
 
     def publicadas(self):
         return self.filter(publicado=True)
 
     def vigentes(self):
-        return self.filter(estado="VIGENTE")
+        return self.filter(estado=ESTADO_VIGENTE)
 
 
 class Documento(models.Model):
@@ -71,7 +76,7 @@ class VersionDocumento(models.Model):
     subido_por = models.BigIntegerField(blank=True, null=True)
     fecha_aprobacion = models.DateTimeField()
     uuid_version = models.UUIDField()
-    estado = models.TextField(default="INACTIVO")
+    estado = models.TextField(default=ESTADO_BORRADOR)
     estado_ia = models.TextField(default="PENDIENTE")
     porcentaje_texto_ia = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True
