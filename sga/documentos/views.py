@@ -1,40 +1,59 @@
 ﻿import json
-import re
-import logging
-import ssl
-import threading
-import urllib.error
-import urllib.request
 from datetime import date
 from io import BytesIO
 from itertools import product
-from pathlib import Path, PurePosixPath
-from uuid import uuid4
+from pathlib import Path
 
-from django.conf import settings
-from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
-from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.contrib import messages
-from django.db import DatabaseError, close_old_connections
+from django.db import DatabaseError
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.db import transaction
-from django.utils import timezone
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
-from sga.models import PerfilUsuario, Periodo
 from .models import (
-    AccesoDocumento, Documento, EditorModulo, HistorialEliminacion,
+    Documento, EditorModulo, HistorialEliminacion,
     VersionDocumento,
 )
 from . import repositories, selectors, services
+from . import storage
+from .constants import (
+    ESTADO_IA_PENDIENTE,
+    ESTADO_IA_LEIDO,
+    ESTADO_IA_OBSERVADO,
+    ESTADO_IA_ERROR,
+    ESTADOS_IA_DOCUMENTO,
+)
+from .access import (
+    _contexto_accesos,
+    _catalogos_acceso,
+    _opciones_acceso,
+    _nombres_catalogo,
+    _metadata_accesos,
+    _ids_opciones_acceso,
+)
+from .integrations import (
+    _iniciar_analisis_ia_segundo_plano,
+    _actualizar_estado_ia_version,
+    _columna_existe,
+    _normalizar_estado_ia,
+    _notificar_version_anterior_no_vigente,
+    _texto_uuid,
+    _items_campos_multipart,
+    _texto_comparable,
+    _validar_porcentaje_texto_ia,  # Compatibilidad con las pruebas previas del módulo.
+    _resolver_estado_vigencia_payload,
+    _notificar_version_anterior_no_vigente_segundo_plano,
+    _reservar_reintento_ia,
+    _datos_archivo_desde_contexto_version,
+)
+from .storage import (
+    _validar_pdf_texto_minimo,
+    _guardar_pdf_django,
+    _leer_pdf_version,
+)
 
-logger = logging.getLogger(__name__)
 
 USUARIO_SIMULADO = {
     "id_usuario_externo": 1001,
@@ -46,7 +65,6 @@ USUARIO_SIMULADO = {
 }
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
-PDF_TEXTO_MINIMO_CARACTERES = 200
 TIPOS_DOCUMENTO = (
     "Manual",
     "Reglamento",
@@ -61,55 +79,6 @@ TIPOS_DOCUMENTO = (
 # esté deshabilitado se usa una categoría admitida por chk_docs_tipo.
 TIPO_DOCUMENTO_PREDETERMINADO = "Manual"
 SELECTOR_TIPO_DOCUMENTO_HABILITADO = False
-
-ESTADO_IA_PENDIENTE = "PENDIENTE"
-ESTADO_IA_LEIDO = "LEIDO"
-ESTADO_IA_OBSERVADO = "OBSERVADO"
-ESTADO_IA_ERROR = "ERROR"
-
-ESTADOS_IA_DOCUMENTO = {
-    ESTADO_IA_PENDIENTE: {
-        "label": "Pendiente",
-        "leido": False,
-        "clase": "status-pending",
-    },
-    ESTADO_IA_LEIDO: {
-        "label": "Leido",
-        "leido": True,
-        "clase": "status-success",
-    },
-    ESTADO_IA_OBSERVADO: {
-        "label": "No Leído",
-        "leido": False,
-        "clase": "status-warning",
-    },
-    ESTADO_IA_ERROR: {
-        "label": "Error",
-        "leido": False,
-        "clase": "status-error",
-    },
-}
-
-NOMBRES_PERFILES_ACCESO = {
-    None: "Todos",
-    1: "Estudiante",
-    2: "Docente",
-    3: "Coordinador",
-}
-
-NOMBRES_GRUPOS_ACCESO = {
-    None: "Todos",
-    10: "Computacion",
-    20: "Empresariales",
-    30: "Derecho",
-}
-
-NOMBRES_PERIODOS_ACCESO = {
-    None: "Todos",
-    1: "Nivelacion",
-    2: "Grado",
-    3: "Postgrado",
-}
 
 
 def lista_documentos(request):
@@ -186,6 +155,14 @@ def lista_documentos(request):
     )
 
 
+def manual_editor(request):
+    """Guía del módulo, disponible únicamente para sus editores."""
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+    return render(request, "documentos/manual_editor.html", {"usuario": usuario})
+
+
 def pendiente_de_migrar(request, *args, **kwargs):
     """Placeholder temporal para flujos todavía atendidos por Flask."""
     return HttpResponse("Pendiente de migrar desde Flask a Django.", status=501)
@@ -209,18 +186,6 @@ def _obtener_sessionid_chat(request):
     if not request.session.session_key:
         request.session.create()
     return request.session.session_key
-
-
-def _columna_existe(tabla, columna):
-    try:
-        return repositories.columna_existe(tabla, columna)
-    except DatabaseError:
-        return False
-
-
-def _normalizar_estado_ia(estado):
-    estado = str(estado or ESTADO_IA_PENDIENTE).upper()
-    return estado if estado in ESTADOS_IA_DOCUMENTO else ESTADO_IA_PENDIENTE
 
 
 def _datos_estado_ia(estado, porcentaje_texto=None, mensaje=""):
@@ -375,12 +340,6 @@ def _numero_json(valor):
     return float(valor)
 
 
-def _sincronizar_estado_versiones(id_documento):
-    # El estado ya no se deriva desde docs.id_version_vigente.
-    # doc_versions.estado es la fuente unica de vigencia.
-    return
-
-
 def _publicacion_habilitada():
     return _columna_existe("doc_versions", "publicado")
 
@@ -464,10 +423,6 @@ def _adjuntar_ultima_version_documentos(documentos, solo_publicadas=False):
         documento["ultima_version_texto"] = (
             f"Versión {numero_version}" if numero_version else "No disponible"
         )
-
-
-def _sincronizar_versionamiento_documento(id_documento):
-    services.sincronizar_versionamiento(id_documento)
 
 
 def _listar_documentos_modulo(usuario, busqueda, anio):
@@ -761,105 +716,6 @@ def _combinaciones_acceso(request):
     )
 
 
-def _catalogos_acceso():
-    return {
-        "perfiles": _opciones_perfiles_acceso(),
-        "grupos": _opciones_grupos_acceso(),
-        "tipos_periodo": _opciones_periodos_acceso(),
-    }
-
-
-def _opciones_perfiles_acceso():
-    opciones = [{"id": "", "nombre": "Todos"}]
-    try:
-        perfiles = PerfilUsuario.objects.filter(status=True)
-        if perfiles.filter(inscripcion__isnull=False).exists():
-            opciones.append({"id": 1, "nombre": "Estudiante"})
-        if perfiles.filter(profesor__isnull=False).exists():
-            opciones.append({"id": 2, "nombre": "Docente"})
-        if perfiles.filter(administrativo__isnull=False).exists():
-            opciones.append({"id": 3, "nombre": "Administrativo"})
-        if perfiles.filter(empleador__isnull=False).exists():
-            opciones.append({"id": 4, "nombre": "Empleador"})
-    except DatabaseError:
-        pass
-
-    if len(opciones) == 1:
-        return _opciones_desde_mapa(NOMBRES_PERFILES_ACCESO)
-    return opciones
-
-
-def _opciones_grupos_acceso():
-    return _opciones_desde_mapa(NOMBRES_GRUPOS_ACCESO)
-
-
-def _opciones_periodos_acceso():
-    opciones = [{"id": "", "nombre": "Todos"}]
-    try:
-        periodos = (
-            Periodo.objects.filter(status=True, activo=True)
-            .order_by("nombre")
-            .values("id", "nombre")
-        )
-        opciones.extend(
-            {"id": periodo["id"], "nombre": periodo["nombre"]}
-            for periodo in periodos
-        )
-    except DatabaseError:
-        pass
-
-    if len(opciones) == 1:
-        return _opciones_desde_mapa(NOMBRES_PERIODOS_ACCESO)
-    return opciones
-
-
-def _opciones_desde_mapa(nombres):
-    return [
-        {"id": "" if identificador is None else identificador, "nombre": nombre}
-        for identificador, nombre in nombres.items()
-    ]
-
-
-def _nombres_catalogo(opciones):
-    nombres = {}
-    for opcion in opciones:
-        identificador = opcion["id"]
-        identificador = None if identificador == "" else int(identificador)
-        nombres[identificador] = opcion["nombre"]
-    return nombres
-
-
-def _opciones_acceso(valores, nombres):
-    opciones = []
-    for valor in valores or [None]:
-        valor_normalizado = None if valor in ("", None) else int(valor)
-        opciones.append(
-            {
-                "id": "" if valor_normalizado is None else valor_normalizado,
-                "nombre": nombres.get(valor_normalizado, str(valor_normalizado)),
-            }
-        )
-    return opciones
-
-
-def _contexto_accesos(perfiles, grupos, periodos):
-    catalogos_acceso = _catalogos_acceso()
-    return {
-        "perfiles": _opciones_acceso(
-            perfiles,
-            _nombres_catalogo(catalogos_acceso["perfiles"]),
-        ),
-        "grupos": _opciones_acceso(
-            grupos,
-            _nombres_catalogo(catalogos_acceso["grupos"]),
-        ),
-        "tipos_periodo": _opciones_acceso(
-            periodos,
-            _nombres_catalogo(catalogos_acceso["tipos_periodo"]),
-        ),
-    }
-
-
 def _contexto_accesos_formulario(request):
     return _contexto_accesos(
         _valores_enteros_formulario(request, "id_perfil_externo"),
@@ -914,321 +770,8 @@ def _campos_multipart_accesos(contexto_accesos):
     return campos
 
 
-def _metadata_accesos(contexto_accesos):
-    contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
-    perfiles = contexto_accesos["perfiles"]
-    grupos = contexto_accesos["grupos"]
-    tipos_periodo = contexto_accesos["tipos_periodo"]
-    return {
-        "perfiles_acceso": perfiles,
-        "grupos_acceso": grupos,
-        "tipos_periodo_acceso": tipos_periodo,
-        "id_perfil_externo": _ids_opciones_acceso(perfiles),
-        "id_grupo_externo": _ids_opciones_acceso(grupos),
-        "id_tipo_periodo_externo": _ids_opciones_acceso(tipos_periodo),
-        "perfiles": _nombres_opciones_acceso(perfiles),
-        "grupos": _nombres_opciones_acceso(grupos),
-        "tipos_periodo": _nombres_opciones_acceso(tipos_periodo),
-        "tipo_periodo": _nombres_opciones_acceso(tipos_periodo),
-    }
-
-
-def _ids_opciones_acceso(opciones):
-    return [opcion["id"] for opcion in opciones]
-
-
-def _nombres_opciones_acceso(opciones):
-    return [opcion["nombre"] for opcion in opciones]
-
-
-def _items_campos_multipart(campos):
-    if hasattr(campos, "items"):
-        return campos.items()
-    return campos
-
-
-def _formatear_valor_multipart(valor):
-    if isinstance(valor, (dict, list, tuple)):
-        return json.dumps(valor, ensure_ascii=False, default=str)
-    return "" if valor is None else str(valor)
-
-
 def _nombres_campos_multipart(campos):
     return [nombre for nombre, _valor in _items_campos_multipart(campos)]
-
-
-def _obtener_pdf_reader():
-    try:
-        from pypdf import PdfReader
-
-        return PdfReader
-    except ImportError:
-        try:
-            from PyPDF2 import PdfReader
-
-            return PdfReader
-        except ImportError as error:
-            raise RuntimeError(
-                "No se puede validar el texto del PDF porque falta la dependencia pypdf."
-            ) from error
-
-
-def _leer_bytes_archivo_subido(archivo):
-    if hasattr(archivo, "seek"):
-        archivo.seek(0)
-
-    if hasattr(archivo, "chunks"):
-        contenido = b"".join(archivo.chunks())
-    else:
-        contenido = archivo.read()
-
-    if hasattr(archivo, "seek"):
-        archivo.seek(0)
-    return contenido
-
-
-def _extraer_texto_pdf_subido(archivo):
-    PdfReader = _obtener_pdf_reader()
-    contenido = _leer_bytes_archivo_subido(archivo)
-    try:
-        lector = PdfReader(BytesIO(contenido))
-    except Exception as error:
-        raise ValueError("No se pudo leer el PDF para validar su texto.") from error
-
-    textos = []
-    for numero_pagina, pagina in enumerate(lector.pages, start=1):
-        try:
-            textos.append(pagina.extract_text() or "")
-        except Exception as error:
-            raise ValueError(
-                f"No se pudo extraer texto de la pagina {numero_pagina} del PDF."
-            ) from error
-    return "\n".join(textos)
-
-
-def _validar_pdf_texto_minimo(archivo):
-    texto = _extraer_texto_pdf_subido(archivo)
-    caracteres = _contar_caracteres_texto(texto)
-    if caracteres < PDF_TEXTO_MINIMO_CARACTERES:
-        raise ValueError(
-            "El PDF debe contener al menos "
-            f"{PDF_TEXTO_MINIMO_CARACTERES} caracteres de texto extraible; "
-            f"se detectaron {caracteres}. Verifique que no sea un PDF netamente escaneado."
-        )
-    return caracteres
-
-
-def _contar_caracteres_texto(texto):
-    """Cuenta contenido real, sin hacer que espacios y saltos inflen el total."""
-    return len(re.sub(r"\s+", "", texto or ""))
-
-
-def _guardar_pdf_django(archivo):
-    nombre_original = Path(archivo.name).name
-    if not nombre_original.lower().endswith(".pdf"):
-        raise ValueError("Solo se permiten archivos PDF.")
-    if archivo.size <= 0:
-        raise ValueError("El archivo PDF está¡ vacio.")
-
-    contenido = _leer_bytes_archivo_subido(archivo)
-    nombre_guardado = f"{uuid4().hex}_{nombre_original}"
-    ruta_relativa = default_storage.save(
-        f"documentos/{nombre_guardado}",
-        ContentFile(contenido),
-    )
-    return {
-        "archivo_nombre": nombre_guardado,
-        "archivo_path": ruta_relativa,
-        "archivo_tipo": archivo.content_type or "application/pdf",
-        "archivo_tamano": len(contenido),
-    }
-
-
-def _ruta_media_segura(ruta_relativa):
-    raiz_media = settings.MEDIA_ROOT.resolve()
-    ruta_pdf = (raiz_media / PurePosixPath(str(ruta_relativa))).resolve()
-    if ruta_pdf != raiz_media and raiz_media not in ruta_pdf.parents:
-        raise ValueError("La ruta del PDF no es valida.")
-    return ruta_pdf
-
-
-def _ruta_pdf_version_segura(datos_archivo):
-    ruta_relativa = str(datos_archivo.get("archivo_path") or "")
-    if ruta_relativa.startswith("documentos/"):
-        return _ruta_media_segura(ruta_relativa)
-
-    nombre_archivo = Path(
-        ruta_relativa or str(datos_archivo.get("archivo_nombre") or "")
-    ).name
-    if not nombre_archivo.lower().endswith(".pdf"):
-        raise ValueError("El archivo asociado no es un PDF valido.")
-
-    ruta_pdf = (settings.FLASK_PDF_DIR / nombre_archivo).resolve()
-    raiz_flask = settings.FLASK_PDF_DIR.resolve()
-    if ruta_pdf != raiz_flask and raiz_flask not in ruta_pdf.parents:
-        raise ValueError("La ruta del PDF heredado no es valida.")
-    if not ruta_pdf.is_file():
-        raise ValueError("El PDF original no esta disponible.")
-    return ruta_pdf
-
-
-def _leer_pdf_version(datos_archivo):
-    ruta_pdf = _ruta_pdf_version_segura(datos_archivo)
-    if not ruta_pdf.is_file():
-        raise ValueError("El PDF original no esta disponible.")
-    return ruta_pdf.read_bytes()
-
-
-def _leer_json_http(respuesta):
-    cuerpo = respuesta.read().decode("utf-8")
-    try:
-        return json.loads(cuerpo or "{}")
-    except ValueError as error:
-        raise RuntimeError(
-            f"El servicio respondio con un formato no JSON. HTTP {respuesta.status}."
-        ) from error
-
-
-def _contexto_ssl_ia():
-    if getattr(settings, "IA_SSL_VERIFY", True):
-        return None
-    return ssl._create_unverified_context()
-
-
-def _publicar_json(url, payload):
-    datos = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
-    solicitud = urllib.request.Request(
-        url,
-        data=datos,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(
-            solicitud,
-            timeout=settings.IA_DOCUMENTOS_TIMEOUT,
-            context=_contexto_ssl_ia(),
-        ) as respuesta:
-            return _leer_json_http(respuesta)
-    except urllib.error.HTTPError as error:
-        contenido = _leer_json_http(error)
-        mensaje = contenido.get("error") or contenido.get("mensaje") or error.reason
-        raise RuntimeError(f"HTTP {error.code}: {mensaje}") from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(str(error.reason)) from error
-
-
-def _publicar_multipart(url, campos, archivos):
-    boundary = f"----django-documentos-{uuid4().hex}"
-    partes = []
-    for nombre, valor in _items_campos_multipart(campos):
-        partes.extend(
-            [
-                f"--{boundary}\r\n".encode("utf-8"),
-                f'Content-Disposition: form-data; name="{nombre}"\r\n\r\n'.encode("utf-8"),
-                _formatear_valor_multipart(valor).encode("utf-8"),
-                b"\r\n",
-            ]
-        )
-    for nombre, archivo in archivos.items():
-        partes.extend(
-            [
-                f"--{boundary}\r\n".encode("utf-8"),
-                (
-                    f'Content-Disposition: form-data; name="{nombre}"; '
-                    f'filename="{archivo["filename"]}"\r\n'
-                ).encode("utf-8"),
-                f'Content-Type: {archivo.get("content_type", "application/octet-stream")}\r\n\r\n'.encode("utf-8"),
-                archivo["content"],
-                b"\r\n",
-            ]
-        )
-    partes.append(f"--{boundary}--\r\n".encode("utf-8"))
-    solicitud = urllib.request.Request(
-        url,
-        data=b"".join(partes),
-        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(
-            solicitud,
-            timeout=settings.IA_DOCUMENTOS_TIMEOUT,
-            context=_contexto_ssl_ia(),
-        ) as respuesta:
-            return _leer_json_http(respuesta)
-    except urllib.error.HTTPError as error:
-        contenido = _leer_json_http(error)
-        mensaje = contenido.get("error") or contenido.get("mensaje") or error.reason
-        raise RuntimeError(f"HTTP {error.code}: {mensaje}") from error
-    except urllib.error.URLError as error:
-        raise RuntimeError(str(error.reason)) from error
-
-
-def _llamar_ia_documentos(datos_archivo, contexto_accesos=None, tipo_documento=None):
-    url = f"{settings.IA_DOCUMENTOS_BASE_URL}{settings.IA_DOCUMENTOS_ANALIZAR_PATH}"
-    try:
-        contenido = _publicar_multipart(
-            url,
-            {
-                "tipo_documento": _texto_comparable(tipo_documento),
-            },
-            {
-                "archivo": {
-                    "filename": datos_archivo["archivo_nombre"],
-                    "content": _leer_pdf_version(datos_archivo),
-                    "content_type": "application/pdf",
-                }
-            },
-        )
-    except RuntimeError as error:
-        raise RuntimeError(
-            f"No se pudo conectar con la IA documental en {url}. "
-            f"Campos enviados: archivo, tipo_documento. Error: {error}"
-        ) from error
-
-    return contenido
-
-
-def _obtener_porcentaje_texto_ia(contenido):
-    valor = contenido.get("porcentaje_texto")
-    if valor is None:
-        datos_pdf = contenido.get("datos_pdf") or contenido.get("datosPdf") or contenido.get("datos") or {}
-        valor = datos_pdf.get("porcentaje_texto")
-        if valor is None:
-            valor = datos_pdf.get("porcentaje_contenido_texto")
-    if valor is None:
-        raise ValueError("La IA no devolvio el campo porcentaje_texto.")
-    try:
-        return float(valor)
-    except (TypeError, ValueError) as error:
-        raise ValueError(f"La IA devolvio un porcentaje_texto invalido: {valor}") from error
-
-
-def _validar_porcentaje_texto_ia(contenido):
-    porcentaje_texto = _obtener_porcentaje_texto_ia(contenido)
-    if porcentaje_texto < settings.IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO:
-        # El porcentaje remoto suele representar la ocupacion visual o la
-        # proporcion de paginas con texto. Portadas, tablas, firmas e imagenes
-        # pueden reducirlo aunque el PDF sea perfectamente util para busqueda.
-        # Si la IA logro extraer suficiente texto, no debemos descartarlo por
-        # ese indicador secundario.
-        caracteres_extraidos = _contar_caracteres_texto(
-            contenido.get("texto_extraido")
-        )
-        if caracteres_extraidos >= PDF_TEXTO_MINIMO_CARACTERES:
-            return porcentaje_texto
-        raise ValueError(
-            "El documento tiene un bajo porcentaje de texto "
-            f"({porcentaje_texto:g}%). Minimo requerido: "
-            f"{settings.IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO:g}%."
-        )
-    return porcentaje_texto
-
-
-def _obtener_interpretacion_ia(contenido):
-    interpretacion_ia = contenido.get("interpretacion_ia") or {}
-    return interpretacion_ia.get("interpretacion") or contenido
 
 
 def _obtener_contexto_version_chroma(id_documento, id_version=None, vigente=None):
@@ -1240,30 +783,10 @@ def _obtener_fecha_aprobacion_version(id_documento, id_version):
     return contexto.get("fecha_aprobacion")
 
 
-def _texto_uuid(valor):
-    return str(valor) if valor else ""
-
-
 def _anio_fecha(valor):
     if not valor:
         return ""
     return str(valor.year) if hasattr(valor, "year") else str(valor)[:4]
-
-
-def _obtener_estado_version(id_documento, id_version):
-    if not id_documento or not id_version:
-        return ""
-    return _texto_comparable(
-        selectors.estado_version(id_documento, id_version)
-    ).upper()
-
-
-def _resolver_estado_vigencia_payload(id_documento, contexto_version):
-    contexto_version = contexto_version or {}
-    estado = _texto_comparable(contexto_version.get("estado")).upper()
-    if estado:
-        return estado
-    return _obtener_estado_version(id_documento, contexto_version.get("id_version")) or "VIGENTE"
 
 
 def _construir_url_pdf_vigente(request, id_documento, contexto_version):
@@ -1297,347 +820,6 @@ def _construir_contexto_reemplazo_version(version_nueva, version_anterior=None):
         "numero_version_anterior": version_anterior.get("numero_version"),
         "uuid_version_anterior": _texto_uuid(version_anterior.get("uuid_version")),
     }
-
-
-def _lista_a_json_texto(valor):
-    if valor is None:
-        return ""
-    if isinstance(valor, str):
-        return valor
-    return json.dumps(valor, ensure_ascii=False, default=str)
-
-
-def _bool_a_texto(valor):
-    return "true" if bool(valor) else "false"
-
-
-def _construir_payload_chroma(
-    id_documento,
-    titulo,
-    datos_archivo,
-    respuesta_ia,
-    contexto_version=None,
-    contexto_accesos=None,
-    tipo_documento=None,
-    documento_url="",
-):
-    interpretacion = _obtener_interpretacion_ia(respuesta_ia)
-    contexto_version = contexto_version or {}
-    contexto_accesos = contexto_accesos or _contexto_accesos(None, None, None)
-    estado_vigencia = _resolver_estado_vigencia_payload(id_documento, contexto_version)
-    tipo_documento = _texto_comparable(tipo_documento) or (
-        interpretacion.get("tipo_documento_sugerido") or "GENERAL"
-    )
-    anio_documento = (
-        contexto_version.get("anio_aprobacion")
-        or interpretacion.get("anio_documento_sugerido")
-        or ""
-    )
-    metadata_accesos = _metadata_accesos(contexto_accesos)
-    metadata_documento_url = (
-        {"documento_url": documento_url}
-        if estado_vigencia == "VIGENTE" and documento_url
-        else {}
-    )
-    payload = {
-        "id_documento": str(id_documento),
-        "id_version": contexto_version.get("id_version") or "",
-        "uuid_documento": contexto_version.get("uuid_documento") or "",
-        "uuid_version": contexto_version.get("uuid_version") or "",
-        "id_version_anterior": contexto_version.get("id_version_anterior") or "",
-        "uuid_version_anterior": contexto_version.get("uuid_version_anterior") or "",
-        "accion_chroma": "reemplazar_version_vigente",
-        "titulo": titulo,
-        "texto_extraido": respuesta_ia.get("texto_extraido") or "",
-        "reemplazar_existente": True,
-        "tipo_documento": tipo_documento,
-        "ambito": interpretacion.get("ambito_sugerido") or "PUBLICO",
-        "estado_vigencia": estado_vigencia,
-        "anio_documento": str(anio_documento),
-        "rol": interpretacion.get("rol_sugerido") or "GENERAL",
-        "carrera": interpretacion.get("carrera_sugerida") or "GENERAL",
-        "tipo_estudio": interpretacion.get("tipo_estudio_sugerido") or "GENERAL",
-        "perfiles_acceso": contexto_accesos["perfiles"],
-        "grupos_acceso": contexto_accesos["grupos"],
-        "tipos_periodo_acceso": contexto_accesos["tipos_periodo"],
-        "nombre_archivo": respuesta_ia.get("nombre_archivo") or datos_archivo["archivo_nombre"],
-        "resumen_documento": interpretacion.get("resumen") or respuesta_ia.get("resumen") or "",
-        "temas_detectados": interpretacion.get("temas_detectados") or respuesta_ia.get("temas_detectados") or [],
-        "advertencias": interpretacion.get("advertencias") or respuesta_ia.get("advertencias") or [],
-        "requiere_revision_humana": _bool_a_texto(
-            interpretacion.get(
-                "requiere_revision_humana",
-                respuesta_ia.get("requiere_revision_humana", False),
-            )
-        ),
-        "metadata": {
-            "fuente": "Django_Modulo_GestionDocumentosLegales",
-            "archivo_path": datos_archivo["archivo_path"],
-            "id_documento": str(id_documento),
-            "id_version": str(contexto_version.get("id_version") or ""),
-            "numero_version": str(contexto_version.get("numero_version") or ""),
-            "anio_documento": str(anio_documento),
-            "tipo_documento": tipo_documento,
-            "tipo_documento_sugerido_ia": interpretacion.get("tipo_documento_sugerido") or "",
-            "uuid_documento": contexto_version.get("uuid_documento") or "",
-            "uuid_version": contexto_version.get("uuid_version") or "",
-            "id_version_anterior": str(contexto_version.get("id_version_anterior") or ""),
-            "numero_version_anterior": str(contexto_version.get("numero_version_anterior") or ""),
-            "uuid_version_anterior": contexto_version.get("uuid_version_anterior") or "",
-            "porcentaje_texto": respuesta_ia.get("porcentaje_texto"),
-            "porcentaje_imagenes": respuesta_ia.get("porcentaje_imagenes"),
-            **metadata_documento_url,
-            **metadata_accesos,
-        },
-        "paginas": respuesta_ia.get("paginas") or 0,
-        "paginas_con_texto": respuesta_ia.get("paginas_con_texto") or 0,
-        "paginas_sin_texto": respuesta_ia.get("paginas_sin_texto") or 0,
-        "paginas_con_poco_texto": respuesta_ia.get("paginas_con_poco_texto") or 0,
-        "total_imagenes": respuesta_ia.get("total_imagenes") or 0,
-        "requiere_revision": bool(respuesta_ia.get("requiere_revision", False)),
-    }
-    return payload
-
-
-def _convertir_payload_chroma_multipart(payload):
-    data = {}
-    for clave, valor in payload.items():
-        if clave == "texto_extraido" and not valor:
-            continue
-        if clave in (
-            "temas_detectados",
-            "advertencias",
-            "metadata",
-            "perfiles_acceso",
-            "grupos_acceso",
-            "tipos_periodo_acceso",
-        ):
-            data[clave] = _lista_a_json_texto(valor)
-        elif isinstance(valor, bool):
-            data[clave] = _bool_a_texto(valor)
-        else:
-            data[clave] = "" if valor is None else str(valor)
-    return data
-
-
-def _guardar_documento_chroma(
-    id_documento,
-    titulo,
-    datos_archivo,
-    respuesta_ia,
-    contexto_version=None,
-    contexto_accesos=None,
-    tipo_documento=None,
-    documento_url="",
-):
-    url = f"{settings.IA_CHROMA_BASE_URL}{settings.IA_CHROMA_GUARDAR_PATH}"
-    payload = _construir_payload_chroma(
-        id_documento,
-        titulo,
-        datos_archivo,
-        respuesta_ia,
-        contexto_version,
-        contexto_accesos,
-        tipo_documento,
-        documento_url,
-    )
-    try:
-        if payload["texto_extraido"]:
-            return _publicar_json(url, payload)
-
-        return _publicar_multipart(
-            url,
-            _convertir_payload_chroma_multipart(payload),
-            {
-                "archivo": {
-                    "filename": datos_archivo["archivo_nombre"],
-                    "content": _leer_pdf_version(datos_archivo),
-                    "content_type": "application/pdf",
-                }
-            },
-        )
-    except RuntimeError as error:
-        raise RuntimeError(f"No se pudo conectar con ChromaDB en {url}: {error}") from error
-
-
-def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_texto=None, mensaje=""):
-    columnas_requeridas = (
-        "estado_ia",
-        "porcentaje_texto_ia",
-        "mensaje_ia",
-        "fecha_analisis_ia",
-    )
-    if not id_version or not all(
-        _columna_existe("doc_versions", columna) for columna in columnas_requeridas
-    ):
-        return
-
-    services.actualizar_estado_ia(
-        id_documento,
-        id_version,
-        _normalizar_estado_ia(estado),
-        porcentaje_texto,
-        str(mensaje or "")[:1000],
-    )
-
-
-def _reservar_reintento_ia(id_documento, id_version):
-    """Reserva de forma atomica un reintento y evita dos analisis simultaneos."""
-    return services.reservar_reintento_ia(
-        id_documento,
-        id_version,
-        ESTADO_IA_PENDIENTE,
-        "Reintento de analisis de IA pendiente.",
-        ESTADO_IA_LEIDO,
-        settings.IA_DOCUMENTOS_REINTENTO_ESPERA,
-    )
-
-
-def _mensaje_ia_con_advertencias(mensaje, advertencias):
-    mensaje = str(mensaje or "")
-    advertencias = [str(advertencia) for advertencia in advertencias if advertencia]
-    if not advertencias:
-        return mensaje
-    return f"{mensaje} Advertencias: {' '.join(advertencias)}"
-
-
-def _procesar_ia_documento_segundo_plano(
-    id_documento,
-    titulo,
-    datos_archivo,
-    contexto_version,
-    contexto_accesos,
-    tipo_documento=None,
-    contexto_version_anterior=None,
-    documento_url="",
-):
-    close_old_connections()
-    id_version = contexto_version.get("id_version")
-    respuesta_ia = {}
-    advertencias = []
-    try:
-        _notificar_version_anterior_no_vigente(
-            contexto_version_anterior,
-            contexto_version,
-        )
-    except RuntimeError as error_chroma_vigencia:
-        advertencias.append(str(error_chroma_vigencia))
-
-    try:
-        respuesta_ia = _llamar_ia_documentos(
-            datos_archivo,
-            contexto_accesos,
-            tipo_documento,
-        )
-        porcentaje_texto = _validar_porcentaje_texto_ia(respuesta_ia)
-    except ValueError as error:
-        try:
-            porcentaje_texto = _obtener_porcentaje_texto_ia(respuesta_ia)
-        except Exception:
-            porcentaje_texto = None
-        _actualizar_estado_ia_version(
-            id_documento,
-            id_version,
-            ESTADO_IA_OBSERVADO,
-            porcentaje_texto,
-            _mensaje_ia_con_advertencias(error, advertencias),
-        )
-        close_old_connections()
-        return
-    except RuntimeError as error:
-        _actualizar_estado_ia_version(
-            id_documento,
-            id_version,
-            ESTADO_IA_ERROR,
-            None,
-            _mensaje_ia_con_advertencias(error, advertencias),
-        )
-        close_old_connections()
-        return
-    except Exception as error:
-        logger.exception(
-            "Error inesperado al analizar con IA el documento %s, version %s.",
-            id_documento,
-            id_version,
-        )
-        _actualizar_estado_ia_version(
-            id_documento,
-            id_version,
-            ESTADO_IA_ERROR,
-            None,
-            _mensaje_ia_con_advertencias(error, advertencias),
-        )
-        close_old_connections()
-        return
-
-    mensaje = _mensaje_ia_con_advertencias("Analisis de IA completado.", advertencias)
-    try:
-        respuesta_chroma = _guardar_documento_chroma(
-            id_documento,
-            titulo,
-            datos_archivo,
-            respuesta_ia,
-            contexto_version,
-            contexto_accesos,
-            tipo_documento,
-            documento_url,
-        )
-        mensaje = (
-            f"El documento {titulo} fue analizado por la IA exitosamente."
-        )
-    except RuntimeError as error_chroma:
-        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
-    except Exception as error_chroma:
-        logger.exception(
-            "Error inesperado al actualizar ChromaDB para el documento %s, version %s.",
-            id_documento,
-            id_version,
-        )
-        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
-
-    _actualizar_estado_ia_version(
-        id_documento,
-        id_version,
-        ESTADO_IA_LEIDO,
-        porcentaje_texto,
-        mensaje,
-    )
-    close_old_connections()
-
-
-def _iniciar_analisis_ia_segundo_plano(
-    id_documento,
-    titulo,
-    datos_archivo,
-    contexto_version,
-    contexto_accesos,
-    tipo_documento=None,
-    contexto_version_anterior=None,
-    documento_url="",
-):
-    id_version = contexto_version.get("id_version")
-    _actualizar_estado_ia_version(
-        id_documento,
-        id_version,
-        ESTADO_IA_PENDIENTE,
-        None,
-        "Analisis de IA pendiente.",
-    )
-    hilo = threading.Thread(
-        target=_procesar_ia_documento_segundo_plano,
-        args=(
-            id_documento,
-            titulo,
-            datos_archivo,
-            contexto_version,
-            contexto_accesos,
-            tipo_documento,
-            contexto_version_anterior,
-            documento_url,
-        ),
-        daemon=True,
-    )
-    hilo.start()
 
 
 @require_POST
@@ -1691,66 +873,6 @@ def reintentar_analisis_ia_documento(request, id_documento):
                 pass
         messages.error(request, f"No se pudo reintentar el analisis de IA: {error}")
     return redirect("documentos:lista")
-
-
-def _datos_archivo_desde_contexto_version(contexto_version):
-    archivo_path = str((contexto_version or {}).get("archivo_path") or "")
-    archivo_nombre = str((contexto_version or {}).get("archivo_nombre") or Path(archivo_path).name)
-    if not archivo_nombre:
-        raise ValueError("La version vigente no tiene archivo asociado.")
-    contenido = _leer_pdf_version(
-        {"archivo_nombre": archivo_nombre, "archivo_path": archivo_path}
-    )
-    return {
-        "archivo_nombre": archivo_nombre,
-        "archivo_path": archivo_path,
-        "archivo_tipo": "application/pdf",
-        "archivo_tamano": len(contenido),
-    }
-
-
-def _quitar_vigencia_chroma(uuid_version):
-    uuid_version = _texto_uuid(uuid_version)
-    if not uuid_version:
-        return {}
-
-    url = f"{settings.IA_CHROMA_BASE_URL}{settings.IA_CHROMA_QUITAR_VIGENCIA_PATH}"
-    try:
-        return _publicar_json(url, {"uuid_version": uuid_version})
-    except RuntimeError as error:
-        raise RuntimeError(
-            f"No se pudo quitar la vigencia en ChromaDB para la version {uuid_version}: {error}"
-        ) from error
-
-
-def _notificar_version_anterior_no_vigente(contexto_anterior, contexto_actual=None):
-    uuid_anterior = _texto_uuid((contexto_anterior or {}).get("uuid_version"))
-    uuid_actual = _texto_uuid((contexto_actual or {}).get("uuid_version"))
-    if uuid_anterior and uuid_anterior != uuid_actual:
-        return _quitar_vigencia_chroma(uuid_anterior)
-    return {}
-
-
-def _notificar_version_anterior_no_vigente_segundo_plano(contexto_anterior, contexto_actual=None):
-    uuid_anterior = _texto_uuid((contexto_anterior or {}).get("uuid_version"))
-    uuid_actual = _texto_uuid((contexto_actual or {}).get("uuid_version"))
-    if not uuid_anterior or uuid_anterior == uuid_actual:
-        return
-
-    def notificar():
-        close_old_connections()
-        try:
-            _notificar_version_anterior_no_vigente(contexto_anterior, contexto_actual)
-        except RuntimeError:
-            logger.exception(
-                "No se pudo quitar la vigencia en ChromaDB para la version %s.",
-                uuid_anterior,
-            )
-        finally:
-            close_old_connections()
-
-    hilo = threading.Thread(target=notificar, daemon=True)
-    hilo.start()
 
 
 def _validar_titulo_unico(titulo, id_documento=None):
@@ -1816,10 +938,6 @@ def _adjuntar_publicacion_versiones(id_documento, versiones):
         version["publicado"] = publicados.get(version["id_version"], False)
 
 
-def _version_esta_vigente(version):
-    return bool(version.get("vigente") or version.get("estado") == "VIGENTE")
-
-
 def _adjuntar_estado_ia_versiones(id_documento, versiones):
     if not versiones:
         return
@@ -1860,29 +978,6 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
         )
 
 
-def _validar_publicacion_versiones_por_ia(versiones, ids_publicados):
-    versiones_por_id = {int(version["id_version"]): version for version in versiones}
-    bloqueadas = []
-    for id_version in ids_publicados:
-        version = versiones_por_id.get(int(id_version))
-        if not version:
-            continue
-        if version.get("publicado"):
-            continue
-        if _normalizar_estado_ia(version.get("estado_ia")) != ESTADO_IA_LEIDO:
-            bloqueadas.append(version)
-
-    if bloqueadas:
-        detalle = ", ".join(
-            f"versión {version.get('numero_version') or version['id_version']}"
-            for version in bloqueadas
-        )
-        raise ValueError(
-            "No se puede publicar una versión si la lectura de IA aún no es positiva "
-            f"para: {detalle}."
-        )
-
-
 def _obtener_versiones_visibles(id_documento, usuario=None):
     usuario = usuario or _obtener_usuario_modulo()
     return _obtener_versiones(
@@ -1900,39 +995,6 @@ def _seleccionar_version(versiones, id_version, preferir_vigente=True):
     if preferir_vigente:
         return next((version for version in versiones if version.get("vigente")), versiones[0])
     return versiones[0]
-
-
-def _validar_cambio_vigencia_version(versiones, id_version, estado_version):
-    if estado_version != "VIGENTE":
-        return
-
-    existe_otra_vigente = any(
-        version["id_version"] != id_version
-        and (version.get("vigente") or version.get("estado") == "VIGENTE")
-        for version in versiones
-    )
-    if existe_otra_vigente:
-        raise ValueError(
-            "No se puede tener mas de una version vigente para el documento. "
-            "Primero cambie la version vigente actual a No vigente y luego active "
-            "la version seleccionada."
-        )
-
-
-def _version_esta_vigente(version):
-    return bool(version.get("vigente") or version.get("estado") == "VIGENTE")
-
-
-def _fecha_comparable(valor):
-    if valor is None:
-        return None
-    if hasattr(valor, "date"):
-        return valor.date()
-    return valor
-
-
-def _texto_comparable(valor):
-    return str(valor or "").strip()
 
 
 def _accesos_documento_combinaciones(id_documento):
@@ -1973,49 +1035,6 @@ def _edicion_mantiene_metadata_actual(
     )
 
 
-def _validar_edicion_version_vigente(
-    documento,
-    version,
-    estado_version,
-    archivo,
-    titulo,
-    descripcion,
-    palabras_clave,
-    fecha_aprobacion,
-    accesos,
-):
-    if not _version_esta_vigente(version):
-        return
-
-    # La edición directa de una versión vigente se permite; el guardado relanza
-    # el análisis IA cuando detecta cambios en PDF, metadatos o accesos.
-    return
-
-
-def _eliminar_documento_logico(id_documento, motivo, usuario):
-    services.eliminar_documento_logicamente(
-        id_documento, motivo, usuario["id_usuario_externo"]
-    )
-
-
-def _documento_tiene_version_publicada(id_documento, id_version=None):
-    if not _publicacion_habilitada():
-        return False
-
-    versiones = VersionDocumento.objects.filter(
-        documento_id=id_documento, publicado=True
-    )
-    if id_version is not None:
-        versiones = versiones.filter(pk=id_version)
-    return versiones.exists()
-
-
-def _eliminar_version_logica(id_documento, id_version, motivo, usuario):
-    services.eliminar_version_logicamente(
-        id_documento, id_version, motivo, usuario["id_usuario_externo"]
-    )
-
-
 def _restaurar_documento_logico(id_documento, usuario):
     services.restaurar_documento_logicamente(
         id_documento, usuario["id_usuario_externo"]
@@ -2039,86 +1058,6 @@ def _restaurar_versiones_logicas(id_documento, ids_versiones):
     services.restaurar_versiones_logicamente(id_documento, ids_versiones)
 
 
-def _registrar_auditoria_django(
-    usuario,
-    usuario_django,
-    id_documento,
-    accion,
-    motivo,
-    resumen,
-    mensaje=None,
-):
-    """Registra la auditoría documental usando la bitácora estándar de Django."""
-    usuario_id = (
-        getattr(usuario_django, "pk", None)
-        if getattr(usuario_django, "is_authenticated", False)
-        else None
-    )
-    if not usuario_id:
-        modelo_usuario = get_user_model()
-        usuario_id = (
-            modelo_usuario.objects.filter(
-                pk=usuario.get("id_usuario_externo")
-            ).values_list("pk", flat=True).first()
-            or modelo_usuario.objects.order_by("pk").values_list("pk", flat=True).first()
-        )
-    if not usuario_id:
-        raise ValueError("No se pudo identificar el usuario de Django para la auditoría.")
-
-    tipo_contenido, _ = ContentType.objects.get_or_create(
-        app_label="documentos",
-        model="documento",
-    )
-    titulo = str(resumen.get("titulo") or f"Documento {id_documento}")
-    LogEntry.objects.create(
-        user_id=usuario_id,
-        content_type=tipo_contenido,
-        object_id=str(id_documento),
-        object_repr=titulo[:200],
-        action_flag=DELETION,
-        change_message=mensaje or json.dumps(
-            {
-                "accion": accion,
-                "motivo": motivo,
-                "datos_anteriores": resumen,
-            },
-            ensure_ascii=False,
-        ),
-    )
-
-
-def _registrar_historial_eliminacion(
-    id_documento,
-    titulo,
-    motivo,
-    usuario,
-    total_versiones,
-    id_version=None,
-    numero_version=None,
-    versiones_eliminadas=None,
-):
-    HistorialEliminacion.objects.create(
-        id_documento=id_documento,
-        id_version=id_version,
-        titulo_documento=titulo,
-        numero_version=numero_version,
-        nombre_usuario=usuario.get("nombre_usuario") or "Usuario",
-        motivo_eliminacion=motivo,
-        total_versiones=total_versiones,
-        versiones_eliminadas=versiones_eliminadas or [],
-        fecha_eliminacion=timezone.now(),
-    )
-
-
-def _mensaje_edicion_documento(usuario, titulo, cambios):
-    mensaje = f"{usuario.get('nombre_usuario') or 'Usuario'} ha editado el documento {titulo}."
-    if len(cambios) == 1:
-        return f"{mensaje} Cambio realizado: {cambios[0]}."
-    if cambios:
-        return f"{mensaje} Cambios realizados: {', '.join(cambios)}."
-    return mensaje
-
-
 def _fecha_comparable(valor):
     return str(valor or "")[:10]
 
@@ -2136,320 +1075,6 @@ def _resumen_accesos_auditoria(contexto):
     return "; ".join(partes)
 
 
-def _eliminar_documento_fisico(id_documento, motivo, usuario, usuario_django):
-    """Elimina de la base un documento que ya se encuentra en la papelera."""
-    with transaction.atomic():
-        documento = Documento.objects.select_for_update().filter(
-            pk=id_documento
-        ).values(
-            "id_documento", "titulo", "descripcion", "uuid_documento",
-            "fecha_eliminacion", "motivo_eliminacion",
-        ).first()
-        if not documento:
-            raise ValueError("El documento no existe.")
-        if not documento.get("fecha_eliminacion"):
-            raise ValueError(
-                "Solo se puede eliminar definitivamente un documento que esté en la papelera."
-            )
-
-        versiones = list(
-            VersionDocumento.objects.filter(documento_id=id_documento)
-            .order_by("numero_version")
-            .values(
-                "id_version", "numero_version", "archivo_nombre",
-                "archivo_path", "uuid_version",
-            )
-        )
-        resumen = {
-            "id_documento_eliminado": id_documento,
-            "titulo": documento.get("titulo"),
-            "uuid_documento": str(documento.get("uuid_documento") or ""),
-            "motivo_baja_logica": documento.get("motivo_eliminacion"),
-            "motivo_eliminacion_definitiva": motivo,
-            "versiones": [
-                {
-                    "id_version": version.get("id_version"),
-                    "numero_version": version.get("numero_version"),
-                    "archivo_nombre": version.get("archivo_nombre"),
-                    "uuid_version": str(version.get("uuid_version") or ""),
-                }
-                for version in versiones
-            ],
-        }
-
-        _registrar_auditoria_django_pruebas(
-            usuario,
-            usuario_django,
-            id_documento,
-            "ELIMINACION_DEFINITIVA",
-            motivo,
-            resumen,
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} "
-                f"ha eliminado el documento {documento.get('titulo') or id_documento} "
-                f"y todas sus versiones. Motivo de eliminación: {motivo}. "
-                f"Versiones eliminadas: {len(versiones)}"
-            ),
-        )
-        _registrar_historial_eliminacion(
-            id_documento,
-            documento.get("titulo") or "",
-            motivo,
-            usuario,
-            len(versiones),
-            versiones_eliminadas=[
-                {
-                    "id_version": version.get("id_version"),
-                    "numero_version": version.get("numero_version"),
-                    "archivo_nombre": version.get("archivo_nombre"),
-                }
-                for version in versiones
-            ],
-        )
-        Documento.objects.filter(pk=id_documento).update(version_vigente=None)
-        AccesoDocumento.objects.filter(documento_id=id_documento).delete()
-        VersionDocumento.objects.filter(documento_id=id_documento).delete()
-        Documento.objects.filter(pk=id_documento).delete()
-
-    return versiones
-
-
-def _eliminar_archivo_version_fisico(version):
-    ruta = str(version.get("archivo_path") or "").strip()
-    if not ruta:
-        return
-    if ruta.startswith("documentos/"):
-        default_storage.delete(ruta)
-        return
-
-    # Los documentos heredados se almacenan en FLASK_PDF_DIR y en la base
-    # pueden tener una ruta distinta a la usada por el storage de Django.
-    nombre = Path(ruta or str(version.get("archivo_nombre") or "")).name
-    raiz = settings.FLASK_PDF_DIR.resolve()
-    ruta_heredada = (raiz / nombre).resolve()
-    if ruta_heredada != raiz and raiz not in ruta_heredada.parents:
-        raise ValueError("La ruta del PDF heredado no es válida.")
-    if ruta_heredada.exists():
-        ruta_heredada.unlink()
-
-
-def _eliminar_version_fisica(id_documento, id_version, motivo, usuario, usuario_django):
-    """Elimina permanentemente una versión que ya se encuentra en la papelera."""
-    with transaction.atomic():
-        version = VersionDocumento.objects.select_for_update().filter(
-            documento_id=id_documento, pk=id_version
-        ).values(
-            "id_version", "documento_id", "numero_version", "archivo_nombre",
-            "archivo_path", "uuid_version", "fecha_eliminacion",
-            "motivo_eliminacion", "documento__titulo",
-        ).first()
-        if not version:
-            raise ValueError("La versión no existe o no pertenece al documento.")
-        version["id_documento"] = version.pop("documento_id")
-        version["titulo"] = version.pop("documento__titulo")
-        if not version.get("fecha_eliminacion"):
-            raise ValueError(
-                "Solo se puede eliminar definitivamente una versión que esté en la papelera."
-            )
-
-        resumen = {
-            "id_documento": id_documento,
-            "id_version_eliminada": id_version,
-            "titulo": version.get("titulo"),
-            "numero_version": version.get("numero_version"),
-            "archivo_nombre": version.get("archivo_nombre"),
-            "uuid_version": str(version.get("uuid_version") or ""),
-            "motivo_baja_logica": version.get("motivo_eliminacion"),
-            "motivo_eliminacion_definitiva": motivo,
-        }
-        _registrar_auditoria_django_pruebas(
-            usuario,
-            usuario_django,
-            id_documento,
-            "ELIMINACION_DEFINITIVA_VERSION",
-            motivo,
-            resumen,
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado la versión "
-                f"{version.get('numero_version')} del documento "
-                f"{version.get('titulo') or id_documento}. Motivo de eliminación: {motivo}. "
-                "Versiones eliminadas: 1"
-            ),
-        )
-        _registrar_historial_eliminacion(
-            id_documento,
-            version.get("titulo") or "",
-            motivo,
-            usuario,
-            1,
-            id_version=id_version,
-            numero_version=version.get("numero_version"),
-            versiones_eliminadas=[
-                {
-                    "id_version": id_version,
-                    "numero_version": version.get("numero_version"),
-                    "archivo_nombre": version.get("archivo_nombre"),
-                }
-            ],
-        )
-        Documento.objects.filter(version_vigente_id=id_version).update(
-            version_vigente=None
-        )
-        VersionDocumento.objects.filter(pk=id_version).delete()
-
-    return version
-
-
-def _eliminar_versiones_fisicas(id_documento, ids_versiones, motivo, usuario, usuario_django):
-    """Elimina definitivamente varias versiones que permanecen en la papelera."""
-    ids_versiones = list(dict.fromkeys(ids_versiones))
-    if not ids_versiones:
-        raise ValueError("Seleccione al menos una versión para eliminar.")
-
-    with transaction.atomic():
-        versiones = list(
-            VersionDocumento.objects.select_for_update().filter(
-                documento_id=id_documento, pk__in=ids_versiones
-            ).values(
-                "id_version", "documento_id", "numero_version", "archivo_nombre",
-                "archivo_path", "uuid_version", "fecha_eliminacion",
-                "motivo_eliminacion", "estado", "documento__titulo",
-            )
-        )
-        for version in versiones:
-            version["id_documento"] = version.pop("documento_id")
-            version["titulo"] = version.pop("documento__titulo")
-        if len(versiones) != len(ids_versiones):
-            raise ValueError("Una o más versiones no pertenecen al documento.")
-        if any(str(version.get("estado") or "").upper() != "ELIMINADO" for version in versiones):
-            raise ValueError("Solo se pueden eliminar definitivamente versiones que estén en la papelera.")
-
-        titulo = versiones[0].get("titulo") or str(id_documento)
-        resumen = {
-            "id_documento": id_documento,
-            "titulo": titulo,
-            "motivo_eliminacion_definitiva": motivo,
-            "versiones": [
-                {
-                    "id_version": version["id_version"],
-                    "numero_version": version.get("numero_version"),
-                    "archivo_nombre": version.get("archivo_nombre"),
-                    "uuid_version": str(version.get("uuid_version") or ""),
-                }
-                for version in versiones
-            ],
-        }
-        _registrar_auditoria_django_pruebas(
-            usuario,
-            usuario_django,
-            id_documento,
-            "ELIMINACION_DEFINITIVA_VERSIONES",
-            motivo,
-            resumen,
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado definitivamente "
-                f"{len(versiones)} versiones del documento {titulo}. "
-                f"Motivo de eliminación: {motivo}."
-            ),
-        )
-        _registrar_historial_eliminacion(
-            id_documento,
-            titulo,
-            motivo,
-            usuario,
-            len(versiones),
-            versiones_eliminadas=[
-                {
-                    "id_version": version["id_version"],
-                    "numero_version": version.get("numero_version"),
-                    "archivo_nombre": version.get("archivo_nombre"),
-                }
-                for version in versiones
-            ],
-        )
-        Documento.objects.filter(
-            pk=id_documento, version_vigente_id__in=ids_versiones
-        ).update(version_vigente=None)
-        VersionDocumento.objects.filter(
-            documento_id=id_documento, pk__in=ids_versiones
-        ).delete()
-
-    return versiones
-
-
-# TEMPORAL: esta copia permite probar eliminaciones cuando el módulo usa el
-# usuario simulado y aún no existe una sesión o usuario real de Django.
-# Debe eliminarse al conectar el módulo con la autenticación real.
-def _registrar_auditoria_django_pruebas(
-    usuario,
-    usuario_django,
-    id_documento,
-    accion,
-    motivo,
-    resumen,
-    mensaje=None,
-    action_flag=DELETION,
-):
-    """Versión temporal de auditoría compatible con el usuario simulado."""
-    usuario_id = (
-        getattr(usuario_django, "pk", None)
-        if getattr(usuario_django, "is_authenticated", False)
-        else None
-    )
-    if not usuario_id:
-        modelo_usuario = get_user_model()
-        campo_usuario = modelo_usuario.USERNAME_FIELD
-        nombre_usuario_pruebas = "auditoria_documentos_pruebas"
-        usuario_pruebas, _ = modelo_usuario.objects.get_or_create(
-            **{campo_usuario: nombre_usuario_pruebas}
-        )
-        usuario_id = usuario_pruebas.pk
-
-    tipo_contenido, _ = ContentType.objects.get_or_create(
-        app_label="documentos",
-        model="documento",
-    )
-    titulo = str(resumen.get("titulo") or f"Documento {id_documento}")
-    LogEntry.objects.create(
-        user_id=usuario_id,
-        content_type=tipo_contenido,
-        object_id=str(id_documento),
-        object_repr=titulo[:200],
-        action_flag=action_flag,
-        change_message=mensaje or json.dumps(
-            {
-                "accion": accion,
-                "motivo": motivo,
-                "datos_anteriores": resumen,
-            },
-            ensure_ascii=False,
-        ),
-    )
-
-
-def _insertar_accesos_documento(id_documento, accesos, usuario):
-    services.reemplazar_accesos_documento(
-        id_documento, accesos, usuario["id_usuario_externo"]
-    )
-
-
-def _eliminar_accesos_documento(id_documento):
-    AccesoDocumento.objects.filter(documento_id=id_documento).delete()
-
-
-def _reemplazar_accesos_documento(id_documento, accesos, usuario):
-    services.reemplazar_accesos_documento(
-        id_documento, accesos, usuario["id_usuario_externo"]
-    )
-
-
-def _crear_documento_base(titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo, usuario):
-    return services.crear_documento(
-        titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo,
-        usuario["id_usuario_externo"],
-    )
-
-
 def _validar_tipo_documento(tipo):
     if tipo not in TIPOS_DOCUMENTO:
         raise ValueError("El tipo de documento no es válido.")
@@ -2461,45 +1086,6 @@ def _tipo_documento_formulario(tipo_solicitado="", tipo_actual=""):
     if SELECTOR_TIPO_DOCUMENTO_HABILITADO:
         return _validar_tipo_documento((tipo_solicitado or "").strip())
     return tipo_actual or TIPO_DOCUMENTO_PREDETERMINADO
-
-
-def _actualizar_tipo_documento(id_documento, tipo):
-    services.actualizar_tipo_documento(id_documento, tipo)
-
-
-def _editar_documento_base(id_documento, titulo, descripcion, palabras_clave, fecha_aprobacion, id_version, usuario):
-    services.editar_documento(
-        id_documento, titulo, descripcion, palabras_clave, fecha_aprobacion,
-        id_version, usuario["id_usuario_externo"],
-    )
-
-
-def _cambiar_estado_version_directo(id_documento, id_version, estado_version):
-    services.cambiar_estado_version(id_documento, id_version, estado_version)
-
-
-def _agregar_version_directa(id_documento, datos_archivo, descripcion_cambio, fecha_aprobacion, usuario):
-    return services.agregar_version(
-        id_documento, datos_archivo, descripcion_cambio, fecha_aprobacion,
-        usuario["id_usuario_externo"],
-    )
-
-
-def _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario):
-    services.reemplazar_archivo_version(
-        id_documento, id_version, datos_archivo, usuario["id_usuario_externo"]
-    )
-
-
-def _guardar_publicacion_versiones(id_documento, ids_publicados, usuario):
-    if not _publicacion_habilitada():
-        raise ValueError(
-            "La publicacion de versiones no esta disponible en esta base de datos."
-        )
-
-    services.guardar_publicacion_versiones(
-        id_documento, ids_publicados, usuario["id_usuario_externo"]
-    )
 
 
 def visor_pdf(request, id_documento):
@@ -2732,23 +1318,13 @@ def eliminar_documento_definitivamente(request, id_documento):
         return redirect("documentos:papelera")
 
     try:
-        versiones = _eliminar_documento_fisico(
+        versiones = services.eliminar_documento_fisico(
             id_documento,
             motivo,
             usuario,
             request.user,
         )
-        archivos_no_eliminados = []
-        rutas_procesadas = set()
-        for version in versiones:
-            ruta = str(version.get("archivo_path") or "").strip()
-            if not ruta or ruta in rutas_procesadas:
-                continue
-            rutas_procesadas.add(ruta)
-            try:
-                _eliminar_archivo_version_fisico(version)
-            except (OSError, ValueError):
-                archivos_no_eliminados.append(ruta)
+        archivos_no_eliminados = storage.eliminar_archivos_versiones(versiones)
 
         if archivos_no_eliminados:
             messages.warning(
@@ -2779,16 +1355,14 @@ def eliminar_version_definitivamente(request, id_documento, id_version):
         return redirect("documentos:papelera")
 
     try:
-        version = _eliminar_version_fisica(
+        version = services.eliminar_version_fisica(
             id_documento,
             id_version,
             motivo,
             usuario,
             request.user,
         )
-        try:
-            _eliminar_archivo_version_fisico(version)
-        except (OSError, ValueError):
+        if storage.eliminar_archivos_versiones([version]):
             messages.warning(
                 request,
                 "La versión fue eliminada definitivamente, pero no se pudo borrar su archivo físico. "
@@ -2815,19 +1389,14 @@ def eliminar_versiones_definitivamente(request, id_documento):
             raise ValueError(
                 "El motivo de eliminación definitiva es obligatorio y debe tener al menos 5 caracteres."
             )
-        versiones = _eliminar_versiones_fisicas(
+        versiones = services.eliminar_versiones_fisicas(
             id_documento,
             ids_versiones,
             motivo,
             usuario,
             request.user,
         )
-        archivos_no_eliminados = []
-        for version in versiones:
-            try:
-                _eliminar_archivo_version_fisico(version)
-            except (OSError, ValueError):
-                archivos_no_eliminados.append(str(version.get("archivo_path") or ""))
+        archivos_no_eliminados = storage.eliminar_archivos_versiones(versiones)
 
         if archivos_no_eliminados:
             messages.warning(
@@ -2849,6 +1418,7 @@ def crear_documento(request):
         return redirect("documentos:lista")
 
     datos_archivo = None
+    persistido = False
     try:
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
@@ -2869,31 +1439,18 @@ def crear_documento(request):
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
         datos_archivo = _guardar_pdf_django(archivo)
-        with transaction.atomic():
-            id_documento = _crear_documento_base(
-                titulo,
-                descripcion,
-                palabras_clave,
-                fecha_aprobacion,
-                datos_archivo,
-                usuario,
-            )
-            _actualizar_tipo_documento(id_documento, tipo)
-            _insertar_accesos_documento(id_documento, accesos, usuario)
-            _sincronizar_estado_versiones(id_documento)
-            _sincronizar_versionamiento_documento(id_documento)
-        _registrar_auditoria_django_pruebas(
+        id_documento = services.crear_documento_con_accesos(
+            titulo,
+            descripcion,
+            palabras_clave,
+            fecha_aprobacion,
+            datos_archivo,
             usuario,
+            tipo,
+            accesos,
             request.user,
-            id_documento,
-            "CREACION_DOCUMENTO",
-            "",
-            {"titulo": titulo, "tipo": tipo, "fecha_aprobacion": str(fecha_aprobacion)},
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} ha creado el documento {titulo}."
-            ),
-            action_flag=ADDITION,
         )
+        persistido = True
         version_nueva = _obtener_contexto_version_chroma(id_documento, vigente=True)
         contexto_version = _construir_contexto_reemplazo_version(version_nueva)
         _iniciar_analisis_ia_segundo_plano(
@@ -2912,8 +1469,11 @@ def crear_documento(request):
             "Documento creado correctamente. Analisis de IA en segundo plano.",
         )
     except (DatabaseError, ValueError, RuntimeError) as error:
+        if persistido:
+            messages.warning(request, f"Los cambios se guardaron, pero falló un paso posterior: {error}")
+            return redirect("documentos:lista")
         if datos_archivo:
-            default_storage.delete(datos_archivo["archivo_path"])
+            storage.descartar_pdf_subido(datos_archivo)
         messages.error(request, f"No se pudo crear el documento: {error}")
     return redirect("documentos:lista")
 
@@ -2925,6 +1485,7 @@ def editar_documento(request, id_documento):
         return redirect("documentos:lista")
 
     datos_archivo = None
+    persistido = False
     try:
         titulo = request.POST.get("titulo", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
@@ -2969,8 +1530,6 @@ def editar_documento(request, id_documento):
             cambios.append(f"Versión vigente: '{documento.get('numero_version_vigente') or documento.get('id_version_vigente')}' → '{version_seleccionada.get('numero_version')}'")
         if estado_version != version_seleccionada.get("estado"):
             cambios.append(f"Estado de versión: '{version_seleccionada.get('estado')}' → '{estado_version}'")
-        if puede_cambiar_estado_version:
-            _validar_cambio_vigencia_version(versiones, id_version, estado_version)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
         accesos_anteriores = _contexto_accesos_documento(id_documento)
@@ -2983,17 +1542,6 @@ def editar_documento(request, id_documento):
             raise ValueError(
                 "El reemplazo de archivos no esta disponible en esta base de datos."
             )
-        _validar_edicion_version_vigente(
-            documento,
-            version_seleccionada,
-            estado_version,
-            archivo,
-            titulo,
-            descripcion,
-            palabras_clave,
-            fecha_aprobacion,
-            accesos,
-        )
         if not cambios:
             messages.info(
                 request,
@@ -3024,41 +1572,23 @@ def editar_documento(request, id_documento):
             _validar_pdf_texto_minimo(archivo)
             datos_archivo = _guardar_pdf_django(archivo)
 
-        with transaction.atomic():
-            _editar_documento_base(
-                id_documento,
-                titulo,
-                descripcion,
-                palabras_clave,
-                fecha_aprobacion,
-                id_version,
-                usuario,
-            )
-            _actualizar_tipo_documento(id_documento, tipo)
-            _reemplazar_accesos_documento(id_documento, accesos, usuario)
-            if puede_cambiar_estado_version:
-                _cambiar_estado_version_directo(id_documento, id_version, estado_version)
-            if datos_archivo:
-                _reemplazar_archivo_version_directo(id_documento, id_version, datos_archivo, usuario)
-        _registrar_auditoria_django_pruebas(
-            usuario,
-            request.user,
+        services.editar_documento_con_accesos(
             id_documento,
-            "EDICION_DOCUMENTO",
-            "",
-            {
-                "titulo": titulo,
-                "tipo": tipo,
-                "id_version": id_version,
-                "estado_version": estado_version,
-                "archivo_reemplazado": bool(datos_archivo),
-                "cambios": cambios,
-            },
-            mensaje=(
-                _mensaje_edicion_documento(usuario, titulo, cambios)
-            ),
-            action_flag=CHANGE,
+            titulo,
+            descripcion,
+            palabras_clave,
+            fecha_aprobacion,
+            id_version,
+            usuario,
+            tipo,
+            accesos,
+            estado_version,
+            puede_cambiar_estado_version,
+            datos_archivo,
+            cambios,
+            request.user,
         )
+        persistido = True
         version_vigente_actual_chroma = _obtener_contexto_version_chroma(
             id_documento,
             vigente=True,
@@ -3127,8 +1657,11 @@ def editar_documento(request, id_documento):
         else:
             messages.success(request, "Documento editado correctamente.")
     except (DatabaseError, ValueError, RuntimeError) as error:
+        if persistido:
+            messages.warning(request, f"Los cambios se guardaron, pero falló un paso posterior: {error}")
+            return redirect("documentos:lista")
         if datos_archivo:
-            default_storage.delete(datos_archivo["archivo_path"])
+            storage.descartar_pdf_subido(datos_archivo)
         mensaje_error = f"No se pudo editar el documento: {error}"
         if "No se puede tener mas de una version vigente" in str(error):
             messages.info(request, mensaje_error)
@@ -3144,6 +1677,7 @@ def agregar_version_documento(request, id_documento):
         return redirect("documentos:lista")
 
     datos_archivo = None
+    persistido = False
     try:
         documento = _obtener_documento_para_edicion(id_documento)
         archivo = request.FILES.get("archivo")
@@ -3158,26 +1692,16 @@ def agregar_version_documento(request, id_documento):
         contexto_accesos = _contexto_accesos_documento(id_documento)
         _validar_pdf_texto_minimo(archivo)
         datos_archivo = _guardar_pdf_django(archivo)
-        id_version_nueva = _agregar_version_directa(
+        id_version_nueva = services.agregar_version_auditada(
             id_documento,
             datos_archivo,
             descripcion_cambio,
             fecha_aprobacion,
             usuario,
-        )
-        _registrar_auditoria_django_pruebas(
-            usuario,
+            documento,
             request.user,
-            id_documento,
-            "NUEVA_VERSION",
-            "",
-            {"titulo": documento.get("titulo"), "descripcion_cambio": descripcion_cambio},
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} ha agregado una nueva versión "
-                f"al documento {documento.get('titulo') or id_documento}."
-            ),
-            action_flag=CHANGE,
         )
+        persistido = True
         version_nueva_chroma = _obtener_contexto_version_chroma(
             id_documento,
             id_version=id_version_nueva,
@@ -3202,8 +1726,11 @@ def agregar_version_documento(request, id_documento):
             "Nueva version agregada correctamente. Analisis de IA en segundo plano.",
         )
     except (DatabaseError, ValueError, RuntimeError) as error:
+        if persistido:
+            messages.warning(request, f"Los cambios se guardaron, pero falló un paso posterior: {error}")
+            return redirect("documentos:lista")
         if datos_archivo:
-            default_storage.delete(datos_archivo["archivo_path"])
+            storage.descartar_pdf_subido(datos_archivo)
         messages.error(request, f"No se pudo agregar la versión: {error}")
     return redirect("documentos:lista")
 
@@ -3238,22 +1765,14 @@ def publicar_versiones_documento(request, id_documento):
                 "No se guardaron cambios porque la publicación no fue modificada.",
             )
             return redirect("documentos:lista")
-        _validar_publicacion_versiones_por_ia(versiones, ids_publicados)
+        services.validar_publicacion_versiones_por_ia(versiones, ids_publicados)
 
-        with transaction.atomic():
-            _guardar_publicacion_versiones(id_documento, ids_publicados, usuario)
-        _registrar_auditoria_django_pruebas(
-            usuario,
-            request.user,
+        services.publicar_versiones_auditadas(
             id_documento,
-            "CAMBIO_PUBLICACION",
-            "",
-            {"titulo": documento.get("titulo"), "versiones_publicadas": sorted(ids_publicados)},
-            mensaje=(
-                f"{usuario.get('nombre_usuario') or 'Usuario'} ha actualizado la publicación "
-                f"del documento {documento.get('titulo') or id_documento}."
-            ),
-            action_flag=CHANGE,
+            ids_publicados,
+            usuario,
+            documento,
+            request.user,
         )
         if retirar_todas:
             messages.success(request, "Publicación del documento retirada correctamente.")
@@ -3276,30 +1795,11 @@ def eliminar_documento(request, id_documento):
         motivo = request.POST.get("motivo_eliminacion", "").strip() or "Eliminación lógica desde Django"
         if alcance == "version":
             id_version = int(request.POST.get("id_version_eliminacion", ""))
-            if _documento_tiene_version_publicada(id_documento, id_version):
-                raise ValueError(
-                    "Para eliminar esta versión, primero debe quitar su publicación."
-                )
             version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
                 id_documento,
                 vigente=True,
             )
-            _eliminar_version_logica(id_documento, id_version, motivo, usuario)
-            _registrar_auditoria_django_pruebas(
-                usuario,
-                request.user,
-                id_documento,
-                "ELIMINACION_VERSION_LOGICA",
-                motivo,
-                {
-                    "titulo": documento.get("titulo"),
-                    "id_version": id_version,
-                },
-                mensaje=(
-                    f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado "
-                    f"lógicamente una versión de {documento.get('titulo') or id_documento}."
-                ),
-            )
+            services.eliminar_version_auditada(id_documento, id_version, motivo, usuario, documento, request.user)
             version_vigente_actual_chroma = _obtener_contexto_version_chroma(
                 id_documento,
                 vigente=True,
@@ -3310,27 +1810,11 @@ def eliminar_documento(request, id_documento):
             )
             messages.success(request, "Versión eliminada lógicamente.")
         elif alcance == "documento":
-            if _documento_tiene_version_publicada(id_documento):
-                raise ValueError(
-                    "Para eliminar el documento, primero debe quitar la publicación de todas sus versiones."
-                )
             version_vigente_anterior_chroma = _obtener_contexto_version_chroma(
                 id_documento,
                 vigente=True,
             )
-            _eliminar_documento_logico(id_documento, motivo, usuario)
-            _registrar_auditoria_django_pruebas(
-                usuario,
-                request.user,
-                id_documento,
-                "ELIMINACION_DOCUMENTO_LOGICA",
-                motivo,
-                {"titulo": documento.get("titulo")},
-                mensaje=(
-                    f"{usuario.get('nombre_usuario') or 'Usuario'} ha eliminado "
-                    f"lógicamente el documento {documento.get('titulo') or id_documento}."
-                ),
-            )
+            services.eliminar_documento_auditado(id_documento, motivo, usuario, documento, request.user)
             _notificar_version_anterior_no_vigente_segundo_plano(
                 version_vigente_anterior_chroma,
                 {},

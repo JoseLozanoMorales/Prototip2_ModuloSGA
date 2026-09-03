@@ -6,6 +6,7 @@ app_name = "documentos"
 
 urlpatterns = [
     path("", views.lista_documentos, name="lista"),
+    path("manual/", views.manual_editor, name="manual"),
     path("analisis-ia/estado/", views.estado_analisis_ia_documentos, name="estado_analisis_ia"),
     path(
         "<int:id_documento>/analisis-ia/reintentar/",

@@ -22,10 +22,10 @@
             </div>
         </div>
         <div class="span4 documentos-actions">
-            <button type="button" class="btn btn-primary" aria-label="Ver documento específico">
-                <i class="fa fa-file-text-o"></i> Ver documento
-            </button>
             {% if usuario.rol_modulo == 'EDITOR' %}
+                <a href="{% url 'documentos:manual' %}" class="btn btn-primary">
+                    <i class="fa fa-book" aria-hidden="true"></i> Manual del editor
+                </a>
                 <a href="{% url 'documentos:papelera' %}" class="btn">
                     <i class="fa fa-trash"></i> Papelera
                 </a>
