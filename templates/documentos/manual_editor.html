@@ -1,0 +1,145 @@
+{% extends "basebs.html" %}
+{% load static %}
+
+{% block pagetitle %}Manual del editor - documentos legales{% endblock %}
+{% block heading %}
+    <link href="{% static 'css/documentos_legales.css' %}" rel="stylesheet" type="text/css">
+    <link href="{% static 'css/manual_editor.css' %}?v=20260903" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block canvas %}
+<div class="documentos-legales manual-editor" id="inicio-manual" lang="es">
+    <div class="row-fluid documentos-header">
+        <div class="span8 documentos-title">
+            <div class="icon-header"><i class="fa fa-book" aria-hidden="true"></i></div>
+            <div><h1>Manual del editor</h1><p>Guía de uso del módulo de gestión de documentos legales.</p></div>
+        </div>
+        <div class="span4 documentos-actions">
+            <a href="{% url 'documentos:lista' %}" class="btn"><i class="fa fa-arrow-left" aria-hidden="true"></i> Volver a documentos</a>
+        </div>
+    </div>
+
+    <div class="manual-layout">
+        <nav class="manual-indice" aria-label="Índice del manual">
+            <h2>Contenido</h2>
+            <ol>
+                <li><a href="#conceptos">Documentos, versiones y roles</a></li>
+                <li><a href="#crear">Crear un documento</a></li>
+                <li><a href="#editar">Editar un documento</a></li>
+                <li><a href="#versiones">Agregar una nueva versión</a></li>
+                <li><a href="#ia">Revisar la lectura de IA</a></li>
+                <li><a href="#publicar">Publicar versiones</a></li>
+                <li><a href="#eliminar">Enviar a la papelera</a></li>
+                <li><a href="#papelera">Restaurar o eliminar definitivamente</a></li>
+                <li><a href="#consultar">Consultar y descargar</a></li>
+            </ol>
+        </nav>
+
+        <div class="manual-contenido">
+            <section id="conceptos" class="manual-seccion" aria-labelledby="titulo-conceptos">
+                <h2 id="titulo-conceptos">1. Documentos, versiones y roles</h2>
+                <p>En este módulo, un <strong>documento</strong> es el registro de un documento legal. Puede contener varias <strong>versiones</strong>, cada una con su propio archivo PDF y fecha de aprobación.</p>
+                <div class="manual-ejemplo" aria-label="Ejemplo: un documento contiene tres versiones">
+                    <strong>Documento legal</strong>
+                    <ul><li>Versión 1</li><li>Versión 2</li><li>Versión 3</li></ul>
+                </div>
+                <dl>
+                    <dt>Lector</dt><dd>Consulta y descarga las versiones publicadas de los documentos a los que tiene acceso.</dd>
+                    <dt>Editor</dt><dd>Administra los documentos y sus versiones: crea, edita, publica y gestiona la papelera. Este manual está dirigido a ese rol.</dd>
+                    <dt>Vigencia</dt><dd>Indica cuál es la versión vigente del documento.</dd>
+                    <dt>Publicación</dt><dd>Permite que los lectores consulten una versión, de acuerdo con los accesos configurados. Un documento puede tener varias versiones publicadas.</dd>
+                </dl>
+                <div class="manual-aviso"><strong>Subir un archivo crea un borrador.</strong> No lo publica automáticamente. Para pasar a vigente debe estar publicado y tener lectura IA positiva. La publicación se gestiona desde <strong>Acciones → Publicar</strong>.</div>
+            </section>
+
+            <section id="crear" class="manual-seccion" aria-labelledby="titulo-crear">
+                <h2 id="titulo-crear">2. Crear un documento</h2>
+                <ol>
+                    <li>Pulse <strong>Crear</strong>, en la parte superior derecha del módulo.</li>
+                    <li>Complete los campos obligatorios: <strong>Título del documento</strong>, <strong>Fecha de aprobación</strong> y <strong>archivo PDF</strong>. El título no debe estar repetido.</li>
+                    <li>Si lo necesita, añada una descripción y palabras clave que ayuden a identificar el documento.</li>
+                    <li>Revise los campos de <strong>perfiles, grupos y período</strong>: definen quiénes pueden acceder al documento.</li>
+                    <li>Pulse <strong>Crear</strong> y revise el mensaje de confirmación.</li>
+                </ol>
+                <p>La fecha de aprobación debe estar entre el 1 de enero de 1984 y la fecha actual. El PDF debe contener texto extraíble suficiente; un archivo compuesto únicamente por imágenes puede ser rechazado.</p>
+                <p>Después de guardarlo, la lectura de IA se realiza en segundo plano. Revise su resultado antes de publicar.</p>
+            </section>
+
+            <section id="editar" class="manual-seccion" aria-labelledby="titulo-editar">
+                <h2 id="titulo-editar">3. Editar un documento</h2>
+                <ol>
+                    <li>Busque el documento y abra <strong>Acciones → Editar</strong>.</li>
+                    <li>Seleccione la versión que desea revisar. El formulario muestra su PDF y los datos asociados.</li>
+                    <li>Actualice los campos necesarios, como el título, la descripción, las palabras clave, la fecha de aprobación o los accesos.</li>
+                    <li>Cuando la opción esté habilitada, puede cambiar el estado de la versión o reemplazar su archivo PDF.</li>
+                    <li>Pulse <strong>Guardar</strong> y compruebe el resultado.</li>
+                </ol>
+                <div class="manual-aviso">Para conservar el archivo anterior como parte del historial, utilice <strong>Agregar nueva versión</strong> en lugar de reemplazar el PDF de una versión existente.</div>
+            </section>
+
+            <section id="versiones" class="manual-seccion" aria-labelledby="titulo-versiones">
+                <h2 id="titulo-versiones">4. Agregar una nueva versión</h2>
+                <ol>
+                    <li>Abra <strong>Acciones → Agregar nueva versión</strong> en el documento correspondiente.</li>
+                    <li>Seleccione el nuevo <strong>PDF</strong> e indique su <strong>fecha de aprobación</strong>; ambos campos son obligatorios.</li>
+                    <li>Puede incluir una descripción del cambio. Si la deja vacía, se utilizará el texto «Nueva version».</li>
+                    <li>Pulse <strong>Procesar</strong> y revise la confirmación y el estado de lectura de IA.</li>
+                </ol>
+                <p>Al agregarla, la nueva versión queda en borrador y se analiza con IA. La versión vigente anterior y las publicaciones existentes se conservan hasta que usted cambie la publicación.</p>
+            </section>
+
+            <section id="ia" class="manual-seccion" aria-labelledby="titulo-ia">
+                <h2 id="titulo-ia">5. Revisar la lectura de IA</h2>
+                <p>El módulo muestra el estado del análisis: <strong>Pendiente</strong>, <strong>Leído</strong>, <strong>No leído</strong> o <strong>Error</strong>.</p>
+                <p>Si el análisis falla, revise el mensaje y utilice <strong>Acciones → Reintentar lectura IA</strong> cuando esté disponible. El reintento analiza la última versión disponible, incluido un borrador; espere a que termine antes de volver a intentarlo.</p>
+                <div class="manual-aviso">Para publicar una versión que aún no está publicada, su lectura de IA debe ser positiva. Si permanece en error o no leído, revise que el PDF tenga texto legible y atienda el mensaje del sistema.</div>
+            </section>
+
+            <section id="publicar" class="manual-seccion" aria-labelledby="titulo-publicar">
+                <h2 id="titulo-publicar">6. Publicar versiones</h2>
+                <ol>
+                    <li>Abra <strong>Acciones → Publicar</strong>.</li>
+                    <li>Marque las versiones que desea hacer visibles para los lectores. Puede seleccionar una o varias, siempre que cumplan la validación de IA.</li>
+                    <li>Desmarque las versiones cuya publicación quiera retirar.</li>
+                    <li>Pulse <strong>Guardar</strong>.</li>
+                </ol>
+                <p>También puede usar <strong>Quitar publicación de todas las versiones</strong> para retirar la publicación del documento completo.</p>
+                <p>Al guardar la publicación, el módulo establece como vigente la versión publicada con el número de versión más alto. Publicar no elimina las otras versiones del historial.</p>
+            </section>
+
+            <section id="eliminar" class="manual-seccion" aria-labelledby="titulo-eliminar">
+                <h2 id="titulo-eliminar">7. Enviar a la papelera</h2>
+                <div class="manual-aviso"><strong>Primero retire la publicación.</strong> Para eliminar una versión, quite su publicación. Para eliminar el documento completo, quite la publicación de todas sus versiones. No basta con cambiar la vigencia.</div>
+                <ol>
+                    <li>Abra <strong>Acciones → Eliminar</strong>.</li>
+                    <li>Elija eliminar el documento completo o una versión específica, si la opción está disponible.</li>
+                    <li>Si eligió una versión, selecciónela. Las versiones publicadas no se pueden seleccionar.</li>
+                    <li>Opcionalmente, escriba el motivo de eliminación y confirme con <strong>Eliminar</strong>.</li>
+                </ol>
+                <p>Esta acción envía el contenido a la papelera, donde puede restaurarlo. Si solo queda una versión activa, utilice la eliminación del documento completo.</p>
+            </section>
+
+            <section id="papelera" class="manual-seccion" aria-labelledby="titulo-papelera">
+                <h2 id="titulo-papelera">8. Restaurar o eliminar definitivamente</h2>
+                <p>Abra <strong>Papelera</strong> desde la cabecera del módulo. Allí encontrará las versiones eliminadas y sus datos.</p>
+                <ul>
+                    <li><strong>Restaurar:</strong> recupera el documento o las versiones seleccionadas. Después, revise su vigencia y publicación en el listado.</li>
+                    <li><strong>Eliminar definitivamente:</strong> retira el contenido de forma permanente. Revise con cuidado lo seleccionado antes de confirmar: no podrá recuperarlo desde la papelera.</li>
+                    <li><strong>Registro de eliminaciones:</strong> permite consultar el historial de eliminaciones registrado por el módulo.</li>
+                </ul>
+            </section>
+
+            <section id="consultar" class="manual-seccion" aria-labelledby="titulo-consultar">
+                <h2 id="titulo-consultar">9. Consultar y descargar</h2>
+                <ol>
+                    <li>Localice el documento mediante la búsqueda o los filtros del listado.</li>
+                    <li>Abra <strong>Ver documento</strong> para acceder al visor.</li>
+                    <li>Seleccione la versión que desea consultar y utilice la opción de descarga del visor.</li>
+                </ol>
+                <p>El lector solo puede consultar versiones publicadas y permitidas por sus accesos. El editor puede revisar también las versiones no publicadas para administrarlas.</p>
+                <a href="#inicio-manual" class="manual-volver">Volver al inicio del manual ↑</a>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -67,7 +67,7 @@ def contexto_version_chroma(id_documento, id_version=None, vigente=None):
     elif vigente is False:
         versiones = versiones.exclude(estado=ESTADO_VIGENTE)
     version = versiones.select_related("documento").order_by(
-        "-fecha_subida", "-id_version"
+        "-numero_version", "-id_version"
     ).first()
     if not version:
         return {}
@@ -122,6 +122,19 @@ def estados_ia_documentos(ids_documentos):
         .values(
             "documento_id", "estado_ia", "porcentaje_texto_ia", "mensaje_ia"
         )
+    )
+    resultado = {}
+    for version in versiones:
+        resultado.setdefault(version["documento_id"], version)
+    return resultado
+
+
+def estados_ia_ultimas_versiones(ids_documentos):
+    """Estado de la última versión para el editor, aunque todavía sea borrador."""
+    versiones = VersionDocumento.objects.activas().filter(
+        documento_id__in=ids_documentos
+    ).order_by("documento_id", "-numero_version", "-id_version").values(
+        "documento_id", "estado_ia", "porcentaje_texto_ia", "mensaje_ia"
     )
     resultado = {}
     for version in versiones:

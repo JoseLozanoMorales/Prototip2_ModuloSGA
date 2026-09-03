@@ -11,6 +11,7 @@ from pathlib import Path
 from django.conf import settings
 from django.db import DatabaseError, close_old_connections, transaction
 from . import repositories, selectors, services
+from .models import ESTADO_BORRADOR, ESTADO_VIGENTE
 from .constants import (
     ESTADO_IA_PENDIENTE,
     ESTADO_IA_LEIDO,
@@ -108,13 +109,14 @@ def _procesar_ia_documento_segundo_plano(
     id_version = contexto_version.get("id_version")
     respuesta_ia = {}
     advertencias = []
-    try:
-        _notificar_version_anterior_no_vigente(
-            contexto_version_anterior,
-            contexto_version,
-        )
-    except RuntimeError as error_chroma_vigencia:
-        advertencias.append(str(error_chroma_vigencia))
+    if contexto_version.get("estado") == ESTADO_VIGENTE:
+        try:
+            _notificar_version_anterior_no_vigente(
+                contexto_version_anterior,
+                contexto_version,
+            )
+        except RuntimeError as error_chroma_vigencia:
+            advertencias.append(str(error_chroma_vigencia))
 
     try:
         respuesta_ia = _llamar_ia_documentos(
@@ -164,29 +166,31 @@ def _procesar_ia_documento_segundo_plano(
         return
 
     mensaje = _mensaje_ia_con_advertencias("Analisis de IA completado.", advertencias)
-    try:
-        respuesta_chroma = _guardar_documento_chroma(
-            id_documento,
-            titulo,
-            datos_archivo,
-            respuesta_ia,
-            contexto_version,
-            contexto_accesos,
-            tipo_documento,
-            documento_url,
-        )
-        mensaje = (
-            f"El documento {titulo} fue analizado por la IA exitosamente."
-        )
-    except RuntimeError as error_chroma:
-        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
-    except Exception as error_chroma:
-        logger.exception(
-            "Error inesperado al actualizar ChromaDB para el documento %s, version %s.",
-            id_documento,
-            id_version,
-        )
-        mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
+    # Los borradores se analizan, pero no reemplazan contenido publicado en Chroma.
+    if contexto_version.get("estado") == ESTADO_VIGENTE:
+        try:
+            respuesta_chroma = _guardar_documento_chroma(
+                id_documento,
+                titulo,
+                datos_archivo,
+                respuesta_ia,
+                contexto_version,
+                contexto_accesos,
+                tipo_documento,
+                documento_url,
+            )
+            mensaje = (
+                f"El documento {titulo} fue analizado por la IA exitosamente."
+            )
+        except RuntimeError as error_chroma:
+            mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
+        except Exception as error_chroma:
+            logger.exception(
+                "Error inesperado al actualizar ChromaDB para el documento %s, version %s.",
+                id_documento,
+                id_version,
+            )
+            mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
 
     _actualizar_estado_ia_version(
         id_documento,
@@ -515,7 +519,7 @@ def _resolver_estado_vigencia_payload(id_documento, contexto_version):
     estado = _texto_comparable(contexto_version.get("estado")).upper()
     if estado:
         return estado
-    return _obtener_estado_version(id_documento, contexto_version.get("id_version")) or "VIGENTE"
+    return _obtener_estado_version(id_documento, contexto_version.get("id_version")) or ESTADO_BORRADOR
 
 def _obtener_estado_version(id_documento, id_version):
     if not id_documento or not id_version:

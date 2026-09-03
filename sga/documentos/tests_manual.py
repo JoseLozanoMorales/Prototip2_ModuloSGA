@@ -1,0 +1,38 @@
+from unittest.mock import patch
+
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.template.loader import render_to_string
+from django.test import RequestFactory, SimpleTestCase
+from django.urls import resolve, reverse
+
+from . import views
+
+
+class ManualEditorTests(SimpleTestCase):
+    def test_ruta_del_manual(self):
+        self.assertEqual(resolve(reverse("documentos:manual")).func, views.manual_editor)
+
+    def test_editor_puede_leer_manual(self):
+        request = RequestFactory().get(reverse("documentos:manual"))
+        with patch.object(views, "_obtener_usuario_modulo", return_value={"rol_modulo": "EDITOR"}):
+            response = views.manual_editor(request)
+        self.assertEqual(response.status_code, 200)
+        for section in ("conceptos", "crear", "editar", "versiones", "ia", "publicar", "eliminar", "papelera", "consultar"):
+            self.assertContains(response, f'id="{section}"')
+            self.assertContains(response, f'href="#{section}"')
+        self.assertContains(response, "No basta con cambiar la vigencia.")
+
+    def test_lector_no_puede_abrir_manual_por_url(self):
+        request = RequestFactory().get(reverse("documentos:manual"))
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        with patch.object(views, "_obtener_usuario_modulo", return_value={"rol_modulo": "LECTOR"}):
+            response = views.manual_editor(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("documentos:lista"))
+
+    def test_boton_solo_visible_para_editor(self):
+        for role in ("EDITOR", "LECTOR"):
+            with self.subTest(role=role):
+                html = render_to_string("documentos/documentosV2.html", {"usuario": {"rol_modulo": role}})
+                self.assertEqual('href="' + reverse("documentos:manual") + '"' in html, role == "EDITOR")

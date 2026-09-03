@@ -1,0 +1,23 @@
+.manual-editor .manual-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; align-items: start; }
+.manual-editor .manual-indice { position: sticky; top: 20px; padding: 20px; border: 1px solid #dce5df; border-radius: 8px; background: #f5faf6; }
+.manual-editor .manual-indice h2 { font-size: 18px; line-height: 1.4; margin: 0 0 12px; }
+.manual-editor .manual-indice ol { margin: 0 0 0 20px; }
+.manual-editor .manual-indice li { margin-bottom: 10px; line-height: 1.5; }
+.manual-editor .manual-indice a, .manual-editor .manual-volver { color: #23602f; text-decoration: underline; }
+.manual-editor .manual-contenido { min-width: 0; max-width: 1000px; }
+.manual-editor .manual-seccion { padding: 24px; margin-bottom: 20px; background: #fff; border: 1px solid #dce5df; border-radius: 8px; scroll-margin-top: 24px; font-size: 15px; line-height: 1.7; }
+.manual-editor .manual-seccion h2 { font-size: 21px; line-height: 1.4; margin: 0 0 16px; color: #245c30; }
+.manual-editor .manual-seccion p, .manual-editor .manual-seccion dd { margin-bottom: 12px; }
+.manual-editor .manual-seccion li { line-height: 1.7; margin-bottom: 8px; }
+.manual-editor .manual-seccion dt { line-height: 1.7; }
+.manual-editor .manual-aviso { padding: 14px 16px; margin: 16px 0; border-left: 4px solid #b88218; background: #fff8e6; color: #63480f; }
+.manual-editor .manual-ejemplo { text-align: center; padding: 18px; margin: 18px 0; background: #f5faf6; border-radius: 6px; }
+.manual-editor .manual-ejemplo ul { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; list-style: none; margin: 14px 0 0; }
+.manual-editor .manual-ejemplo li { border: 1px solid #b7d0bd; border-radius: 6px; padding: 8px 20px; background: #fff; margin: 0; }
+.manual-editor a:focus-visible { outline: 3px solid #23602f; outline-offset: 3px; }
+@media (max-width: 900px) {
+    .manual-editor .manual-layout { grid-template-columns: 1fr; gap: 16px; }
+    .manual-editor .manual-indice { position: static; }
+    .manual-editor .manual-seccion { padding: 18px; }
+    .manual-editor .documentos-actions { margin-top: 14px; }
+}
