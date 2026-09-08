@@ -22,6 +22,12 @@
             </div>
         </div>
         <div class="span4 documentos-actions">
+            <form method="post" action="{% url 'documentos:logout' %}" class="documentos-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="btn">
+                    <i class="fa fa-sign-out" aria-hidden="true"></i> Cambiar usuario
+                </button>
+            </form>
             {% if usuario.rol_modulo == 'EDITOR' %}
                 <a href="{% url 'documentos:manual' %}" class="btn btn-primary">
                     <i class="fa fa-book" aria-hidden="true"></i> Manual del editor
@@ -244,6 +250,12 @@
                         <small>Tama&ntilde;o m&aacute;ximo recomendado 4MB, en formato PDF.</small>
                         <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
                     </div>
+                    <div class="form-row ia-process-option">
+                        <label>
+                            <input type="checkbox" name="procesar_ia" value="1" checked>
+                            <span><strong>Procesar el documento con IA</strong><small>Analiza el contenido antes de permitir su publicaci&oacute;n. Desm&aacute;rquelo para omitir la lectura de IA.</small></span>
+                        </label>
+                    </div>
                     <div class="form-row access-row">
                         <label>
                             <strong>Perfiles</strong>
@@ -334,11 +346,11 @@
                                         <strong>Estado de la versi&oacute;n</strong>
                                         <input type="hidden" name="estado_version" value="{{ doc.estado }}" data-saved-version-status>
                                         <select data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
-                                            <option value="VIGENTE" {% if doc.estado == 'VIGENTE' %}selected{% endif %}>Vigente</option>
-                                            {% if capacidades.puede_cambiar_estado_version %}
-                                                <option value="BORRADOR" {% if doc.estado == 'BORRADOR' %}selected{% endif %}>Borrador</option>
-                                                <option value="NO_VIGENTE" {% if doc.estado == 'NO_VIGENTE' %}selected{% endif %}>No vigente</option>
-                                            {% endif %}
+                                            {% for valor, etiqueta in estados_version %}
+                                                {% if capacidades.puede_cambiar_estado_version or valor == 'VIGENTE' %}
+                                                    <option value="{{ valor }}" {% if doc.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                                {% endif %}
+                                            {% endfor %}
                                         </select>
                                     </label>
                                 </div>
@@ -481,7 +493,7 @@
                                                 <span>Publicado</span>
                                             </label>
                                             {% if version.bloqueada_publicacion_ia %}
-                                                <small class="delete-note">La versi&oacute;n vigente requiere lectura IA positiva.</small>
+                                                <small class="delete-note">La versi&oacute;n requiere una lectura IA positiva o que el an&aacute;lisis se haya omitido al crearla.</small>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -564,7 +576,7 @@
     {% endif %}
 
     {% if usuario %}
-        <p class="documentos-hint">Usuario simulado: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>
+        <p class="documentos-hint">Usuario: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>
     {% endif %}
 </div>
 

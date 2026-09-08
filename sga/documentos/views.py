@@ -5,13 +5,17 @@ from itertools import product
 from pathlib import Path
 
 from django.contrib import messages
+from django.contrib.auth import login as auth_login, logout as auth_logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.db import DatabaseError
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
+from .forms import CrearDocumentoForm, EditarDocumentoForm
 from .models import (
     ESTADO_BORRADOR, ESTADO_NO_VIGENTE, ESTADO_VIGENTE,
     Documento, EditorModulo, HistorialEliminacion,
@@ -19,9 +23,11 @@ from .models import (
 )
 from . import repositories, selectors, services
 from . import storage
+from .catalogos import TIPO_DOCUMENTO_CHOICES as TIPO_DOCUMENTO, ESTADO_CHOICES as ESTADO
 from .constants import (
     ESTADO_IA_PENDIENTE,
     ESTADO_IA_LEIDO,
+    ESTADO_IA_OMITIDO,
     ESTADO_IA_OBSERVADO,
     ESTADO_IA_ERROR,
     ESTADOS_IA_DOCUMENTO,
@@ -36,6 +42,7 @@ from .access import (
 )
 from .integrations import (
     _iniciar_analisis_ia_segundo_plano,
+    _iniciar_sincronizacion_publicacion_segundo_plano,
     _actualizar_estado_ia_version,
     _columna_existe,
     _normalizar_estado_ia,
@@ -66,27 +73,48 @@ USUARIO_SIMULADO = {
 }
 
 FECHA_APROBACION_MINIMA = date(1984, 1, 1)
-TIPOS_DOCUMENTO = (
-    "Documento legal",
-    "Manual",
-    "Reglamento",
-    "Guías",
-    "Ordenes",
-    "Modelos",
-    "Procedimiento",
-    "Videos",
-)
+TIPOS_DOCUMENTO = tuple(valor for valor, etiqueta in TIPO_DOCUMENTO)
 # Preparado para habilitar la clasificación cuando el módulo maneje más tipos.
 # Debe coincidir con el modelo y el default de public.docs.tipo.
 TIPO_DOCUMENTO_PREDETERMINADO = "Documento legal"
 SELECTOR_TIPO_DOCUMENTO_HABILITADO = False
 
 
+def iniciar_sesion(request):
+    """Autentica a los usuarios del módulo y los dirige a su interfaz por rol."""
+    if request.user.is_authenticated:
+        return redirect("documentos:lista")
+
+    siguiente = request.POST.get("next") or request.GET.get("next") or ""
+    formulario = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST" and formulario.is_valid():
+        auth_login(request, formulario.get_user())
+        destino = siguiente if url_has_allowed_host_and_scheme(
+            siguiente,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ) else reverse("documentos:lista")
+        return redirect(destino)
+
+    return render(
+        request,
+        "documentos/login.html",
+        {"formulario": formulario, "next": siguiente},
+    )
+
+
+@require_POST
+def cerrar_sesion(request):
+    """Cierra la sesión del módulo para permitir el cambio de usuario."""
+    auth_logout(request)
+    return redirect("documentos:login")
+
+
 def lista_documentos(request):
     """Lista documentos leyendo el estado desde la versiÃ³n actual."""
     documentos = []
     error_base_datos = None
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     sessionid = _obtener_sessionid_chat(request)
     catalogos_acceso = _catalogos_acceso()
     busqueda = request.GET.get("q", "").strip()
@@ -128,7 +156,11 @@ def lista_documentos(request):
             _adjuntar_detalles_editor(documentos, catalogos_acceso)
     except (DatabaseError, ValueError) as error:
         # La pÃ¡gina sigue siendo Ãºtil para comprobar el servidor aunque PostgreSQL
-        # aÃºn no estÃ© disponible o falten variables en .env.
+        # aÃºn no estÃ© disponible o falten variables en .env. No se conserva la
+        # lista parcialmente enriquecida: la plantilla genera URLs con los datos
+        # de versiÃ³n y un contexto incompleto ocultarÃ­a el error original con un
+        # NoReverseMatch.
+        documentos = []
         error_base_datos = str(error)
 
     return render(
@@ -151,6 +183,7 @@ def lista_documentos(request):
             "grupos_acceso": catalogos_acceso["grupos"],
             "tipos_periodo_acceso": catalogos_acceso["tipos_periodo"],
             "tipos_documento": TIPOS_DOCUMENTO,
+            "estados_version": tuple((valor, etiqueta) for valor, etiqueta in ESTADO if valor != "ELIMINADO"),
             "selector_tipo_documento_habilitado": SELECTOR_TIPO_DOCUMENTO_HABILITADO,
         },
     )
@@ -169,9 +202,18 @@ def pendiente_de_migrar(request, *args, **kwargs):
     return HttpResponse("Pendiente de migrar desde Flask a Django.", status=501)
 
 
-def _obtener_usuario_modulo():
-    """Obtiene el rol del usuario simulado desde la tabla de editores."""
+def _obtener_usuario_modulo(request=None):
+    """Obtiene la identidad Django y resuelve su rol dentro del módulo."""
     usuario = dict(USUARIO_SIMULADO)
+    django_user = getattr(request, "user", None)
+    if django_user is not None and getattr(django_user, "is_authenticated", False):
+        usuario.update(
+            id_usuario_externo=django_user.pk,
+            nombre_usuario=django_user.get_username(),
+        )
+        if django_user.is_superuser:
+            usuario["rol_modulo"] = "EDITOR"
+            return usuario
     try:
         es_editor = EditorModulo.objects.filter(
             id_usuario_externo=usuario["id_usuario_externo"], activo=True
@@ -277,7 +319,7 @@ def estado_analisis_ia_documentos(request):
         if not ids_solicitados:
             return JsonResponse({"documentos": []})
 
-        usuario = _obtener_usuario_modulo()
+        usuario = _obtener_usuario_modulo(request)
         documentos_visibles = _listar_documentos_modulo(usuario, "", None)
         _adjuntar_publicacion_documentos(documentos_visibles)
         if usuario["rol_modulo"] != "EDITOR":
@@ -648,7 +690,7 @@ def _valores_acceso(accesos, campo):
 
 
 def _requerir_editor(request):
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         messages.error(request, "No tienes permisos para realizar esta acciÃ³n.")
         return None
@@ -893,9 +935,9 @@ def _obtener_documento_para_edicion(id_documento):
     return documento
 
 
-def _obtener_documento_visible(id_documento):
+def _obtener_documento_visible(id_documento, usuario=None):
     """Evita que un identificador escrito a mano salte las reglas de acceso."""
-    usuario = _obtener_usuario_modulo()
+    usuario = usuario or _obtener_usuario_modulo()
     documentos = _listar_documentos_modulo(usuario, "", None)
     if not any(documento["id_documento"] == id_documento for documento in documentos):
         raise Http404("Documento no disponible.")
@@ -977,7 +1019,7 @@ def _adjuntar_estado_ia_versiones(id_documento, versiones):
         )
         version["bloqueada_publicacion_ia"] = (
             requiere_lectura_ia
-            and estado != ESTADO_IA_LEIDO
+            and estado not in {ESTADO_IA_LEIDO, ESTADO_IA_OMITIDO}
         )
 
 
@@ -1099,8 +1141,8 @@ def visor_pdf(request, id_documento):
         raise Http404("Versión no válida.") from error
 
     try:
-        usuario = _obtener_usuario_modulo()
-        documento = _obtener_documento_visible(id_documento)
+        usuario = _obtener_usuario_modulo(request)
+        documento = _obtener_documento_visible(id_documento, usuario)
         versiones = _obtener_versiones_visibles(id_documento, usuario)
     except DatabaseError as error:
         raise Http404("No fue posible consultar el documento.") from error
@@ -1132,8 +1174,8 @@ def visor_pdf(request, id_documento):
 def servir_pdf(request, id_documento, id_version):
     """Entrega un PDF existente de Flask, restringido al documento y versiÃ³n visibles."""
     try:
-        usuario = _obtener_usuario_modulo()
-        _obtener_documento_visible(id_documento)
+        usuario = _obtener_usuario_modulo(request)
+        _obtener_documento_visible(id_documento, usuario)
         version = _seleccionar_version(
             _obtener_versiones_visibles(id_documento, usuario),
             id_version,
@@ -1162,7 +1204,7 @@ def servir_pdf(request, id_documento, id_version):
 @xframe_options_sameorigin
 def servir_pdf_version_papelera(request, id_documento, id_version):
     """Permite a los editores previsualizar un PDF eliminado sin restaurarlo."""
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         raise Http404("No tienes permisos para ver esta versión.")
 
@@ -1191,7 +1233,7 @@ def servir_pdf_version_papelera(request, id_documento, id_version):
 
 def papelera_documentos(request):
     """Lista documentos y versiones eliminados lÃ³gicamente para editores."""
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         messages.error(request, "No tienes permisos para ver la papelera.")
         return redirect("documentos:lista")
@@ -1259,7 +1301,7 @@ def papelera_documentos(request):
 @require_POST
 def restaurar_documento(request, id_documento):
     """Restaura un documento mediante el procedimiento heredado."""
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         messages.error(request, "No tienes permisos para restaurar documentos.")
         return redirect("documentos:lista")
@@ -1275,7 +1317,7 @@ def restaurar_documento(request, id_documento):
 @require_POST
 def restaurar_version_documento(request, id_documento, id_version):
     """Restaura una versiÃ³n mediante el procedimiento heredado."""
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         messages.error(request, "No tienes permisos para restaurar versiones.")
         return redirect("documentos:lista")
@@ -1291,7 +1333,7 @@ def restaurar_version_documento(request, id_documento, id_version):
 @require_POST
 def restaurar_versiones_documento(request, id_documento):
     """Restaura las versiones seleccionadas de un documento en la papelera."""
-    usuario = _obtener_usuario_modulo()
+    usuario = _obtener_usuario_modulo(request)
     if usuario["rol_modulo"] != "EDITOR":
         messages.error(request, "No tienes permisos para restaurar versiones.")
         return redirect("documentos:lista")
@@ -1423,21 +1465,24 @@ def crear_documento(request):
     datos_archivo = None
     persistido = False
     try:
-        titulo = request.POST.get("titulo", "").strip()
-        descripcion = request.POST.get("descripcion", "").strip()
-        palabras_clave = request.POST.get("palabras_clave", "").strip()
-        tipo = _tipo_documento_formulario(request.POST.get("tipo", ""))
-        fecha_aprobacion = _fecha_formulario(
-            request.POST.get("fecha_aprobacion"),
-            requerido=True,
+        formulario = CrearDocumentoForm(
+            request.POST,
+            request.FILES,
+            tipo_actual=TIPO_DOCUMENTO_PREDETERMINADO,
+            selector_tipo_habilitado=SELECTOR_TIPO_DOCUMENTO_HABILITADO,
         )
-        archivo = request.FILES.get("archivo")
-        if not titulo:
-            raise ValueError("El título del documento es obligatorio.")
-        if not archivo:
-            raise ValueError("Debe seleccionar un archivo PDF.")
+        if not formulario.is_valid():
+            raise ValueError(formulario.mensaje_error())
+        titulo = formulario.cleaned_data["titulo"]
+        descripcion = formulario.cleaned_data["descripcion"]
+        palabras_clave = formulario.cleaned_data["palabras_clave"]
+        tipo = formulario.cleaned_data["tipo"]
+        fecha_aprobacion = formulario.cleaned_data["fecha_aprobacion"]
+        archivo = formulario.cleaned_data["archivo"]
+        procesar_ia = formulario.cleaned_data["procesar_ia"]
 
-        _validar_pdf_texto_minimo(archivo)
+        if procesar_ia:
+            _validar_pdf_texto_minimo(archivo)
         _validar_titulo_unico(titulo)
         accesos = _combinaciones_acceso(request)
         contexto_accesos = _contexto_accesos_formulario(request)
@@ -1452,25 +1497,27 @@ def crear_documento(request):
             tipo,
             accesos,
             request.user,
+            procesar_ia,
         )
         persistido = True
-        version_nueva = _obtener_contexto_version_chroma(id_documento)
-        contexto_version = _construir_contexto_reemplazo_version(version_nueva)
-        _iniciar_analisis_ia_segundo_plano(
-            id_documento,
-            titulo,
-            datos_archivo,
-            contexto_version,
-            contexto_accesos,
-            tipo,
-            documento_url=_construir_url_pdf_vigente(
-                request, id_documento, contexto_version
-            ),
-        )
-        messages.success(
-            request,
-            "Documento creado correctamente. Analisis de IA en segundo plano.",
-        )
+        if procesar_ia:
+            version_nueva = _obtener_contexto_version_chroma(id_documento)
+            contexto_version = _construir_contexto_reemplazo_version(version_nueva)
+            _iniciar_analisis_ia_segundo_plano(
+                id_documento,
+                titulo,
+                datos_archivo,
+                contexto_version,
+                contexto_accesos,
+                tipo,
+                documento_url=_construir_url_pdf_vigente(
+                    request, id_documento, contexto_version
+                ),
+            )
+            mensaje_creacion = "Documento creado correctamente. Analisis de IA en segundo plano."
+        else:
+            mensaje_creacion = "Documento creado correctamente sin lectura de IA."
+        messages.success(request, mensaje_creacion)
     except (DatabaseError, ValueError, RuntimeError) as error:
         if persistido:
             messages.warning(request, f"Los cambios se guardaron, pero falló un paso posterior: {error}")
@@ -1490,29 +1537,27 @@ def editar_documento(request, id_documento):
     datos_archivo = None
     persistido = False
     try:
-        titulo = request.POST.get("titulo", "").strip()
-        descripcion = request.POST.get("descripcion", "").strip()
-        palabras_clave = request.POST.get("palabras_clave", "").strip()
-        fecha_aprobacion = _fecha_formulario(
-            request.POST.get("fecha_aprobacion"),
-            requerido=True,
-        )
-        id_version = int(request.POST.get("id_version_vigente", ""))
-        estado_version = request.POST.get("estado_version", ESTADO_BORRADOR)
-        if estado_version not in {ESTADO_VIGENTE, ESTADO_BORRADOR, ESTADO_NO_VIGENTE}:
-            raise ValueError("El estado de la versión no es válido.")
         documento = _obtener_documento_para_edicion(id_documento)
-        tipo = _tipo_documento_formulario(
-            request.POST.get("tipo", ""),
-            documento.get("tipo") or TIPO_DOCUMENTO_PREDETERMINADO,
+        formulario = EditarDocumentoForm(
+            request.POST,
+            request.FILES,
+            tipo_actual=documento.get("tipo") or TIPO_DOCUMENTO_PREDETERMINADO,
+            selector_tipo_habilitado=SELECTOR_TIPO_DOCUMENTO_HABILITADO,
         )
+        if not formulario.is_valid():
+            raise ValueError(formulario.mensaje_error())
+        titulo = formulario.cleaned_data["titulo"]
+        descripcion = formulario.cleaned_data["descripcion"]
+        palabras_clave = formulario.cleaned_data["palabras_clave"]
+        fecha_aprobacion = formulario.cleaned_data["fecha_aprobacion"]
+        id_version = formulario.cleaned_data["id_version_vigente"]
+        estado_version = formulario.cleaned_data["estado_version"]
+        tipo = formulario.cleaned_data["tipo"]
         puede_cambiar_estado_version = _columna_existe("doc_versions", "estado")
         if estado_version != "VIGENTE" and not puede_cambiar_estado_version:
             raise ValueError(
                 "El cambio de estado de versiones no esta disponible en esta base de datos."
             )
-        if not titulo:
-            raise ValueError("El titulo del documento es obligatorio.")
         cambios = []
         if titulo != (documento.get("titulo") or ""):
             cambios.append(f"Título: '{_valor_auditoria(documento.get('titulo'))}' → '{_valor_auditoria(titulo)}'")
@@ -1538,7 +1583,7 @@ def editar_documento(request, id_documento):
         accesos_anteriores = _contexto_accesos_documento(id_documento)
         if accesos_anteriores != contexto_accesos:
             cambios.append(f"Permisos de acceso: '{_resumen_accesos_auditoria(accesos_anteriores)}' → '{_resumen_accesos_auditoria(contexto_accesos)}'")
-        archivo = request.FILES.get("archivo")
+        archivo = formulario.cleaned_data["archivo"]
         if archivo:
             cambios.append(f"Archivo PDF: reemplazado por '{archivo.name}'")
         if archivo and not _columna_existe("doc_versions", "archivo_path"):
@@ -1780,7 +1825,7 @@ def publicar_versiones_documento(request, id_documento):
         contexto_actual = _obtener_contexto_version_chroma(id_documento, vigente=True)
         if contexto_actual:
             contexto_reemplazo = _construir_contexto_reemplazo_version(contexto_actual, contexto_anterior)
-            _iniciar_analisis_ia_segundo_plano(
+            _iniciar_sincronizacion_publicacion_segundo_plano(
                 id_documento, documento.get("titulo") or "",
                 _datos_archivo_desde_contexto_version(contexto_actual),
                 contexto_reemplazo, contexto_accesos, documento.get("tipo") or "",

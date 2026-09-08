@@ -52,7 +52,7 @@ def actualizar_tipo_documento(id_documento, tipo):
 @transaction.atomic
 def crear_documento(
     titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo,
-    id_usuario_externo,
+    id_usuario_externo, procesar_ia=True,
 ):
     ahora = timezone.now()
     documento = Documento.objects.create(
@@ -78,6 +78,8 @@ def crear_documento(
         uuid_version=uuid4(),
         estado=ESTADO_BORRADOR,
         publicado=False,
+        estado_ia="PENDIENTE" if procesar_ia else "OMITIDO",
+        mensaje_ia="Analisis de IA pendiente." if procesar_ia else "Lectura de IA omitida por el editor.",
     )
     documento.actualizado_por = id_usuario_externo
     documento.fecha_actualizacion = ahora
@@ -125,8 +127,10 @@ def cambiar_estado_version(id_documento, id_version, estado):
     if estado == ESTADO_VIGENTE:
         if not version.publicado:
             raise ValueError("Solo una versión publicada puede pasar a vigente.")
-        if version.estado_ia != "LEIDO":
-            raise ValueError("Solo una versión con análisis IA exitoso puede pasar a vigente.")
+        if version.estado_ia not in {"LEIDO", "OMITIDO"}:
+            raise ValueError(
+                "Solo una versión con análisis IA exitoso u omitido puede pasar a vigente."
+            )
         VersionDocumento.objects.filter(
             documento_id=id_documento, estado=ESTADO_VIGENTE
         ).exclude(pk=id_version).update(estado=ESTADO_NO_VIGENTE)
@@ -285,6 +289,12 @@ def guardar_publicacion_versiones(id_documento, ids_publicados, id_usuario_exter
         actualizado_por=id_usuario_externo,
         fecha_actualizacion=timezone.now(),
     )
+
+
+def guardar_resultado_ia(id_documento, id_version, resultado):
+    VersionDocumento.objects.filter(
+        documento_id=id_documento, pk=id_version
+    ).update(resultado_ia=resultado)
 
 
 def retirar_vigencia_documento(id_documento):
@@ -681,11 +691,11 @@ def eliminar_versiones_fisicas(id_documento, ids_versiones, motivo, usuario, usu
 
 
 @transaction.atomic
-def crear_documento_con_accesos(titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo, usuario, tipo, accesos, usuario_django):
+def crear_documento_con_accesos(titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo, usuario, tipo, accesos, usuario_django, procesar_ia=True):
     validar_titulo_unico(titulo)
     id_documento = crear_documento(
         titulo, descripcion, palabras_clave, fecha_aprobacion, datos_archivo,
-        usuario["id_usuario_externo"],
+        usuario["id_usuario_externo"], procesar_ia,
     )
     actualizar_tipo_documento(id_documento, tipo)
     reemplazar_accesos_documento(id_documento, accesos, usuario["id_usuario_externo"])
@@ -841,7 +851,7 @@ def validar_publicacion_versiones_por_ia(versiones, ids_publicados):
             continue
         if version.get("publicado"):
             continue
-        if str(version.get("estado_ia") or "").strip().upper() != "LEIDO":
+        if str(version.get("estado_ia") or "").strip().upper() not in {"LEIDO", "OMITIDO"}:
             bloqueadas.append(version)
 
     if bloqueadas:

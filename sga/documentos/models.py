@@ -7,6 +7,9 @@ migraciones de Django intenten crear, alterar o eliminar esas tablas.
 
 from django.db import models
 
+from .tuplas import PERFILES
+from .catalogos import TIPO_DOCUMENTO_CHOICES as TIPO_DOCUMENTO, ESTADO_CHOICES as ESTADO, ESTADO_IA_CHOICES as ESTADO_IA
+
 ESTADO_BORRADOR = "BORRADOR"
 ESTADO_VIGENTE = "VIGENTE"
 ESTADO_NO_VIGENTE = "NO_VIGENTE"
@@ -45,7 +48,7 @@ class Documento(models.Model):
     fecha_eliminacion = models.DateTimeField(blank=True, null=True)
     motivo_eliminacion = models.TextField(blank=True, null=True)
     palabras_clave = models.TextField(default="")
-    tipo = models.CharField(max_length=20, default="Documento legal")
+    tipo = models.CharField(max_length=20, choices=TIPO_DOCUMENTO, default="Documento legal")
     tiene_versionamiento = models.BooleanField(default=False)
     uuid_documento = models.UUIDField()
 
@@ -61,10 +64,8 @@ class Documento(models.Model):
 
 class VersionDocumento(models.Model):
     id_version = models.BigAutoField(primary_key=True)
-    documento = models.ForeignKey(
-        Documento, db_column="id_documento", related_name="versiones",
-        on_delete=models.PROTECT,
-    )
+    documento = models.ForeignKey(Documento, db_column="id_documento", related_name="versiones",on_delete=models.PROTECT)
+    # documento = models.ForeignKey(Documento, verbose_name="versiones", on_delete=models.PROTECT)
     numero_version = models.IntegerField()
     archivo_nombre = models.TextField()
     archivo_path = models.TextField()
@@ -76,13 +77,14 @@ class VersionDocumento(models.Model):
     subido_por = models.BigIntegerField(blank=True, null=True)
     fecha_aprobacion = models.DateTimeField()
     uuid_version = models.UUIDField()
-    estado = models.TextField(default=ESTADO_BORRADOR)
-    estado_ia = models.TextField(default="PENDIENTE")
+    estado = models.TextField(choices=ESTADO, default=ESTADO_BORRADOR)
+    estado_ia = models.TextField(choices=ESTADO_IA, default="PENDIENTE")
     porcentaje_texto_ia = models.DecimalField(
         max_digits=5, decimal_places=2, blank=True, null=True
     )
     mensaje_ia = models.TextField(blank=True, null=True)
     fecha_analisis_ia = models.DateTimeField(blank=True, null=True)
+    resultado_ia = models.JSONField(blank=True, null=True)
     publicado = models.BooleanField(default=False)
     eliminado_por = models.BigIntegerField(blank=True, null=True)
     fecha_eliminacion = models.DateTimeField(blank=True, null=True)
@@ -105,7 +107,7 @@ class AccesoDocumento(models.Model):
         Documento, db_column="id_documento", related_name="accesos",
         on_delete=models.CASCADE,
     )
-    id_perfil_externo = models.BigIntegerField(blank=True, null=True)
+    id_perfil_externo = models.BigIntegerField(choices=PERFILES, blank=True, null=True)
     id_grupo_externo = models.BigIntegerField(blank=True, null=True)
     id_tipo_periodo_externo = models.BigIntegerField(blank=True, null=True)
     activo = models.BooleanField(default=True)

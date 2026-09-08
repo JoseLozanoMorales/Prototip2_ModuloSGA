@@ -141,6 +141,16 @@ class OperacionesDocumentalesTests(TestCase):
         services.guardar_publicacion_versiones(pk, [version], 1001)
         self.assertTrue(VersionDocumento.objects.get(pk=version).publicado)
 
+    def test_servicio_publica_si_lectura_ia_fue_omitida(self):
+        pk = services.crear_documento_con_accesos(
+            "Sin IA", "Descripción", "clave", date(2025, 1, 1), self.archivo,
+            self.usuario, "Manual", [(2, 10, 2)], self.actor, procesar_ia=False,
+        )
+        version = VersionDocumento.objects.get(documento_id=pk)
+        self.assertEqual(version.estado_ia, "OMITIDO")
+        services.guardar_publicacion_versiones(pk, [version.pk], 1001)
+        self.assertTrue(VersionDocumento.objects.get(pk=version.pk).publicado)
+
     def test_publicacion_rechaza_version_ajena(self):
         pk = self.crear()
         with self.assertRaisesMessage(ValueError, "no pertenecen"):

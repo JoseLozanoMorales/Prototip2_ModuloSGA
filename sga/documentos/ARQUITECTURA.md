@@ -8,7 +8,8 @@ Este documento describe la implementación de `sga/documentos`, no toda la plant
 
 | Archivo | Responsabilidad actual |
 | --- | --- |
-| `views.py` | Permisos de la petición, lectura y validación del formulario, consultas y preparación de datos de presentación, llamadas a servicios/integraciones y respuestas HTTP. |
+| `forms.py` | Validación y normalización de los datos enviados por los modales de creación y edición. No guarda modelos directamente. |
+| `views.py` | Permisos de la petición, validaciones que coordinan almacenamiento y consultas, preparación de datos de presentación, llamadas a servicios/integraciones y respuestas HTTP. |
 | `services.py` | Escrituras ORM, reglas de negocio, bloqueos y transacciones. Los servicios agregados coordinan la operación con su auditoría. No importan vistas ni reciben `request`. |
 | `audit.py` | Escrituras en `LogEntry` y en el historial de eliminación definitiva, dentro de la transacción del servicio llamador. |
 | `storage.py` | Validación, guardado, lectura y borrado de PDFs. No ofrece transacciones de archivos. |
@@ -17,7 +18,9 @@ Este documento describe la implementación de `sga/documentos`, no toda la plant
 | `repositories.py` | SQL parametrizado de lectura heredada e introspección de columnas. |
 | `models.py` | Mapeo de tablas heredadas, relaciones, QuerySets y constantes de estados documentales. |
 | `access.py` | Catálogos y representación de permisos compartidos por formularios e integración IA. |
-| `constants.py` | Estados/etiquetas IA y mapas de nombres de perfiles, grupos y períodos; no define los estados documentales. |
+| `tuplas.py` | Opciones `(identificador numérico, etiqueta)` de tipos documentales, perfiles, estados IA y estados documentales. |
+| `catalogos.py` | Equivalencias explícitas entre identificadores numéricos y textos existentes; deriva los `choices` usados por modelos, formularios y vistas. |
+| `constants.py` | Constantes y estilos IA, etiquetas IA y perfiles derivados de `tuplas.py`, y mapas de grupos y períodos. |
 | `urls.py` / `apps.py` | Rutas con namespace `documentos` y registro de la aplicación con label `documentos`. |
 | `admin.py` | No registra modelos documentales; actualmente solo contiene un texto provisional. |
 
@@ -84,6 +87,8 @@ Los estados documentales definidos en `models.py` son `BORRADOR`, `VIGENTE`, `NO
 
 El tipo predeterminado del modelo y del formulario es `Documento legal`. El selector de tipos está deshabilitado por `SELECTOR_TIPO_DOCUMENTO_HABILITADO = False`; al editar se conserva el tipo existente. El esquema debe admitir ese valor en `docs.tipo`.
 
+Los catálogos de `tuplas.py` tienen identificadores numéricos. Para tipo, estado IA y estado, `catalogos.py` los traduce a los códigos de texto existentes y deriva los `choices` de modelos y formularios y las opciones de las vistas. Los números solo identifican opciones: no se guardan en estos tres campos ni cambian los contratos de IA. Las equivalencias se vinculan al identificador, no a la posición de la opción. La eliminación sigue siendo una operación separada. Los perfiles conservan sus identificadores almacenados; las opciones disponibles siguen dependiendo de las categorías activas en `PerfilUsuario`, con etiquetas y catálogo alternativo derivados de las tuplas (3: Administrativo; 4: Empleador). Cualquier ampliación de tipos o estados requiere definir su equivalencia en `catalogos.py` y adaptar las restricciones SQL correspondientes.
+
 ### Papelera y eliminación definitiva
 
 La baja lógica conserva las filas y los PDFs, y registra fecha, motivo y usuario. No permite eliminar contenido publicado: primero se retira su publicación. Tampoco permite eliminar aisladamente la única versión activa; en ese caso se elimina lógicamente el documento completo.
@@ -96,7 +101,7 @@ La eliminación definitiva exige un motivo de al menos cinco caracteres y verifi
 
 `audit.py` usa el usuario Django autenticado cuando está disponible. En caso contrario crea o reutiliza `auditoria_documentos_pruebas`, un usuario técnico temporal. La bitácora guarda el mensaje proporcionado o, si no lo hay, el resumen JSON; no guarda ambos automáticamente.
 
-La autorización del módulo todavía utiliza `USUARIO_SIMULADO`. Su rol se consulta en `modulo_editores`: una entrada activa concede rol editor; de lo contrario se utiliza lector. Esto no equivale a una integración terminada con la identidad real de `request.user`.
+La autorización del módulo utiliza la identidad autenticada de `request.user`. Un superusuario Django recibe el rol editor; para los demás usuarios, una entrada activa en `modulo_editores` concede ese rol y su ausencia asigna lector. El middleware del módulo redirige las solicitudes anónimas a `/documentos/login/`.
 
 Los lectores consultan las versiones publicadas de documentos visibles para sus accesos. Las rutas de visor/PDF comprueban visibilidad; la previsualización de papelera y el manual requieren editor. Registrar una apertura del visor por un lector no equivale a registrar todas las descargas del endpoint PDF.
 

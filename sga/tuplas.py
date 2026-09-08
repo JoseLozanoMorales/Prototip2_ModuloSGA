@@ -12,3 +12,9 @@ MESES_CHOICES = (
     (11, u'NOVIEMBRE'),
     (12, u'DICIEMBRE')
 )
+
+TIPO_DOCUMENTO = (
+    (1, u'DOCUMENTO LEGAL'),
+    (2, u'MANUALES'),
+
+)

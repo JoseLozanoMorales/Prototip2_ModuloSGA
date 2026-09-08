@@ -15,6 +15,7 @@ from .models import ESTADO_BORRADOR, ESTADO_VIGENTE
 from .constants import (
     ESTADO_IA_PENDIENTE,
     ESTADO_IA_LEIDO,
+    ESTADO_IA_OMITIDO,
     ESTADO_IA_OBSERVADO,
     ESTADO_IA_ERROR,
     ESTADOS_IA_DOCUMENTO,
@@ -192,6 +193,7 @@ def _procesar_ia_documento_segundo_plano(
             )
             mensaje = f"{mensaje} No se pudo actualizar ChromaDB: {error_chroma}"
 
+    services.guardar_resultado_ia(id_documento, id_version, respuesta_ia)
     _actualizar_estado_ia_version(
         id_documento,
         id_version,
@@ -200,6 +202,64 @@ def _procesar_ia_documento_segundo_plano(
         mensaje,
     )
     close_old_connections()
+
+
+def _iniciar_sincronizacion_publicacion_segundo_plano(
+    id_documento,
+    titulo,
+    datos_archivo,
+    contexto_version,
+    contexto_accesos,
+    tipo_documento=None,
+    contexto_version_anterior=None,
+    documento_url="",
+):
+    """Publica en Chroma reutilizando el análisis almacenado de la versión."""
+    def sincronizar():
+        close_old_connections()
+        try:
+            _notificar_version_anterior_no_vigente(
+                contexto_version_anterior, contexto_version
+            )
+            if contexto_version.get("estado_ia") == ESTADO_IA_OMITIDO:
+                return
+
+            respuesta_ia = contexto_version.get("resultado_ia")
+            if not isinstance(respuesta_ia, dict) or not respuesta_ia:
+                # Compatibilidad para versiones analizadas antes de que se
+                # empezara a persistir el resultado completo.
+                _procesar_ia_documento_segundo_plano(
+                    id_documento,
+                    titulo,
+                    datos_archivo,
+                    contexto_version,
+                    contexto_accesos,
+                    tipo_documento,
+                    contexto_version_anterior,
+                    documento_url,
+                )
+                return
+
+            _guardar_documento_chroma(
+                id_documento,
+                titulo,
+                datos_archivo,
+                respuesta_ia,
+                contexto_version,
+                contexto_accesos,
+                tipo_documento,
+                documento_url,
+            )
+        except Exception:
+            logger.exception(
+                "No se pudo sincronizar en ChromaDB el documento %s al publicarlo.",
+                id_documento,
+            )
+        finally:
+            close_old_connections()
+
+    hilo = threading.Thread(target=sincronizar, daemon=True)
+    transaction.on_commit(hilo.start)
 
 def _notificar_version_anterior_no_vigente(contexto_anterior, contexto_actual=None):
     uuid_anterior = _texto_uuid((contexto_anterior or {}).get("uuid_version"))

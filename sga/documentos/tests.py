@@ -1,9 +1,126 @@
+from datetime import date, timedelta
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import RequestFactory, SimpleTestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
+from django.db import DatabaseError
+from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.test import override_settings
+from django.urls import reverse
 
 from . import views
+from .forms import CrearDocumentoForm, EditarDocumentoForm
+
+
+class AutorizacionModuloTests(SimpleTestCase):
+    def test_superusuario_django_es_editor(self):
+        request = RequestFactory().get("/documentos/")
+        request.user = SimpleNamespace(
+            pk=7,
+            is_authenticated=True,
+            is_superuser=True,
+            get_username=lambda: "jlozano",
+        )
+
+        usuario = views._obtener_usuario_modulo(request)
+
+        self.assertEqual(usuario["id_usuario_externo"], 7)
+        self.assertEqual(usuario["nombre_usuario"], "jlozano")
+        self.assertEqual(usuario["rol_modulo"], "EDITOR")
+
+    def test_usuario_normal_conserva_asignacion_de_modulo_editores(self):
+        request = RequestFactory().get("/documentos/")
+        request.user = SimpleNamespace(
+            pk=8,
+            is_authenticated=True,
+            is_superuser=False,
+            get_username=lambda: "editor_asignado",
+        )
+        with patch.object(views.EditorModulo.objects, "filter") as filtrar:
+            filtrar.return_value.exists.return_value = True
+            usuario = views._obtener_usuario_modulo(request)
+
+        filtrar.assert_called_once_with(id_usuario_externo=8, activo=True)
+        self.assertEqual(usuario["rol_modulo"], "EDITOR")
+
+
+class SesionDocumentosTests(TestCase):
+    def setUp(self):
+        usuarios = get_user_model()
+        self.editor = usuarios.objects.create_superuser("editor", password="Clave-Segura-123")
+        self.lector = usuarios.objects.create_user("lector", password="Clave-Segura-456")
+
+    def test_usuario_anonimo_es_redirigido_al_login(self):
+        respuesta = self.client.get(reverse("documentos:lista"))
+
+        self.assertRedirects(
+            respuesta,
+            f'{reverse("documentos:login")}?next={reverse("documentos:lista")}',
+            fetch_redirect_response=False,
+        )
+
+    def test_editor_puede_iniciar_sesion(self):
+        respuesta = self.client.post(
+            reverse("documentos:login"),
+            {"username": "editor", "password": "Clave-Segura-123"},
+        )
+
+        self.assertRedirects(respuesta, reverse("documentos:lista"), fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.editor.pk)
+
+    def test_lector_puede_iniciar_sesion(self):
+        respuesta = self.client.post(
+            reverse("documentos:login"),
+            {"username": "lector", "password": "Clave-Segura-456"},
+        )
+
+        self.assertRedirects(respuesta, reverse("documentos:lista"), fetch_redirect_response=False)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.lector.pk)
+
+    def test_cerrar_sesion_regresa_al_login(self):
+        self.client.force_login(self.lector)
+
+        respuesta = self.client.post(reverse("documentos:logout"))
+
+        self.assertRedirects(respuesta, reverse("documentos:login"), fetch_redirect_response=False)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+class ListaDocumentosErroresTests(SimpleTestCase):
+    def test_un_error_de_base_no_renderiza_documentos_a_medio_preparar(self):
+        request = RequestFactory().get("/documentos/")
+        usuario = {
+            "id_usuario_externo": 1001,
+            "id_perfil_externo": 2,
+            "id_grupo_externo": 10,
+            "id_tipo_periodo_externo": 2,
+            "nombre_usuario": "Editor",
+            "rol_modulo": "EDITOR",
+        }
+        catalogos = {"perfiles": [], "grupos": [], "tipos_periodo": []}
+        documento_incompleto = {"id_documento": 29, "titulo": "Documento"}
+
+        with (
+            patch.object(views, "_obtener_usuario_modulo", return_value=usuario),
+            patch.object(views, "_obtener_sessionid_chat", return_value="sesion"),
+            patch.object(views, "_catalogos_acceso", return_value=catalogos),
+            patch.object(views, "_capacidades_base", return_value={}),
+            patch.object(
+                views,
+                "_listar_documentos_modulo",
+                return_value=[documento_incompleto],
+            ),
+            patch.object(
+                views,
+                "_adjuntar_publicacion_documentos",
+                side_effect=DatabaseError("Falta una columna"),
+            ),
+        ):
+            respuesta = views.lista_documentos(request)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, "Falta una columna")
+        self.assertNotContains(respuesta, "modal-editar-29")
 
 
 @override_settings(IA_DOCUMENTOS_PORCENTAJE_TEXTO_MINIMO=80)
@@ -89,3 +206,48 @@ class TipoDocumentoFormularioTests(SimpleTestCase):
         )
         with self.assertRaisesMessage(ValueError, "El tipo de documento no es válido."):
             views._tipo_documento_formulario("Desconocido")
+
+
+class DocumentoFormsTests(SimpleTestCase):
+    def datos_base(self):
+        return {
+            "titulo": "Reglamento académico",
+            "descripcion": "Descripción",
+            "palabras_clave": "reglamento, estudiantes",
+            "fecha_aprobacion": "2025-01-01",
+        }
+
+    def test_creacion_exige_archivo(self):
+        formulario = CrearDocumentoForm(self.datos_base())
+
+        self.assertFalse(formulario.is_valid())
+        self.assertEqual(
+            formulario.errors["archivo"],
+            ["Debe seleccionar un archivo PDF."],
+        )
+
+    def test_edicion_conserva_tipo_actual_si_el_selector_esta_oculto(self):
+        datos = {
+            **self.datos_base(),
+            "tipo": "Reglamento",
+            "id_version_vigente": "12",
+            "estado_version": "BORRADOR",
+        }
+        formulario = EditarDocumentoForm(
+            datos,
+            tipo_actual="Manual",
+            selector_tipo_habilitado=False,
+        )
+
+        self.assertTrue(formulario.is_valid(), formulario.errors)
+        self.assertEqual(formulario.cleaned_data["tipo"], "Manual")
+        self.assertEqual(formulario.cleaned_data["id_version_vigente"], 12)
+
+    def test_rechaza_fecha_de_aprobacion_futura(self):
+        datos = self.datos_base()
+        datos["fecha_aprobacion"] = (date.today() + timedelta(days=1)).isoformat()
+        archivo = SimpleUploadedFile("documento.pdf", b"contenido", "application/pdf")
+        formulario = CrearDocumentoForm(datos, {"archivo": archivo})
+
+        self.assertFalse(formulario.is_valid())
+        self.assertIn("fecha_aprobacion", formulario.errors)

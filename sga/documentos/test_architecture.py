@@ -20,6 +20,7 @@ class SeparacionCapasTests(SimpleTestCase):
                 analizar = stack.enter_context(patch.object(integrations, "_llamar_ia_documentos", return_value={}))
                 stack.enter_context(patch.object(integrations, "_validar_porcentaje_texto_ia", return_value=100))
                 actualizar = stack.enter_context(patch.object(integrations, "_actualizar_estado_ia_version"))
+                guardar_resultado = stack.enter_context(patch.object(services, "guardar_resultado_ia"))
                 quitar = stack.enter_context(patch.object(integrations, "_notificar_version_anterior_no_vigente"))
                 chroma = stack.enter_context(patch.object(integrations, "_guardar_documento_chroma"))
                 integrations._procesar_ia_documento_segundo_plano(
@@ -27,6 +28,7 @@ class SeparacionCapasTests(SimpleTestCase):
                     contexto_version_anterior={"id_version": 1},
                 )
                 analizar.assert_called_once()
+                guardar_resultado.assert_called_once_with(1, 2, {})
                 self.assertEqual(actualizar.call_args.args[2], "LEIDO")
                 self.assertEqual(chroma.call_count, int(estado == "VIGENTE"))
                 self.assertEqual(quitar.call_count, int(estado == "VIGENTE"))
@@ -77,6 +79,41 @@ class SeparacionCapasTests(SimpleTestCase):
             on_commit.call_args.args[0]()
             thread.return_value.start.assert_called_once()
 
+    def test_publicacion_reutiliza_resultado_sin_reanalizar(self):
+        resultado = {"texto_extraido": "contenido analizado", "porcentaje_texto": 100}
+        with patch.object(integrations, "close_old_connections"), \
+                patch.object(integrations, "_notificar_version_anterior_no_vigente"), \
+                patch.object(integrations, "_llamar_ia_documentos") as analizar, \
+                patch.object(integrations, "_guardar_documento_chroma") as chroma, \
+                patch.object(integrations.threading, "Thread") as thread, \
+                patch.object(integrations.transaction, "on_commit") as on_commit:
+            integrations._iniciar_sincronizacion_publicacion_segundo_plano(
+                1, "Titulo", {},
+                {"id_version": 2, "estado_ia": "LEIDO", "resultado_ia": resultado},
+                {},
+            )
+            on_commit.call_args.args[0]()
+            thread.call_args.kwargs["target"]()
+            analizar.assert_not_called()
+            self.assertIs(chroma.call_args.args[3], resultado)
+
+    def test_publicacion_omitida_no_contacta_ia_ni_chroma(self):
+        with patch.object(integrations, "close_old_connections"), \
+                patch.object(integrations, "_notificar_version_anterior_no_vigente"), \
+                patch.object(integrations, "_llamar_ia_documentos") as analizar, \
+                patch.object(integrations, "_guardar_documento_chroma") as chroma, \
+                patch.object(integrations.threading, "Thread") as thread, \
+                patch.object(integrations.transaction, "on_commit") as on_commit:
+            integrations._iniciar_sincronizacion_publicacion_segundo_plano(
+                1, "Titulo", {},
+                {"id_version": 2, "estado_ia": "OMITIDO", "resultado_ia": None},
+                {},
+            )
+            on_commit.call_args.args[0]()
+            thread.call_args.kwargs["target"]()
+            analizar.assert_not_called()
+            chroma.assert_not_called()
+
 
 class FallosPosterioresAlGuardadoTests(SimpleTestCase):
     def test_edicion_acepta_estados_ofrecidos_por_el_formulario(self):
@@ -97,6 +134,8 @@ class FallosPosterioresAlGuardadoTests(SimpleTestCase):
     def comprobar(self, vista, servicio, falla_persistencia, estado="VIGENTE"):
         request = RequestFactory().post("/", {
             "titulo": "Editado", "id_version_vigente": "2", "estado_version": estado,
+            "fecha_aprobacion": "2025-01-01",
+            "procesar_ia": "1",
             "archivo": SimpleUploadedFile("prueba.pdf", b"pdf", "application/pdf"),
         })
         request.user = Mock()

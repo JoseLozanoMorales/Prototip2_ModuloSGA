@@ -5,6 +5,8 @@ from . import views
 app_name = "documentos"
 
 urlpatterns = [
+    path("login/", views.iniciar_sesion, name="login"),
+    path("logout/", views.cerrar_sesion, name="logout"),
     path("", views.lista_documentos, name="lista"),
     path("manual/", views.manual_editor, name="manual"),
     path("analisis-ia/estado/", views.estado_analisis_ia_documentos, name="estado_analisis_ia"),

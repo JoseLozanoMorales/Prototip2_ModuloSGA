@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const IA_FINAL_STATES = ['LEIDO', 'OBSERVADO', 'ERROR'];
+    const IA_FINAL_STATES = ['LEIDO', 'OMITIDO', 'OBSERVADO', 'ERROR'];
     const IA_POLL_INTERVAL = 5000;
     let iaPollTimer = null;
 

@@ -33,17 +33,17 @@ def _catalogos_acceso():
     }
 
 def _opciones_perfiles_acceso():
-    opciones = [{"id": "", "nombre": "Todos"}]
+    opciones = [{"id": "", "nombre": NOMBRES_PERFILES_ACCESO[None]}]
     try:
         perfiles = PerfilUsuario.objects.filter(status=True)
         if perfiles.filter(inscripcion__isnull=False).exists():
-            opciones.append({"id": 1, "nombre": "Estudiante"})
+            opciones.append({"id": 1, "nombre": NOMBRES_PERFILES_ACCESO[1]})
         if perfiles.filter(profesor__isnull=False).exists():
-            opciones.append({"id": 2, "nombre": "Docente"})
+            opciones.append({"id": 2, "nombre": NOMBRES_PERFILES_ACCESO[2]})
         if perfiles.filter(administrativo__isnull=False).exists():
-            opciones.append({"id": 3, "nombre": "Administrativo"})
+            opciones.append({"id": 3, "nombre": NOMBRES_PERFILES_ACCESO[3]})
         if perfiles.filter(empleador__isnull=False).exists():
-            opciones.append({"id": 4, "nombre": "Empleador"})
+            opciones.append({"id": 4, "nombre": NOMBRES_PERFILES_ACCESO[4]})
     except DatabaseError:
         pass
 

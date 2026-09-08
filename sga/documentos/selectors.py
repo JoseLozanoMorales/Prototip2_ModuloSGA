@@ -42,7 +42,7 @@ def versiones_activas(id_documento):
             "archivo_tipo", "archivo_tamano", "descripcion_cambio",
             "mensaje_auditoria", "fecha_subida", "subido_por",
             "fecha_aprobacion", "uuid_version", "estado", "estado_ia",
-            "porcentaje_texto_ia", "mensaje_ia", "fecha_analisis_ia",
+            "porcentaje_texto_ia", "mensaje_ia", "fecha_analisis_ia", "resultado_ia",
             "publicado", "eliminado_por", "fecha_eliminacion",
             "motivo_eliminacion",
         )
@@ -82,6 +82,8 @@ def contexto_version_chroma(id_documento, id_version=None, vigente=None):
         "uuid_version": version.uuid_version,
         "fecha_aprobacion": version.fecha_aprobacion,
         "publicado": bool(version.publicado),
+        "estado_ia": version.estado_ia,
+        "resultado_ia": version.resultado_ia,
     }
 
 

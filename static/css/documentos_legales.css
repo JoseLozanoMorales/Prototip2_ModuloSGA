@@ -254,6 +254,28 @@
     color: #1b7505;
 }
 
+.ia-status-badge.status-skipped {
+    background: #eef2f7;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.ia-process-option > label {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+}
+
+.ia-process-option input[type="checkbox"] {
+    margin-top: 4px;
+    width: auto;
+}
+
+.ia-process-option small {
+    display: block;
+    margin-top: 3px;
+}
+
 .ia-status-badge.status-warning {
     background: #fff4e5;
     border-color: #ffd399;
@@ -1012,4 +1034,8 @@
         height: calc(100vh - 10px);
         width: calc(100vw - 10px);
     }
+}
+.documentos-logout-form {
+    display: inline-block;
+    margin: 0;
 }
