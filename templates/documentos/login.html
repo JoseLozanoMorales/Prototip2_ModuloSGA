@@ -1,0 +1,40 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Iniciar sesión | Documentos legales</title>
+    <link rel="stylesheet" href="{% static 'css/documentos_login.css' %}">
+</head>
+<body>
+    <main class="login-shell">
+        <section class="login-card" aria-labelledby="login-title">
+            <div class="login-brand" aria-hidden="true">DL</div>
+            <p class="login-eyebrow">Universidad Técnica Estatal de Quevedo</p>
+            <h1 id="login-title">Documentos legales</h1>
+            <p class="login-intro">Ingresa con tu cuenta para acceder a las funciones disponibles según tu rol.</p>
+
+            {% if formulario.non_field_errors %}
+                <div class="login-error" role="alert">Usuario o contraseña incorrectos. Inténtalo nuevamente.</div>
+            {% endif %}
+
+            <form method="post" class="login-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <label for="{{ formulario.username.id_for_label }}">Usuario</label>
+                {{ formulario.username }}
+                {% for error in formulario.username.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+
+                <label for="{{ formulario.password.id_for_label }}">Contraseña</label>
+                {{ formulario.password }}
+                {% for error in formulario.password.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+
+                <button type="submit">Iniciar sesión</button>
+            </form>
+            <p class="login-help">El rol EDITOR o LECTOR se asignará automáticamente al ingresar.</p>
+        </section>
+    </main>
+</body>
+</html>
