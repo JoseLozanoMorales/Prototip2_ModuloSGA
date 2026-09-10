@@ -84,6 +84,7 @@ def _actualizar_estado_ia_version(id_documento, id_version, estado, porcentaje_t
         _normalizar_estado_ia(estado),
         porcentaje_texto,
         str(mensaje or "")[:1000],
+        proteger_omision=estado != ESTADO_IA_OMITIDO,
     )
 
 def _columna_existe(tabla, columna):

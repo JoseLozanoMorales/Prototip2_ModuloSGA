@@ -51,7 +51,7 @@
                     <dt>Vigencia</dt><dd>Indica cuál es la versión vigente del documento.</dd>
                     <dt>Publicación</dt><dd>Permite que los lectores consulten una versión, de acuerdo con los accesos configurados. Un documento puede tener varias versiones publicadas.</dd>
                 </dl>
-                <div class="manual-aviso"><strong>Subir un archivo crea un borrador.</strong> No lo publica automáticamente. Puede procesarlo con IA o desmarcar esa opción para omitir la lectura. La publicación se gestiona desde <strong>Acciones → Publicar</strong>.</div>
+                <div class="manual-aviso"><strong>Subir un archivo crea un borrador.</strong> No lo publica automáticamente. Puede procesarlo con IA o desmarcar esa opción para omitir la lectura. La publicación se gestiona desde <strong>Acciones → Gestionar publicación</strong>.</div>
             </section>
 
             <section id="crear" class="manual-seccion" aria-labelledby="titulo-crear">
@@ -59,11 +59,12 @@
                 <ol>
                     <li>Pulse <strong>Crear</strong>, en la parte superior derecha del módulo.</li>
                     <li>Complete los campos obligatorios: <strong>Título del documento</strong>, <strong>Fecha de aprobación</strong> y <strong>archivo PDF</strong>. El título no debe estar repetido.</li>
-                    <li>Si lo necesita, añada una descripción y palabras clave que ayuden a identificar el documento.</li>
+                    <li>Si lo necesita, añada una descripción y palabras clave que ayuden a identificar el documento. Escriba cada palabra o frase y presione <strong>Enter</strong> para convertirla en una etiqueta separada.</li>
                     <li>Revise los campos de <strong>perfiles, grupos y período</strong>: definen quiénes pueden acceder al documento.</li>
                     <li>Pulse <strong>Crear</strong> y revise el mensaje de confirmación.</li>
                 </ol>
-                <p>La fecha de aprobación debe estar entre el 1 de enero de 1984 y la fecha actual. El PDF debe contener texto extraíble suficiente; un archivo compuesto únicamente por imágenes puede ser rechazado.</p>
+                <p>Puede registrar hasta 30 palabras clave, con un máximo de 80 caracteres por etiqueta. Las etiquetas repetidas se descartan sin distinguir mayúsculas y minúsculas; puede retirarlas con el botón <strong>×</strong> antes de guardar.</p>
+                <p>La fecha de aprobación debe estar entre el 1 de enero de 1984 y la fecha actual. El PDF puede ocupar hasta 10 MB y debe contener al menos 200 caracteres de texto extraíble, sin contar espacios; un archivo compuesto únicamente por imágenes puede ser rechazado.</p>
                 <p>Si mantiene activa la opción de procesamiento, la lectura de IA se realiza en segundo plano. Revise su resultado antes de publicar.</p>
             </section>
 
@@ -72,7 +73,7 @@
                 <ol>
                     <li>Busque el documento y abra <strong>Acciones → Editar</strong>.</li>
                     <li>Seleccione la versión que desea revisar. El formulario muestra su PDF y los datos asociados.</li>
-                    <li>Actualice los campos necesarios, como el título, la descripción, las palabras clave, la fecha de aprobación o los accesos.</li>
+                    <li>Actualice los campos necesarios. El título, la descripción, las palabras clave y los accesos pertenecen al documento completo. La fecha de aprobación, el estado y el PDF pertenecen únicamente a la versión seleccionada.</li>
                     <li>Cuando la opción esté habilitada, puede cambiar el estado de la versión o reemplazar su archivo PDF.</li>
                     <li>Pulse <strong>Guardar</strong> y compruebe el resultado.</li>
                 </ol>
@@ -92,15 +93,16 @@
 
             <section id="ia" class="manual-seccion" aria-labelledby="titulo-ia">
                 <h2 id="titulo-ia">5. Revisar la lectura de IA</h2>
-                <p>El módulo muestra el estado del análisis: <strong>Pendiente</strong>, <strong>Leído</strong>, <strong>No leído</strong> o <strong>Error</strong>.</p>
+                <p>El módulo muestra el estado del análisis: <strong>Pendiente</strong>, <strong>Leído</strong>, <strong>Lectura omitida</strong>, <strong>No leído</strong> o <strong>Error</strong>.</p>
                 <p>Si el análisis falla, revise el mensaje y utilice <strong>Acciones → Reintentar lectura IA</strong> cuando esté disponible. El reintento analiza la última versión disponible, incluido un borrador; espere a que termine antes de volver a intentarlo.</p>
-                <div class="manual-aviso">Para publicar una versión que aún no está publicada, su lectura de IA debe ser positiva o haberse omitido expresamente al crearla. Si permanece en error o no leído, revise que el PDF tenga texto legible y atienda el mensaje del sistema.</div>
+                <p>Si la IA no está disponible y el documento debe publicarse, utilice <strong>Acciones → Omitir lectura IA</strong>. La opción actúa sobre la última versión no publicada, queda registrada en la auditoría y habilita su publicación.</p>
+                <div class="manual-aviso">Para publicar una versión que aún no está publicada, su lectura de IA debe ser positiva o haberse omitido expresamente. Si permanece en error o no leído, revise que el PDF tenga texto legible, reintente el análisis o registre la omisión.</div>
             </section>
 
             <section id="publicar" class="manual-seccion" aria-labelledby="titulo-publicar">
                 <h2 id="titulo-publicar">6. Publicar versiones</h2>
                 <ol>
-                    <li>Abra <strong>Acciones → Publicar</strong>.</li>
+                    <li>Abra <strong>Acciones → Gestionar publicación</strong>.</li>
                     <li>Marque las versiones que desea hacer visibles para los lectores. Puede seleccionar una o varias, siempre que cumplan la validación de IA.</li>
                     <li>Desmarque las versiones cuya publicación quiera retirar.</li>
                     <li>Pulse <strong>Guardar</strong>.</li>
@@ -126,7 +128,7 @@
                 <p>Abra <strong>Papelera</strong> desde la cabecera del módulo. Allí encontrará las versiones eliminadas y sus datos.</p>
                 <ul>
                     <li><strong>Restaurar:</strong> recupera el documento o las versiones seleccionadas. Después, revise su vigencia y publicación en el listado.</li>
-                    <li><strong>Eliminar definitivamente:</strong> retira el contenido de forma permanente. Revise con cuidado lo seleccionado antes de confirmar: no podrá recuperarlo desde la papelera.</li>
+                    <li><strong>Eliminar definitivamente:</strong> retira el contenido de forma permanente. Debe indicar un motivo de al menos cinco caracteres. Revise con cuidado lo seleccionado antes de confirmar: no podrá recuperarlo desde la papelera.</li>
                     <li><strong>Registro de eliminaciones:</strong> permite consultar el historial de eliminaciones registrado por el módulo.</li>
                 </ul>
             </section>
@@ -138,6 +140,7 @@
                     <li>Abra <strong>Ver documento</strong> para acceder al visor.</li>
                     <li>Seleccione la versión que desea consultar y utilice la opción de descarga del visor.</li>
                 </ol>
+                <p>La búsqueda consulta el título, la descripción, las palabras clave, el tipo y el año. No distingue mayúsculas ni tildes y permite escribir varias palabras en cualquier orden; el documento debe coincidir con todos los términos introducidos.</p>
                 <p>El lector solo puede consultar versiones publicadas y permitidas por sus accesos. El editor puede revisar también las versiones no publicadas para administrarlas.</p>
                 <a href="#inicio-manual" class="manual-volver">Volver al inicio del manual ↑</a>
             </section>

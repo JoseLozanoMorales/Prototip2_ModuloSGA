@@ -297,6 +297,9 @@ def _adjuntar_estado_ia_documentos(documentos, solo_publicadas=False):
                         version.get("mensaje_ia") or ""
                         if version else estado_sin_vigente["mensaje_ia"]
                     ),
+                    "ultima_version_publicada": bool(
+                        version and version.get("publicado")
+                    ),
                 }
             )
     estados = {
@@ -310,6 +313,16 @@ def _adjuntar_estado_ia_documentos(documentos, solo_publicadas=False):
     for documento in documentos:
         estado_fallback = estado_sin_vigente if solo_publicadas else estado_por_defecto
         documento.update(estados.get(documento["id_documento"], estado_fallback))
+        documento["ultima_version_publicada"] = bool(
+            next(
+                (
+                    fila.get("ultima_version_publicada")
+                    for fila in filas
+                    if fila["id_documento"] == documento["id_documento"]
+                ),
+                documento.get("publicado") if solo_publicadas else False,
+            )
+        )
 
 
 def estado_analisis_ia_documentos(request):
@@ -935,6 +948,37 @@ def reintentar_analisis_ia_documento(request, id_documento):
             except DatabaseError:
                 pass
         messages.error(request, f"No se pudo reintentar el analisis de IA: {error}")
+    return redirect("documentos:lista")
+
+
+@require_POST
+def omitir_analisis_ia_documento(request, id_documento):
+    usuario = _requerir_editor(request)
+    if not usuario:
+        return redirect("documentos:lista")
+
+    try:
+        documento = _obtener_documento_para_edicion(id_documento)
+        contexto_version = _obtener_contexto_version_chroma(id_documento)
+        id_version = contexto_version.get("id_version")
+        if not id_version:
+            raise ValueError("El documento no tiene una versión disponible.")
+        actualizado = services.omitir_analisis_ia_auditado(
+            id_documento,
+            id_version,
+            usuario,
+            documento,
+            request.user,
+        )
+        if actualizado:
+            messages.success(
+                request,
+                "La lectura de IA fue omitida. La versión ya puede publicarse.",
+            )
+        else:
+            messages.info(request, "La lectura de IA ya estaba omitida.")
+    except (DatabaseError, ValueError, RuntimeError) as error:
+        messages.error(request, f"No se pudo omitir la lectura de IA: {error}")
     return redirect("documentos:lista")
 
 

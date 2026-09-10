@@ -169,3 +169,25 @@ class EditorModulo(models.Model):
     class Meta:
         managed = False
         db_table = "modulo_editores"
+
+
+class AccesoLectorModulo(models.Model):
+    """Audiencias que representa un lector dentro del módulo documental.
+
+    Un valor nulo funciona como comodín para esa dimensión. Por ejemplo,
+    ``(1, NULL, NULL)`` representa a estudiantes de cualquier grupo y período;
+    una fila completamente nula concede acceso universal al lector.
+    """
+
+    id_acceso_lector = models.BigAutoField(primary_key=True)
+    id_usuario_externo = models.BigIntegerField()
+    id_perfil_externo = models.BigIntegerField(choices=PERFILES, blank=True, null=True)
+    id_grupo_externo = models.BigIntegerField(blank=True, null=True)
+    id_tipo_periodo_externo = models.BigIntegerField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    asignado_por = models.BigIntegerField(blank=True, null=True)
+    fecha_asignacion = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "modulo_lectores_acceso"

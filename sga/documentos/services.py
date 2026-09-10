@@ -206,10 +206,14 @@ def sincronizar_versionamiento(id_documento):
 
 def actualizar_estado_ia(
     id_documento, id_version, estado, porcentaje_texto=None, mensaje="",
+    proteger_omision=False,
 ):
-    VersionDocumento.objects.filter(
+    versiones = VersionDocumento.objects.filter(
         documento_id=id_documento, pk=id_version
-    ).update(
+    )
+    if proteger_omision:
+        versiones = versiones.exclude(estado_ia="OMITIDO")
+    versiones.update(
         estado_ia=estado,
         porcentaje_texto_ia=porcentaje_texto,
         mensaje_ia=mensaje,
@@ -289,6 +293,54 @@ def guardar_publicacion_versiones(id_documento, ids_publicados, id_usuario_exter
         actualizado_por=id_usuario_externo,
         fecha_actualizacion=timezone.now(),
     )
+
+
+@transaction.atomic
+def omitir_analisis_ia_auditado(
+    id_documento, id_version, usuario, documento, usuario_django
+):
+    """Omite expresamente la IA de una versión pendiente y registra al editor."""
+    version = VersionDocumento.objects.select_for_update().filter(
+        documento_id=id_documento,
+        pk=id_version,
+    ).exclude(estado="ELIMINADO").first()
+    if not version:
+        raise ValueError("La versión seleccionada no existe o fue eliminada.")
+    if version.publicado:
+        raise ValueError("No se puede omitir la lectura IA de una versión ya publicada.")
+    if version.estado_ia == "LEIDO":
+        raise ValueError("La versión ya cuenta con una lectura IA positiva.")
+    if version.estado_ia == "OMITIDO":
+        return False
+
+    version.estado_ia = "OMITIDO"
+    version.porcentaje_texto_ia = None
+    version.mensaje_ia = "Lectura de IA omitida expresamente por un editor."
+    version.fecha_analisis_ia = timezone.now()
+    version.save(
+        update_fields=[
+            "estado_ia", "porcentaje_texto_ia", "mensaje_ia", "fecha_analisis_ia"
+        ]
+    )
+    _registrar_auditoria_django_pruebas(
+        usuario,
+        usuario_django,
+        id_documento,
+        "OMISION_LECTURA_IA",
+        "",
+        {
+            "titulo": documento.get("titulo"),
+            "id_version": version.pk,
+            "numero_version": version.numero_version,
+        },
+        mensaje=(
+            f"{usuario.get('nombre_usuario') or 'Usuario'} ha omitido la lectura IA "
+            f"de la versión {version.numero_version} del documento "
+            f"{documento.get('titulo') or id_documento}."
+        ),
+        action_flag=CHANGE,
+    )
+    return True
 
 
 def guardar_resultado_ia(id_documento, id_version, resultado):

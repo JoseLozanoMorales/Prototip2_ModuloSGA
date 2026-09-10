@@ -194,3 +194,33 @@ Django solicitará la contraseña nueva y su confirmación de manera interactiva
 - Realice una copia de seguridad antes de modificar directamente las tablas de autenticación o de roles.
 - Un usuario LECTOR se convierte en EDITOR si recibe una asignación activa en `modulo_editores`.
 - Desactivar esa asignación devuelve al usuario normal al rol LECTOR, siempre que no sea superusuario.
+
+## 8. Lectores para probar la segmentación
+
+Después de aplicar las migraciones, puede crear la matriz de lectores de prueba con:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py configurar_lectores_prueba
+```
+
+El comando no almacena contraseñas y configura estas audiencias:
+
+| Usuario | Perfiles | Grupos | Períodos |
+|---|---|---|---|
+| `jaucatomac` | Todos | Todos | Todos |
+| `lector_estudiante` | Estudiante | Todos | Todos |
+| `lector_docente` | Docente | Todos | Todos |
+| `lector_mixto` | Estudiante y Docente | Todos | Todos |
+
+Las cuentas nuevas se crean con contraseña inutilizable. Asígneles una de forma
+interactiva antes de iniciar sesión, por ejemplo:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py changepassword lector_estudiante
+.\.venv\Scripts\python.exe manage.py changepassword lector_docente
+.\.venv\Scripts\python.exe manage.py changepassword lector_mixto
+```
+
+Una fila de audiencia puede usar `Todos` en una dimensión sin eliminar las demás
+restricciones. Un lector con una fila completamente en `Todos`, como
+`jaucatomac`, puede consultar cualquier documento publicado.

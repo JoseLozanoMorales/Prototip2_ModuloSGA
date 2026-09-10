@@ -21,6 +21,16 @@ class ManualEditorTests(SimpleTestCase):
             self.assertContains(response, f'id="{section}"')
             self.assertContains(response, f'href="#{section}"')
         self.assertContains(response, "No basta con cambiar la vigencia.")
+        self.assertContains(response, "Acciones → Gestionar publicación", count=2)
+        self.assertContains(response, "Lectura omitida")
+        self.assertContains(response, "hasta 30 palabras clave")
+        self.assertContains(response, "máximo de 80 caracteres")
+        self.assertContains(response, "hasta 10 MB")
+        self.assertContains(response, "al menos 200 caracteres")
+        self.assertContains(response, "motivo de al menos cinco caracteres")
+        self.assertContains(response, "No distingue mayúsculas ni tildes")
+        self.assertContains(response, "pertenecen al documento completo")
+        self.assertContains(response, "pertenecen únicamente a la versión seleccionada")
 
     def test_lector_no_puede_abrir_manual_por_url(self):
         request = RequestFactory().get(reverse("documentos:manual"))

@@ -136,7 +136,7 @@ def estados_ia_ultimas_versiones(ids_documentos):
     versiones = VersionDocumento.objects.activas().filter(
         documento_id__in=ids_documentos
     ).order_by("documento_id", "-numero_version", "-id_version").values(
-        "documento_id", "estado_ia", "porcentaje_texto_ia", "mensaje_ia"
+        "documento_id", "estado_ia", "porcentaje_texto_ia", "mensaje_ia", "publicado"
     )
     resultado = {}
     for version in versiones:

@@ -15,6 +15,11 @@ urlpatterns = [
         views.reintentar_analisis_ia_documento,
         name="reintentar_analisis_ia",
     ),
+    path(
+        "<int:id_documento>/analisis-ia/omitir/",
+        views.omitir_analisis_ia_documento,
+        name="omitir_analisis_ia",
+    ),
     path("visor/<int:id_documento>/", views.visor_pdf, name="visor"),
     path("visor/<int:id_documento>/pdf/<int:id_version>/", views.servir_pdf, name="pdf"),
     path("papelera/", views.papelera_documentos, name="papelera"),

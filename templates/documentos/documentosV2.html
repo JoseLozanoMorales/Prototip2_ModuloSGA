@@ -158,6 +158,12 @@
                                                     {% csrf_token %}
                                                     <button type="submit"><i class="fa fa-refresh"></i> Reintentar lectura IA</button>
                                                 </form>
+                                                {% if doc.estado_ia != 'OMITIDO' and not doc.ultima_version_publicada %}
+                                                    <form class="menu-action-form" action="{% url 'documentos:omitir_analisis_ia' id_documento=doc.id_documento %}" method="post" onsubmit="return confirm('¿Omitir la lectura de IA para esta versión? Esta decisión quedará registrada.');">
+                                                        {% csrf_token %}
+                                                        <button type="submit"><i class="fa fa-forward"></i> Omitir lectura IA</button>
+                                                    </form>
+                                                {% endif %}
                                             {% endif %}
                                             <a href="#modal-eliminar-{{ doc.id_documento }}"><i class="fa fa-trash"></i> Eliminar</a>
                                             <a href="{% url 'documentos:visor' id_documento=doc.id_documento %}"><i class="fa fa-eye"></i> Ver documento</a>
@@ -503,7 +509,7 @@
                                                 <span>Publicado</span>
                                             </label>
                                             {% if version.bloqueada_publicacion_ia %}
-                                                <small class="delete-note">La versi&oacute;n requiere una lectura IA positiva o que el an&aacute;lisis se haya omitido al crearla.</small>
+                                                <small class="delete-note">La versi&oacute;n requiere una lectura IA positiva o que el an&aacute;lisis se haya omitido expresamente.</small>
                                             {% endif %}
                                         </td>
                                     </tr>

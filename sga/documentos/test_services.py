@@ -151,6 +151,44 @@ class OperacionesDocumentalesTests(TestCase):
         services.guardar_publicacion_versiones(pk, [version.pk], 1001)
         self.assertTrue(VersionDocumento.objects.get(pk=version.pk).publicado)
 
+    def test_editor_puede_omitir_ia_despues_de_subir_y_publicar(self):
+        pk = self.crear()
+        version = VersionDocumento.objects.get(documento_id=pk)
+
+        actualizado = services.omitir_analisis_ia_auditado(
+            pk, version.pk, self.usuario, {"titulo": "Prueba"}, self.actor,
+        )
+
+        self.assertTrue(actualizado)
+        version.refresh_from_db()
+        self.assertEqual(version.estado_ia, "OMITIDO")
+        self.assertIn("omitida expresamente", version.mensaje_ia)
+        services.guardar_publicacion_versiones(pk, [version.pk], 1001)
+        self.assertTrue(VersionDocumento.objects.get(pk=version.pk).publicado)
+
+    def test_no_permite_omitir_ia_de_version_publicada(self):
+        pk = self.crear(publicar=True)
+        version = VersionDocumento.objects.get(documento_id=pk)
+
+        with self.assertRaisesMessage(ValueError, "ya publicada"):
+            services.omitir_analisis_ia_auditado(
+                pk, version.pk, self.usuario, {"titulo": "Prueba"}, self.actor,
+            )
+
+    def test_resultado_tardio_de_ia_no_revierte_una_omision(self):
+        pk = self.crear()
+        version = VersionDocumento.objects.get(documento_id=pk)
+        services.actualizar_estado_ia(pk, version.pk, "OMITIDO")
+
+        services.actualizar_estado_ia(
+            pk, version.pk, "LEIDO", proteger_omision=True,
+        )
+
+        self.assertEqual(
+            VersionDocumento.objects.get(pk=version.pk).estado_ia,
+            "OMITIDO",
+        )
+
     def test_publicacion_rechaza_version_ajena(self):
         pk = self.crear()
         with self.assertRaisesMessage(ValueError, "no pertenecen"):
