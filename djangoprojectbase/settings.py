@@ -60,7 +60,10 @@ def env_list(nombre, defecto=None):
 
 def env_path(nombre, defecto):
     valor = os.environ.get(nombre)
-    return Path(valor) if valor else defecto
+    if not valor:
+        return defecto
+    ruta = Path(valor).expanduser()
+    return ruta if ruta.is_absolute() else BASE_DIR / ruta
 
 
 # Quick-start development settings - unsuitable for production
@@ -127,10 +130,10 @@ WSGI_APPLICATION = 'djangoprojectbase.wsgi.application'
 DATABASES = {
 
     'default': {
-        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql_psycopg2'),
-        'NAME': os.environ.get('DB_NAME', 'uteq'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'pass123'),
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.environ.get('DB_NAME', 'documentos_db'),
+        'USER': os.environ.get('DB_USER', 'documentos_app'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     },
@@ -183,9 +186,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Configuracion requerida por el modulo de gestion de documentos legales.
 FLASK_PDF_DIR = env_path(
     'FLASK_PDF_DIR',
-    BASE_DIR / 'Prototipo_Version_Django' / 'media' / 'documentos',
+    BASE_DIR / 'media' / 'documentos_heredados',
 )
-IA_DOCUMENTOS_BASE_URL = os.environ.get('IA_DOCUMENTOS_BASE_URL', 'http://localhost:8000')
+IA_DOCUMENTOS_BASE_URL = os.environ.get('IA_DOCUMENTOS_BASE_URL', 'http://localhost:8001')
 IA_DOCUMENTOS_ANALIZAR_PATH = os.environ.get(
     'IA_DOCUMENTOS_ANALIZAR_PATH',
     '/api/integracion/documentos/analizar/',

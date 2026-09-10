@@ -2,7 +2,7 @@
 
 Última revisión: 3 de septiembre de 2026. Referencia de código: `f580dc2`.
 
-Este documento describe la implementación de `sga/documentos`, no toda la plantilla SGA. Distingue lo implementado de lo pendiente. Una actualización de código no aplica automáticamente cambios en PostgreSQL ni garantiza que todos los entornos tengan el mismo esquema.
+Este documento describe la implementación de `sga/documentos`, no toda la plantilla SGA. Distingue lo implementado de lo pendiente. Las migraciones deben ejecutarse después de actualizar el código; una actualización por sí sola no modifica PostgreSQL.
 
 ## 1. Responsabilidades y dependencias
 
@@ -39,7 +39,9 @@ La separación no significa que las vistas solo llamen a un servicio: aún conti
 | `HistorialEliminacion` | `historial_eliminaciones` |
 | `EditorModulo` | `modulo_editores` |
 
-Todos estos modelos tienen `managed = False`: Django puede consultar y modificar sus filas con ORM, pero sus migraciones no administran la creación o modificación de esas tablas. Las migraciones de las demás aplicaciones Django siguen siendo necesarias.
+Todos estos modelos tienen `managed = False` para impedir que futuras migraciones generadas automáticamente alteren tablas heredadas. La migración inicial `documentos.0001_initial` es la excepción controlada: registra el estado de los modelos y crea las seis tablas, restricciones e índices sobre una instalación PostgreSQL nueva mediante SQL repetible. Si las tablas ya existen, las conserva. La reversión es deliberadamente no destructiva y no elimina información documental.
+
+La migración inicial garantiza el esquema final para una base nueva, pero no repara automáticamente cualquier variante histórica de una tabla ya existente. Los entornos heredados deben validarse y, cuando corresponda, aplicar los scripts de adaptación antes de marcar la migración como completada.
 
 `Documento.version_vigente` referencia una versión; las versiones pertenecen al documento. Los servicios coordinan el estado de la versión con esa referencia. El historial de eliminación guarda identificadores y datos descriptivos sin depender de que el documento eliminado siga existiendo.
 
@@ -51,7 +53,7 @@ Las escrituras de este módulo se realizan con ORM. Todavía se invocan desde `r
 - `fn_listar_papelera_documentos`: listado de papelera.
 - Introspección de columnas mediante la conexión Django.
 
-Por tanto, el módulo todavía depende de PostgreSQL y de funciones SQL instaladas; no es portable íntegramente a otra base solo por usar ORM. Las consultas de presentación aún no están todas en `selectors.py`. El criterio para SQL excepcional es encapsularlo y parametrizarlo en repositorios, no añadirlo a las vistas.
+Por tanto, el módulo todavía depende de PostgreSQL y de funciones SQL, pero estas se instalan mediante `documentos.0002_funciones_consulta`; ya no requieren un paso externo con `psql` en instalaciones nuevas. No es portable íntegramente a otra base solo por usar ORM. Las consultas de presentación aún no están todas en `selectors.py`. El criterio para SQL excepcional es encapsularlo y parametrizarlo en repositorios, no añadirlo a las vistas.
 
 ## 3. Servicios utilizados por las vistas
 
@@ -162,13 +164,13 @@ La configuración se encuentra en `djangoprojectbase/settings.py`, con valores d
 
 Antes de desplegar:
 
-1. Revisar las migraciones Django y la existencia de todas las tablas mapeadas, columnas y funciones SQL utilizadas. No considerar el dump heredado una instalación completa y actualizada.
+1. Ejecutar `python manage.py migrate`. En una base PostgreSQL nueva esto crea las tablas documentales junto con las tablas internas de Django. Verificar por separado las funciones SQL heredadas utilizadas por los repositorios.
 2. Respaldar la base y aplicar de forma controlada `schema_estados_documentales.sql` si el entorno aún usa los estados antiguos.
 3. Verificar que `docs.tipo` acepte `Documento legal` y que existan las tablas de lecturas, accesos e historial.
 4. Verificar rutas/permisos de PDFs y configuración de los endpoints IA/Chroma.
 5. Ejecutar comprobaciones y pruebas aisladas. Validar además el flujo real en un entorno de prueba PostgreSQL antes de producción.
 
-`schema_estados_documentales.sql` actúa sobre `public.doc_versions`: en una transacción y con timeout de bloqueo de cinco segundos, sustituye la restricción de estados, convierte únicamente `INACTIVO` a `NO_VIGENTE` y cambia el default a `BORRADOR`. No modifica publicaciones ni referencias vigentes. El dump `schema_documentosv2_tables.sql` aún describe estados antiguos; después de restaurarlo también se necesita esta adaptación. `manage.py migrate` no ejecuta este script automáticamente.
+`schema_estados_documentales.sql` se conserva para actualizar bases heredadas: en una transacción y con timeout de bloqueo de cinco segundos, sustituye la restricción de estados, convierte únicamente `INACTIVO` a `NO_VIGENTE` y cambia el default a `BORRADOR`. No modifica publicaciones ni referencias vigentes. Una instalación nueva creada por `documentos.0001_initial` ya nace con los estados actuales y no necesita ese script.
 
 Registro de la aplicación local autorizada del 3 de septiembre de 2026: se convirtieron cinco versiones, se comprobó que publicaciones y referencias vigentes no cambiaron y se guardó un respaldo de los campos afectados en `tmp/`. Ese respaldo es local y no se versiona; esto no certifica la aplicación del script en otros entornos.
 

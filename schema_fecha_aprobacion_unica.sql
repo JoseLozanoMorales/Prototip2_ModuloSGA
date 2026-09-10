@@ -6,11 +6,24 @@ BEGIN;
 
 -- Las instalaciones antiguas tienen la fecha en ambas tablas. La de la
 -- versión es la fuente de verdad; este respaldo solo cubre datos heredados.
-UPDATE public.doc_versions v
-SET fecha_aprobacion = d.fecha_aprobacion
-FROM public.docs d
-WHERE d.id_documento = v.id_documento
-  AND v.fecha_aprobacion IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'docs'
+          AND column_name = 'fecha_aprobacion'
+    ) THEN
+        EXECUTE $sql$
+            UPDATE public.doc_versions v
+            SET fecha_aprobacion = d.fecha_aprobacion
+            FROM public.docs d
+            WHERE d.id_documento = v.id_documento
+              AND v.fecha_aprobacion IS NULL
+        $sql$;
+    END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.fn_crear_documento_base(
     p_titulo text, p_descripcion text, p_palabras_clave text,
@@ -61,6 +74,21 @@ BEGIN
 
     DELETE FROM public.documento_acceso WHERE id_documento = p_id_documento;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_usuario_es_editor(
+    p_id_usuario_externo bigint
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.modulo_editores e
+        WHERE e.id_usuario_externo = p_id_usuario_externo
+          AND COALESCE(e.activo, TRUE)
+    );
 $$;
 
 CREATE OR REPLACE FUNCTION public.fn_listar_documentos_modulo(
@@ -210,6 +238,6 @@ LANGUAGE sql STABLE AS $$
              numero_version NULLS FIRST;
 $$;
 
-ALTER TABLE public.docs DROP COLUMN fecha_aprobacion;
+ALTER TABLE public.docs DROP COLUMN IF EXISTS fecha_aprobacion;
 
 COMMIT;
