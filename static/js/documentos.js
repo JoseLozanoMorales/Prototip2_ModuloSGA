@@ -182,6 +182,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 control.dataset.initialDisabled = control.disabled ? 'true' : 'false';
             }
         });
+        form.querySelectorAll('[data-published-locked-control]').forEach(function (control) {
+            if (!control.dataset.initialDisabled) {
+                control.dataset.initialDisabled = control.disabled ? 'true' : 'false';
+            }
+        });
     }
 
     function refreshEditLock(select) {
@@ -191,8 +196,22 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const locked = (option.dataset.estado || 'BORRADOR') === 'VIGENTE';
+        const documentPublished = form.dataset.documentPublished === 'true';
+        const versionPublished = option.dataset.publicado === 'true';
+        const locked = documentPublished || versionPublished ||
+            (option.dataset.estado || 'BORRADOR') === 'VIGENTE';
         form.classList.toggle('is-version-edit-locked', locked);
+
+        const notice = form.querySelector('[data-edit-lock-notice]');
+        const noticeMessage = form.querySelector('[data-edit-lock-message]');
+        if (notice) {
+            notice.hidden = !locked;
+        }
+        if (noticeMessage) {
+            noticeMessage.innerHTML = documentPublished || versionPublished
+                ? 'Este documento está publicado y sus campos de edición están bloqueados. Primero retire la publicación desde <strong>Acciones → Gestionar publicación</strong>.'
+                : 'Esta versión está vigente y sus campos de edición están bloqueados. Cambie primero su estado y guarde antes de modificarla.';
+        }
 
         form.querySelectorAll('[data-edit-locked-field]').forEach(function (field) {
             field.readOnly = locked;
@@ -202,6 +221,14 @@ document.addEventListener('DOMContentLoaded', function () {
         form.querySelectorAll('[data-edit-locked-control]').forEach(function (control) {
             control.disabled = locked || control.dataset.initialDisabled === 'true';
             control.title = locked ? 'Primero cambie la version a No vigente o borrador y guarde.' : '';
+        });
+
+        form.querySelectorAll('[data-published-locked-control]').forEach(function (control) {
+            const publishedLocked = documentPublished || versionPublished;
+            control.disabled = publishedLocked || control.dataset.initialDisabled === 'true';
+            control.title = publishedLocked
+                ? 'Primero retire la publicación desde Gestionar publicación.'
+                : '';
         });
 
         form.querySelectorAll('.file-button').forEach(function (label) {
@@ -405,6 +432,37 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     }
 
+    function closeIaErrorModal() {
+        const modal = document.querySelector('[data-ia-error-modal]');
+        if (!modal) {
+            return;
+        }
+        modal.hidden = true;
+        modal.classList.remove('is-visible');
+    }
+
+    function openIaErrorModal(trigger) {
+        const modal = document.querySelector('[data-ia-error-modal]');
+        if (!modal || !trigger || trigger.dataset.iaState !== 'ERROR') {
+            return;
+        }
+        const documentName = modal.querySelector('[data-ia-error-document]');
+        const message = modal.querySelector('[data-ia-error-message]');
+        if (documentName) {
+            documentName.textContent = trigger.dataset.documentTitle || 'Documento';
+        }
+        if (message) {
+            message.textContent = trigger.dataset.iaMessage ||
+                'No se registró un detalle adicional para este fallo.';
+        }
+        modal.hidden = false;
+        modal.classList.add('is-visible');
+        const closeButton = modal.querySelector('[data-ia-error-close]');
+        if (closeButton) {
+            closeButton.focus();
+        }
+    }
+
     function updateIaRow(documento) {
         const row = document.querySelector('[data-documento-id="' + documento.id_documento + '"]');
         if (!row) {
@@ -421,6 +479,17 @@ document.addEventListener('DOMContentLoaded', function () {
             badge.className = 'ia-status-badge ' + (documento.clase_ia || 'status-pending');
             badge.textContent = documento.label_ia || 'Pendiente';
             badge.title = documento.mensaje_ia || '';
+            badge.dataset.iaState = documento.estado_ia || 'PENDIENTE';
+            badge.dataset.iaMessage = documento.mensaje_ia ||
+                'No se registró un detalle adicional para este fallo.';
+            badge.dataset.documentTitle = documento.titulo || badge.dataset.documentTitle || 'Documento';
+            badge.disabled = documento.estado_ia !== 'ERROR';
+            badge.setAttribute('aria-disabled', badge.disabled ? 'true' : 'false');
+            if (!badge.disabled) {
+                badge.setAttribute('aria-label', 'Ver motivo del error de IA de ' + badge.dataset.documentTitle);
+            } else {
+                badge.removeAttribute('aria-label');
+            }
         }
         if (percent) {
             percent.remove();
@@ -603,6 +672,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('click', function (event) {
+        const iaErrorTrigger = event.target.closest('[data-ia-error-trigger]');
+        if (iaErrorTrigger && !iaErrorTrigger.disabled) {
+            openIaErrorModal(iaErrorTrigger);
+            return;
+        }
+
+        if (event.target.closest('[data-ia-error-close]')) {
+            closeIaErrorModal();
+            return;
+        }
+
+        const iaErrorBackdrop = event.target.closest('[data-ia-error-modal]');
+        if (iaErrorBackdrop && event.target === iaErrorBackdrop) {
+            closeIaErrorModal();
+            return;
+        }
+
         const activeMenu = event.target.closest('.menu-actions');
         const menuTrigger = event.target.closest('.menu-trigger');
         const menuLink = event.target.closest('.menu-box a, .menu-box form button');
@@ -651,6 +737,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const box = button.closest('[data-selected-box]');
         button.closest('.selection-chip').remove();
         refreshPlaceholder(box);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeIaErrorModal();
+        }
     });
 
     document.querySelectorAll('.menu-actions').forEach(function (menu) {

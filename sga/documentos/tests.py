@@ -318,3 +318,19 @@ class BusquedaDocumentosTests(SimpleTestCase):
         self.assertEqual(parametros[4], "")
         self.assertEqual(parametros[-2:], ["%articulo%", "%academico%"])
         self.assertEqual(sql.count(" LIKE %s "), 2)
+
+
+class EstadoVersionPublicadaTests(SimpleTestCase):
+    def test_no_permite_cambiar_estado_si_la_version_esta_publicada(self):
+        version = {"publicado": True, "estado": "VIGENTE"}
+
+        with self.assertRaisesMessage(ValueError, "Primero retire su publicación"):
+            views._validar_cambio_estado_version_publicada(version, "NO_VIGENTE")
+
+    def test_permite_conservar_estado_o_cambiar_version_no_publicada(self):
+        views._validar_cambio_estado_version_publicada(
+            {"publicado": True, "estado": "VIGENTE"}, "VIGENTE"
+        )
+        views._validar_cambio_estado_version_publicada(
+            {"publicado": False, "estado": "BORRADOR"}, "VIGENTE"
+        )

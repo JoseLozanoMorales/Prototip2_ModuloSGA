@@ -1107,6 +1107,14 @@ def _seleccionar_version(versiones, id_version, preferir_vigente=True):
     return versiones[0]
 
 
+def _validar_cambio_estado_version_publicada(version, estado_nuevo):
+    if version.get("publicado") and estado_nuevo != version.get("estado"):
+        raise ValueError(
+            "No se puede cambiar el estado de una versión publicada. "
+            "Primero retire su publicación desde Gestionar publicación."
+        )
+
+
 def _accesos_documento_combinaciones(id_documento):
     accesos = selectors.accesos_de_documento(id_documento)
     return {
@@ -1639,6 +1647,7 @@ def editar_documento(request, id_documento):
 
         versiones = _obtener_versiones(id_documento)
         version_seleccionada = _seleccionar_version(versiones, id_version)
+        _validar_cambio_estado_version_publicada(version_seleccionada, estado_version)
         if estado_version == ESTADO_VIGENTE and id_version != documento.get("id_version_vigente"):
             cambios.append(f"Versión vigente: '{documento.get('numero_version_vigente') or documento.get('id_version_vigente')}' → '{version_seleccionada.get('numero_version')}'")
         if estado_version != version_seleccionada.get("estado"):

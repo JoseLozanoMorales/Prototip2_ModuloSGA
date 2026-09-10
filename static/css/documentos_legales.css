@@ -242,6 +242,20 @@
     padding: 4px 8px;
 }
 
+button.ia-status-badge {
+    font: inherit;
+}
+
+button.ia-status-badge:not(:disabled) {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+button.ia-status-badge:disabled {
+    opacity: 1;
+}
+
 .ia-status-badge.status-pending {
     background: #f2f4f7;
     border-color: #d0d5dd;
@@ -604,6 +618,68 @@
     display: block;
 }
 
+.ia-error-modal.is-visible {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+
+.ia-error-modal .modal-card {
+    margin: 0;
+    max-height: min(78vh, 620px);
+    max-width: 680px;
+    width: 100%;
+}
+
+.ia-error-modal .modal-header {
+    align-items: center;
+    background: #fff7f6;
+    border-bottom-color: #f3c7c3;
+    display: flex;
+    justify-content: space-between;
+}
+
+.ia-error-modal .modal-header h2 {
+    color: #912018;
+    margin: 0;
+}
+
+.ia-error-modal-content {
+    color: #344054;
+    line-height: 1.55;
+    max-height: 46vh;
+    overflow-y: auto;
+    padding: 20px 22px;
+}
+
+.ia-error-modal-content strong {
+    color: #1d2939;
+    display: block;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.ia-error-modal-content p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.modal-close-button {
+    background: transparent;
+    border: 0;
+    color: #667085;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    padding: 2px 6px;
+}
+
+.modal-close-button:hover,
+.modal-close-button:focus-visible {
+    color: #b42318;
+}
+
 .modal-card {
     background: #fff;
     border: 1px solid #cfd7df;
@@ -864,6 +940,24 @@
     line-height: 16px;
     padding: 0;
     width: 18px;
+}
+
+.edit-lock-notice {
+    align-items: flex-start;
+    background: #fff4d6;
+    border: 1px solid #e2b84f;
+    border-left: 4px solid #b88218;
+    border-radius: 4px;
+    color: #63480f;
+    display: flex;
+    gap: 10px;
+    line-height: 1.45;
+    margin: 14px 22px 0;
+    padding: 12px 14px;
+}
+
+.edit-lock-notice[hidden] {
+    display: none;
 }
 
 .keyword-input {

@@ -4,7 +4,7 @@
 {% block pagetitle %}Gesti&oacute;n de documentos legales{% endblock %}
 
 {% block heading %}
-    <link href="{% static 'css/documentos_legales.css' %}?v=20260814-publication-table-fit" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'css/documentos_legales.css' %}?v=20260910-compact-ia-error" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block canvas %}
@@ -130,9 +130,9 @@
                             <td>{{ doc.anio|default:'-' }}</td>
                             {% if usuario.rol_modulo == 'EDITOR' %}
                                 <td class="ia-status-cell" data-ia-status-cell>
-                                    <span class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge>
+                                    <button type="button" class="ia-status-badge {{ doc.clase_ia|default:'status-pending' }}" title="{{ doc.mensaje_ia|default:'' }}" data-ia-badge data-ia-error-trigger data-ia-state="{{ doc.estado_ia|default:'PENDIENTE' }}" data-ia-message="{{ doc.mensaje_ia|default:'No se registró un detalle adicional para este fallo.' }}" data-document-title="{{ doc.titulo }}" {% if doc.estado_ia != 'ERROR' %}disabled aria-disabled="true"{% else %}aria-label="Ver motivo del error de IA de {{ doc.titulo }}"{% endif %}>
                                         {{ doc.label_ia|default:'Pendiente' }}
-                                    </span>
+                                    </button>
                                 </td>
                                 <td class="publish-status-cell">
                                     <span class="publish-status-badge {% if doc.publicado %}is-published{% else %}is-unpublished{% endif %}">
@@ -315,25 +315,29 @@
         {% for doc in documentos %}
             <div id="modal-editar-{{ doc.id_documento }}" class="modal-layer">
                 <div class="modal-card modal-edit-with-preview">
-                    <form action="{% url 'documentos:editar' id_documento=doc.id_documento %}" method="post" enctype="multipart/form-data" class="document-form">
+                    <form action="{% url 'documentos:editar' id_documento=doc.id_documento %}" method="post" enctype="multipart/form-data" class="document-form" data-document-published="{{ doc.publicado|yesno:'true,false' }}">
                         {% csrf_token %}
                         <div class="edit-modal-layout">
                             <div class="edit-form-pane">
                                 <div class="modal-header"><h2>Detalles del documento legal</h2></div>
+                                <div class="edit-lock-notice" data-edit-lock-notice role="alert" hidden>
+                                    <i class="fa fa-lock" aria-hidden="true"></i>
+                                    <span data-edit-lock-message>Este documento está publicado y sus campos de edición están bloqueados. Primero retire la publicación desde <strong>Acciones → Gestionar publicación</strong>.</span>
+                                </div>
                                 <div class="form-row two-columns">
                                     <label>
                                         <strong>T&iacute;tulo del documento</strong>
-                                        <input type="text" name="titulo" value="{{ doc.titulo }}" required>
+                                        <input type="text" name="titulo" value="{{ doc.titulo }}" data-edit-locked-field required>
                                     </label>
                                     <label>
                                         <strong>Fecha de aprobaci&oacute;n</strong>
                                         <input type="hidden" name="fecha_aprobacion" value="{{ doc.fecha_aprobacion|default:'' }}" data-saved-approval-date>
-                                        <input type="date" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
+                                        <input type="date" value="{{ doc.fecha_aprobacion|default:'' }}" data-version-approval-date data-edit-locked-field min="{{ fecha_aprobacion_minima }}" max="{{ fecha_aprobacion_maxima }}" required>
                                     </label>
                                     {% if selector_tipo_documento_habilitado %}
                                         <label>
                                             <strong>Tipo</strong>
-                                            <select name="tipo" required>
+                                            <select name="tipo" data-edit-locked-control required>
                                                 {% for tipo_documento in tipos_documento %}
                                                     <option value="{{ tipo_documento }}" {% if doc.tipo == tipo_documento %}selected{% endif %}>{{ tipo_documento }}</option>
                                                 {% endfor %}
@@ -347,7 +351,7 @@
                                         <input type="hidden" name="id_version_vigente" value="{{ doc.id_version_preview }}" data-saved-version-id>
                                         <select data-version-select required>
                                             {% for version in doc.versiones %}
-                                                <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-fecha-aprobacion="{{ version.fecha_aprobacion|date:'Y-m-d' }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
+                                                <option value="{{ version.id_version }}" data-estado="{{ version.estado }}" data-publicado="{{ version.publicado|yesno:'true,false' }}" data-fecha-aprobacion="{{ version.fecha_aprobacion|date:'Y-m-d' }}" data-pdf-url="{% url 'documentos:pdf' id_documento=doc.id_documento id_version=version.id_version %}" {% if version.id_version == doc.id_version_preview %}selected{% endif %}>
                                                     Versi&oacute;n {{ version.numero_version }}{% if version.archivo_nombre %} - {{ version.archivo_nombre }}{% endif %}
                                                 </option>
                                             {% endfor %}
@@ -356,7 +360,7 @@
                                     <label>
                                         <strong>Estado de la versi&oacute;n</strong>
                                         <input type="hidden" name="estado_version" value="{{ doc.estado }}" data-saved-version-status>
-                                        <select data-version-status-select {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
+                                        <select data-version-status-select data-published-locked-control {% if not capacidades.puede_cambiar_estado_version %}disabled{% endif %} required>
                                             {% for valor, etiqueta in estados_version %}
                                                 {% if capacidades.puede_cambiar_estado_version or valor == 'VIGENTE' %}
                                                     <option value="{{ valor }}" {% if doc.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
@@ -369,7 +373,7 @@
                                     <span>Seleccione archivo PDF</span>
                                     <label class="btn btn-success file-button {% if not capacidades.puede_reemplazar_archivo %}is-disabled{% endif %}">
                                         <i class="fa fa-upload"></i> Cargar archivo
-                                        <input type="file" name="archivo" accept="application/pdf" {% if not capacidades.puede_reemplazar_archivo %}disabled{% endif %}>
+                                        <input type="file" name="archivo" accept="application/pdf" data-edit-locked-control {% if not capacidades.puede_reemplazar_archivo %}disabled{% endif %}>
                                     </label>
                                     <small>Tama&ntilde;o m&aacute;ximo recomendado 4MB, en formato PDF.</small>
                                     <span class="file-status" data-file-status>Ning&uacute;n archivo seleccionado</span>
@@ -377,7 +381,7 @@
                                 <div class="form-row">
                                     <label>
                                         <strong>Descripci&oacute;n</strong>
-                                        <textarea name="descripcion" placeholder="Ingrese la descripci&oacute;n">{{ doc.descripcion|default:'' }}</textarea>
+                                        <textarea name="descripcion" data-edit-locked-field placeholder="Ingrese la descripci&oacute;n">{{ doc.descripcion|default:'' }}</textarea>
                                     </label>
                                 </div>
                                 <div class="form-row">
@@ -394,7 +398,7 @@
                                 <div class="form-row access-row">
                                     <label>
                                         <strong>Perfiles</strong>
-                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-perfiles">
+                                        <select class="access-picker" data-edit-locked-control data-target="editar-{{ doc.id_documento }}-perfiles">
                                             <option value="__placeholder__" disabled selected>Seleccione</option>
                                             {% for opcion in perfiles_acceso %}
                                                 <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
@@ -403,7 +407,7 @@
                                     </label>
                                     <label>
                                         <strong>Grupos</strong>
-                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-grupos">
+                                        <select class="access-picker" data-edit-locked-control data-target="editar-{{ doc.id_documento }}-grupos">
                                             <option value="__placeholder__" disabled selected>Seleccione</option>
                                             {% for opcion in grupos_acceso %}
                                                 <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
@@ -412,7 +416,7 @@
                                     </label>
                                     <label>
                                         <strong>Periodo</strong>
-                                        <select class="access-picker" data-target="editar-{{ doc.id_documento }}-periodos">
+                                        <select class="access-picker" data-edit-locked-control data-target="editar-{{ doc.id_documento }}-periodos">
                                             <option value="__placeholder__" disabled selected>Seleccione</option>
                                             {% for opcion in tipos_periodo_acceso %}
                                                 <option value="{{ opcion.id }}">{{ opcion.nombre }}</option>
@@ -423,17 +427,17 @@
                                 <div class="selected-boxes">
                                     <div data-selected-box="editar-{{ doc.id_documento }}-perfiles" data-field="id_perfil_externo" data-placeholder="Perfiles seleccionados">
                                         {% for opcion in doc.perfiles_seleccionados_opciones %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ opcion.id }}"></span>
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" data-edit-locked-control aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_perfil_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-grupos" data-field="id_grupo_externo" data-placeholder="Grupos seleccionados">
                                         {% for opcion in doc.grupos_seleccionados_opciones %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ opcion.id }}"></span>
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" data-edit-locked-control aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_grupo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                     <div data-selected-box="editar-{{ doc.id_documento }}-periodos" data-field="id_tipo_periodo_externo" data-placeholder="Periodos seleccionados">
                                         {% for opcion in doc.periodos_seleccionados_opciones %}
-                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ opcion.id }}"></span>
+                                            <span class="selection-chip" data-value="{{ opcion.id }}">{{ opcion.nombre }}<button type="button" data-edit-locked-control aria-label="Quitar {{ opcion.nombre }}">&times;</button><input type="hidden" name="id_tipo_periodo_externo" value="{{ opcion.id }}"></span>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -591,6 +595,22 @@
         {% endfor %}
     {% endif %}
 
+    <div class="modal-layer ia-error-modal" data-ia-error-modal role="dialog" aria-modal="true" aria-labelledby="ia-error-modal-title" hidden>
+        <div class="modal-card modal-medium" role="document">
+            <div class="modal-header">
+                <h2 id="ia-error-modal-title"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> Motivo del fallo de IA</h2>
+                <button type="button" class="modal-close-button" data-ia-error-close aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="ia-error-modal-content">
+                <strong data-ia-error-document></strong>
+                <p data-ia-error-message></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-ia-error-close>Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     {% if usuario %}
         <p class="documentos-hint">Usuario: {{ usuario.nombre_usuario }} | Rol: {{ usuario.rol_modulo }}</p>
     {% endif %}
@@ -608,5 +628,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260910-csrf-refresh"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260910-ia-error-detail"></script>
 {% endblock %}

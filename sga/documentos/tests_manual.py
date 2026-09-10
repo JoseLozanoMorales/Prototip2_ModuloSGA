@@ -77,3 +77,93 @@ class ManualEditorTests(SimpleTestCase):
         self.assertIn("function syncCsrfToken(form)", javascript)
         self.assertIn("cookieValue('csrftoken')", javascript)
         self.assertIn("document.addEventListener('submit'", javascript)
+
+    def test_editor_recibe_aviso_y_bloqueo_para_documento_publicado(self):
+        html = render_to_string(
+            "documentos/documentosV2.html",
+            {
+                "usuario": {"rol_modulo": "EDITOR"},
+                "documentos": [
+                    {
+                        "id_documento": 7,
+                        "titulo": "Reglamento",
+                        "descripcion": "Descripción",
+                        "publicado": True,
+                        "estado": "VIGENTE",
+                        "id_version_preview": 19,
+                        "versiones": [
+                            {
+                                "id_version": 19,
+                                "numero_version": 1,
+                                "estado": "VIGENTE",
+                                "publicado": True,
+                            }
+                        ],
+                    }
+                ],
+                "capacidades": {
+                    "puede_reemplazar_archivo": True,
+                    "puede_cambiar_estado_version": True,
+                },
+                "perfiles_acceso": [],
+                "grupos_acceso": [],
+                "tipos_periodo_acceso": [],
+                "estados_version": [("VIGENTE", "Vigente")],
+            },
+        )
+
+        self.assertIn('data-document-published="true"', html)
+        self.assertIn('data-publicado="true"', html)
+        self.assertIn("Este documento está publicado", html)
+        self.assertIn('name="descripcion" data-edit-locked-field', html)
+        self.assertIn("data-version-status-select data-published-locked-control", html)
+
+        javascript = Path(settings.BASE_DIR, "static", "js", "documentos.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("documentPublished || versionPublished", javascript)
+        self.assertIn("const publishedLocked = documentPublished || versionPublished", javascript)
+
+    def test_estado_error_ofrece_popup_con_el_motivo(self):
+        html = render_to_string(
+            "documentos/documentosV2.html",
+            {
+                "usuario": {"rol_modulo": "EDITOR"},
+                "documentos": [
+                    {
+                        "id_documento": 9,
+                        "titulo": "Documento con error",
+                        "estado_ia": "ERROR",
+                        "label_ia": "Error",
+                        "clase_ia": "status-error",
+                        "mensaje_ia": "El servicio de IA no está disponible.",
+                        "id_version_preview": 20,
+                        "estado": "BORRADOR",
+                        "versiones": [
+                            {
+                                "id_version": 20,
+                                "numero_version": 1,
+                                "estado": "BORRADOR",
+                                "publicado": False,
+                            }
+                        ],
+                    }
+                ],
+                "capacidades": {},
+                "perfiles_acceso": [],
+                "grupos_acceso": [],
+                "tipos_periodo_acceso": [],
+                "estados_version": [],
+            },
+        )
+
+        self.assertIn("data-ia-error-trigger", html)
+        self.assertIn('data-ia-state="ERROR"', html)
+        self.assertIn("El servicio de IA no está disponible.", html)
+        self.assertIn("Motivo del fallo de IA", html)
+
+        javascript = Path(settings.BASE_DIR, "static", "js", "documentos.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("function openIaErrorModal(trigger)", javascript)
+        self.assertIn("badge.dataset.iaMessage", javascript)
