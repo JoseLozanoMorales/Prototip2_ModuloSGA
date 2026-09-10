@@ -3,7 +3,7 @@ import builtins
 import inspect
 import symtable
 from contextlib import ExitStack
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import Mock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,6 +13,48 @@ from . import access, audit, integrations, services, storage, views
 
 
 class SeparacionCapasTests(SimpleTestCase):
+    def test_nombre_de_archivo_es_legible_unico_y_conserva_extension(self):
+        momento = datetime(2026, 9, 9, 14, 3, 5)
+        with patch.object(storage, "uuid4") as uuid:
+            uuid.return_value.hex = "a1b2c3d4e5f67890"
+            nombre = storage.generar_nombre_archivo(
+                "documento", "Nombre MUY largo de usuario.PDF", momento
+            )
+
+        self.assertEqual(nombre, "documento_20260909_140305_a1b2c3d4.pdf")
+
+    def test_validacion_de_archivos_centraliza_formato_mime_contenido_y_tamano(self):
+        pdf = SimpleUploadedFile(
+            "documento.PDF", b"%PDF-1.7\ncontenido", "application/pdf"
+        )
+        self.assertEqual(storage._validar_archivo_subido(pdf), b"%PDF-1.7\ncontenido")
+
+        casos_invalidos = (
+            (
+                SimpleUploadedFile("imagen.jpg", b"imagen", "image/jpeg"),
+                "extensión",
+            ),
+            (
+                SimpleUploadedFile("documento.pdf", b"%PDF-1.7", "image/jpeg"),
+                "tipo de contenido",
+            ),
+            (
+                SimpleUploadedFile("documento.pdf", b"no es pdf", "application/pdf"),
+                "PDF válido",
+            ),
+            (
+                SimpleUploadedFile(
+                    "documento.pdf",
+                    b"%PDF-" + b"x" * storage.TAMANO_MAXIMO_ARCHIVO,
+                    "application/pdf",
+                ),
+                "10 MB",
+            ),
+        )
+        for archivo, mensaje in casos_invalidos:
+            with self.subTest(nombre=archivo.name), self.assertRaisesMessage(ValueError, mensaje):
+                storage._validar_archivo_subido(archivo)
+
     def test_borrador_se_analiza_sin_reemplazar_la_vigente_en_chroma(self):
         for estado in ("BORRADOR", "VIGENTE"):
             with self.subTest(estado=estado), ExitStack() as stack:

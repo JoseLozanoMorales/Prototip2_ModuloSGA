@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+tmp/
+.idea/
+.ai/
+
+# Prototipo independiente conservado solo como referencia local. La aplicación
+# activa del repositorio es sga.documentos.
+versionamiento_documentos/

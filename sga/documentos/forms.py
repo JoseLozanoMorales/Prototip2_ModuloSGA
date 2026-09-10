@@ -60,6 +60,31 @@ class DocumentoBaseForm(forms.Form):
             raise forms.ValidationError("El tipo de documento es obligatorio.")
         return tipo
 
+    def clean_palabras_clave(self):
+        """Guarda etiquetas separadas, limpias y sin duplicados."""
+        valor = self.cleaned_data.get("palabras_clave", "")
+        etiquetas = []
+        vistas = set()
+
+        for fragmento in valor.replace("\r", "\n").replace(";", ",").split(","):
+            for etiqueta in fragmento.split("\n"):
+                etiqueta = " ".join(etiqueta.split())
+                if not etiqueta:
+                    continue
+                if len(etiqueta) > 80:
+                    raise forms.ValidationError(
+                        "Cada palabra clave puede tener como máximo 80 caracteres."
+                    )
+                clave = etiqueta.casefold()
+                if clave not in vistas:
+                    vistas.add(clave)
+                    etiquetas.append(etiqueta)
+
+        if len(etiquetas) > 30:
+            raise forms.ValidationError("Puede registrar como máximo 30 palabras clave.")
+
+        return ", ".join(etiquetas)
+
     def mensaje_error(self):
         for errores in self.errors.as_data().values():
             if errores:

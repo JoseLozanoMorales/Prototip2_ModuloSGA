@@ -112,7 +112,7 @@
                     </thead>
                     <tbody>
                     {% for doc in documentos %}
-                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}" data-live-search-row data-search-text="{{ doc.titulo }} {{ doc.descripcion|default:'' }} {{ doc.tipo|default:'' }} {{ doc.anio|default:'' }}">
+                        <tr data-documento-id="{{ doc.id_documento }}" data-ia-estado="{{ doc.estado_ia|default:'PENDIENTE' }}" data-live-search-row data-search-text="{{ doc.titulo }} {{ doc.descripcion|default:'' }} {{ doc.palabras_clave|default:'' }} {{ doc.tipo|default:'' }} {{ doc.anio|default:'' }}">
                             <td class="title-cell">{{ doc.titulo }}</td>
                             <td class="description-cell">
                                 {% with descripcion=doc.descripcion|default:'' %}
@@ -238,7 +238,12 @@
                     <div class="form-row">
                         <label>
                             <strong>Palabras clave</strong>
-                            <textarea name="palabras_clave" placeholder="Ejemplo: reglamento, estudiantes, matr&iacute;cula"></textarea>
+                            <span class="keyword-input" data-keyword-input>
+                                <span class="keyword-chips" data-keyword-chips></span>
+                                <input type="text" data-keyword-entry placeholder="Escriba una palabra y presione Enter" autocomplete="off">
+                                <input type="hidden" name="palabras_clave" value="">
+                            </span>
+                            <small class="field-help">Presione Enter despu&eacute;s de cada palabra o frase clave.</small>
                         </label>
                     </div>
                     <div class="upload-row">
@@ -372,7 +377,12 @@
                                 <div class="form-row">
                                     <label>
                                         <strong>Palabras clave</strong>
-                                        <textarea name="palabras_clave" placeholder="Ejemplo: reglamento, estudiantes, matr&iacute;cula">{{ doc.palabras_clave|default:'' }}</textarea>
+                                        <span class="keyword-input" data-keyword-input>
+                                            <span class="keyword-chips" data-keyword-chips></span>
+                                            <input type="text" data-keyword-entry data-edit-locked-field placeholder="Escriba una palabra y presione Enter" autocomplete="off">
+                                            <input type="hidden" name="palabras_clave" value="{{ doc.palabras_clave|default:'' }}">
+                                        </span>
+                                        <small class="field-help">Presione Enter despu&eacute;s de cada palabra o frase clave.</small>
                                     </label>
                                 </div>
                                 <div class="form-row access-row">
@@ -592,5 +602,5 @@
 
 {% block moreblock %}
     <script src="{% static 'js/character-counter.js' %}?v=20260731-1"></script>
-    <script src="{% static 'js/documentos.js' %}?v=20260825-preview-version"></script>
+    <script src="{% static 'js/documentos.js' %}?v=20260910-flexible-search"></script>
 {% endblock %}

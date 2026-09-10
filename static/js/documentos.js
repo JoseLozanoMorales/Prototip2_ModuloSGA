@@ -51,6 +51,100 @@ document.addEventListener('DOMContentLoaded', function () {
         refreshPlaceholder(box);
     }
 
+    function keywordValues(component) {
+        return Array.from(component.querySelectorAll('.keyword-chip')).map(function (chip) {
+            return chip.dataset.value;
+        });
+    }
+
+    function syncKeywords(component) {
+        const hidden = component.querySelector('input[type="hidden"][name="palabras_clave"]');
+        if (hidden) {
+            hidden.value = keywordValues(component).join(', ');
+        }
+    }
+
+    function addKeyword(component, rawValue) {
+        const value = (rawValue || '').replace(/\s+/g, ' ').trim();
+        const entry = component.querySelector('[data-keyword-entry]');
+        if (!value) {
+            return false;
+        }
+
+        const exists = keywordValues(component).some(function (item) {
+            return item.toLocaleLowerCase() === value.toLocaleLowerCase();
+        });
+        if (exists) {
+            if (entry) {
+                entry.value = '';
+            }
+            return false;
+        }
+
+        const chip = document.createElement('span');
+        chip.className = 'keyword-chip';
+        chip.dataset.value = value;
+        chip.append(document.createTextNode(value));
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.keywordRemove = '';
+        button.dataset.editLockedControl = '';
+        button.setAttribute('aria-label', 'Quitar ' + value);
+        button.innerHTML = '&times;';
+        chip.append(button);
+
+        component.querySelector('[data-keyword-chips]').append(chip);
+        if (entry) {
+            entry.value = '';
+        }
+        syncKeywords(component);
+        return true;
+    }
+
+    document.querySelectorAll('[data-keyword-input]').forEach(function (component) {
+        const hidden = component.querySelector('input[type="hidden"][name="palabras_clave"]');
+        const entry = component.querySelector('[data-keyword-entry]');
+
+        (hidden && hidden.value ? hidden.value.split(/[,;\n]+/) : []).forEach(function (value) {
+            addKeyword(component, value);
+        });
+
+        entry.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                addKeyword(component, entry.value);
+                return;
+            }
+            if (event.key === 'Backspace' && !entry.value) {
+                const chips = component.querySelectorAll('.keyword-chip');
+                const lastChip = chips[chips.length - 1];
+                if (lastChip && !entry.readOnly) {
+                    lastChip.remove();
+                    syncKeywords(component);
+                }
+            }
+        });
+
+        entry.addEventListener('blur', function () {
+            if (!entry.readOnly) {
+                addKeyword(component, entry.value);
+            }
+        });
+    });
+
+    document.querySelectorAll('.document-form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('[data-keyword-input]').forEach(function (component) {
+                const entry = component.querySelector('[data-keyword-entry]');
+                if (entry && !entry.readOnly) {
+                    addKeyword(component, entry.value);
+                }
+                syncKeywords(component);
+            });
+        });
+    });
+
     function rememberInitialDisabledState(form) {
         if (!form) {
             return;
@@ -159,6 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
         refreshVersionStatus(select);
         refreshPdfViewer(select);
         refreshEditLock(select);
+        markPreviewedVersionForSave(select);
     }
 
     function refreshActiveModalPdf() {
@@ -507,6 +602,16 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        const keywordButton = event.target.closest('[data-keyword-remove]');
+        if (keywordButton) {
+            if (!keywordButton.disabled) {
+                const component = keywordButton.closest('[data-keyword-input]');
+                keywordButton.closest('.keyword-chip').remove();
+                syncKeywords(component);
+            }
+            return;
+        }
+
         const button = event.target.closest('.selection-chip button');
         if (!button) {
             return;
@@ -546,6 +651,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function normalizeSearchText(value) {
+        return (value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase();
+    }
+
     document.querySelectorAll('[data-live-search-input]').forEach(function (input) {
         const table = document.getElementById(input.dataset.liveSearchTarget);
         if (!table) {
@@ -556,11 +668,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const emptyRow = table.querySelector('[data-live-search-empty]');
 
         input.addEventListener('input', function () {
-            const query = input.value.trim().toLocaleLowerCase();
+            const terms = normalizeSearchText(input.value).trim().split(/\s+/).filter(Boolean);
             let matches = 0;
 
             rows.forEach(function (row) {
-                const matchesQuery = !query || (row.dataset.searchText || '').toLocaleLowerCase().includes(query);
+                const searchableText = normalizeSearchText(row.dataset.searchText);
+                const matchesQuery = terms.every(function (term) {
+                    return searchableText.includes(term);
+                });
                 row.hidden = !matchesQuery;
                 if (matchesQuery) {
                     matches += 1;

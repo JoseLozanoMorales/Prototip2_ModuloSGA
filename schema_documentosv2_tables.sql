@@ -46,12 +46,13 @@ CREATE TABLE public.doc_versions (
     porcentaje_texto_ia numeric(5,2),
     mensaje_ia text,
     fecha_analisis_ia timestamp with time zone,
+    resultado_ia jsonb,
     eliminado_por bigint,
     fecha_eliminacion timestamp with time zone,
     motivo_eliminacion text,
     CONSTRAINT chk_numero_version CHECK ((numero_version > 0)),
     CONSTRAINT ck_doc_versions_estado CHECK ((estado = ANY (ARRAY['VIGENTE'::text, 'INACTIVO'::text, 'ELIMINADO'::text]))),
-    CONSTRAINT ck_doc_versions_estado_ia CHECK ((estado_ia = ANY (ARRAY['PENDIENTE'::text, 'LEIDO'::text, 'OBSERVADO'::text, 'ERROR'::text])))
+    CONSTRAINT ck_doc_versions_estado_ia CHECK ((estado_ia = ANY (ARRAY['PENDIENTE'::text, 'LEIDO'::text, 'OMITIDO'::text, 'OBSERVADO'::text, 'ERROR'::text])))
 );
 
 
@@ -82,7 +83,6 @@ CREATE TABLE public.docs (
     id_documento bigint NOT NULL,
     titulo text NOT NULL,
     descripcion text,
-    fecha_aprobacion timestamp with time zone NOT NULL,
     id_version_vigente bigint,
     creado_por bigint,
     fecha_creacion timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -92,8 +92,10 @@ CREATE TABLE public.docs (
     fecha_eliminacion timestamp with time zone,
     motivo_eliminacion text,
     palabras_clave text DEFAULT ''::text NOT NULL,
+    tipo character varying(20) DEFAULT 'Documento legal'::character varying NOT NULL,
     tiene_versionamiento boolean DEFAULT false NOT NULL,
-    uuid_documento uuid DEFAULT gen_random_uuid() NOT NULL
+    uuid_documento uuid DEFAULT gen_random_uuid() NOT NULL,
+    CONSTRAINT chk_docs_tipo CHECK (tipo IN ('Documento legal', 'Manual', 'Reglamento', 'Guías', 'Ordenes', 'Modelos', 'Procedimiento', 'Videos'))
 );
 
 
@@ -149,43 +151,6 @@ CREATE SEQUENCE public.documento_acceso_id_acceso_seq
 --
 
 ALTER SEQUENCE public.documento_acceso_id_acceso_seq OWNED BY public.documento_acceso.id_acceso;
-
-
---
--- Name: documento_auditoria; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.documento_auditoria (
-    id_auditoria bigint NOT NULL,
-    id_documento bigint,
-    id_version bigint,
-    id_usuario_externo bigint,
-    nombre_usuario text,
-    accion character varying(50) NOT NULL,
-    mensaje text NOT NULL,
-    datos_anteriores jsonb,
-    datos_nuevos jsonb,
-    fecha_hora timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
---
--- Name: documento_auditoria_id_auditoria_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.documento_auditoria_id_auditoria_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: documento_auditoria_id_auditoria_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.documento_auditoria_id_auditoria_seq OWNED BY public.documento_auditoria.id_auditoria;
 
 
 --
@@ -245,13 +210,6 @@ ALTER TABLE ONLY public.documento_acceso ALTER COLUMN id_acceso SET DEFAULT next
 
 
 --
--- Name: documento_auditoria id_auditoria; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.documento_auditoria ALTER COLUMN id_auditoria SET DEFAULT nextval('public.documento_auditoria_id_auditoria_seq'::regclass);
-
-
---
 -- Name: documento_lectura id_lectura; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -280,14 +238,6 @@ ALTER TABLE ONLY public.docs
 
 ALTER TABLE ONLY public.documento_acceso
     ADD CONSTRAINT documento_acceso_pkey PRIMARY KEY (id_acceso);
-
-
---
--- Name: documento_auditoria documento_auditoria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.documento_auditoria
-    ADD CONSTRAINT documento_auditoria_pkey PRIMARY KEY (id_auditoria);
 
 
 --
@@ -347,34 +297,6 @@ CREATE INDEX idx_documento_acceso_id_documento ON public.documento_acceso USING 
 --
 
 CREATE INDEX idx_documento_acceso_segmento ON public.documento_acceso USING btree (id_perfil_externo, id_grupo_externo, id_tipo_periodo_externo);
-
-
---
--- Name: idx_documento_auditoria_accion; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_documento_auditoria_accion ON public.documento_auditoria USING btree (accion);
-
-
---
--- Name: idx_documento_auditoria_documento; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_documento_auditoria_documento ON public.documento_auditoria USING btree (id_documento);
-
-
---
--- Name: idx_documento_auditoria_fecha; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_documento_auditoria_fecha ON public.documento_auditoria USING btree (fecha_hora);
-
-
---
--- Name: idx_documento_auditoria_usuario; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_documento_auditoria_usuario ON public.documento_auditoria USING btree (id_usuario_externo);
 
 
 --
@@ -441,22 +363,6 @@ ALTER TABLE ONLY public.docs
 
 ALTER TABLE ONLY public.documento_acceso
     ADD CONSTRAINT fk_documento_acceso_docs FOREIGN KEY (id_documento) REFERENCES public.docs(id_documento) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: documento_auditoria fk_documento_auditoria_docs; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.documento_auditoria
-    ADD CONSTRAINT fk_documento_auditoria_docs FOREIGN KEY (id_documento) REFERENCES public.docs(id_documento) ON UPDATE CASCADE ON DELETE SET NULL;
-
-
---
--- Name: documento_auditoria fk_documento_auditoria_version; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.documento_auditoria
-    ADD CONSTRAINT fk_documento_auditoria_version FOREIGN KEY (id_version) REFERENCES public.doc_versions(id_version) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --

@@ -5,11 +5,12 @@ from unittest.mock import Mock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError
+from django.http import QueryDict
 from django.test import RequestFactory, SimpleTestCase, TestCase
 from django.test import override_settings
 from django.urls import reverse
 
-from . import views
+from . import repositories, views
 from .forms import CrearDocumentoForm, EditarDocumentoForm
 
 
@@ -251,3 +252,62 @@ class DocumentoFormsTests(SimpleTestCase):
 
         self.assertFalse(formulario.is_valid())
         self.assertIn("fecha_aprobacion", formulario.errors)
+
+    def test_palabras_clave_se_normalizan_y_eliminan_duplicados(self):
+        datos = self.datos_base()
+        datos["palabras_clave"] = (
+            " reglamento,  estudiantes ; Reglamento\nmatrícula "
+        )
+        archivo = SimpleUploadedFile("documento.pdf", b"contenido", "application/pdf")
+        formulario = CrearDocumentoForm(datos, {"archivo": archivo})
+
+        self.assertTrue(formulario.is_valid(), formulario.errors)
+        self.assertEqual(
+            formulario.cleaned_data["palabras_clave"],
+            "reglamento, estudiantes, matrícula",
+        )
+
+    def test_palabra_clave_demasiado_extensa_se_rechaza(self):
+        datos = self.datos_base()
+        datos["palabras_clave"] = "x" * 81
+        archivo = SimpleUploadedFile("documento.pdf", b"contenido", "application/pdf")
+        formulario = CrearDocumentoForm(datos, {"archivo": archivo})
+
+        self.assertFalse(formulario.is_valid())
+        self.assertIn("palabras_clave", formulario.errors)
+
+    @patch("sga.documentos.views._obtener_fecha_aprobacion_version")
+    def test_edicion_recupera_fecha_persistida_si_el_navegador_no_la_envia(
+        self, obtener_fecha
+    ):
+        obtener_fecha.return_value = date(2025, 1, 1)
+        datos = QueryDict("id_version_vigente=12&fecha_aprobacion=")
+
+        resultado = views._completar_fecha_aprobacion_edicion(datos, 7)
+
+        self.assertEqual(resultado["fecha_aprobacion"], "2025-01-01")
+        obtener_fecha.assert_called_once_with(7, "12")
+
+
+class BusquedaDocumentosTests(SimpleTestCase):
+    def test_normaliza_tildes_mayusculas_y_espacios(self):
+        self.assertEqual(
+            repositories._terminos_busqueda("  ARTÍCULO   matrícula artículo "),
+            ["articulo", "matricula"],
+        )
+
+    @patch("sga.documentos.repositories.consultar_filas", return_value=[])
+    def test_aplica_cada_termino_sin_filtrado_estricto_de_la_funcion(self, consultar):
+        usuario = {
+            "id_usuario_externo": 1,
+            "id_perfil_externo": 2,
+            "id_grupo_externo": 3,
+            "id_tipo_periodo_externo": 4,
+        }
+
+        repositories.listar_documentos_modulo(usuario, "Artículo académico", None)
+
+        sql, parametros = consultar.call_args.args
+        self.assertEqual(parametros[4], "")
+        self.assertEqual(parametros[-2:], ["%articulo%", "%academico%"])
+        self.assertEqual(sql.count(" LIKE %s "), 2)

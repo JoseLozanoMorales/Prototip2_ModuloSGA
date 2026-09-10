@@ -1,4 +1,4 @@
-"""Acceso al almacenamiento de PDFs, sin dependencia de vistas ni de HTTP."""
+"""Validacion y almacenamiento de archivos, sin depender de las vistas."""
 
 import re
 from io import BytesIO
@@ -7,6 +7,31 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.utils import timezone
+
+
+TAMANO_MAXIMO_ARCHIVO = 10 * 1024 * 1024
+FORMATOS_ARCHIVO_PERMITIDOS = {
+    ".pdf": {
+        "tipos_mime": frozenset({
+            "application/pdf",
+            "application/octet-stream",
+        }),
+        "firma": b"%PDF-",
+    },
+}
+
+
+def generar_nombre_archivo(nombre, original, momento=None):
+    """Genera un nombre legible y suficientemente unico para almacenamiento."""
+    extension = Path(original).suffix.lower()
+    momento = momento or timezone.localtime()
+    if timezone.is_aware(momento):
+        momento = timezone.localtime(momento)
+    marca_tiempo = momento.strftime("%Y%m%d_%H%M%S")
+    identificador = uuid4().hex[:8]
+    return f"{nombre}_{marca_tiempo}_{identificador}{extension}"
+
 
 def _leer_bytes_archivo_subido(archivo):
     if hasattr(archivo, "seek"):
@@ -21,15 +46,43 @@ def _leer_bytes_archivo_subido(archivo):
         archivo.seek(0)
     return contenido
 
+
+def _validar_archivo_subido(archivo, contenido=None):
+    """Valida un archivo con una politica central facil de ampliar por formato."""
+    nombre_original = Path(getattr(archivo, "name", "")).name
+    extension = Path(nombre_original).suffix.lower()
+    formato = FORMATOS_ARCHIVO_PERMITIDOS.get(extension)
+    extensiones = ", ".join(sorted(FORMATOS_ARCHIVO_PERMITIDOS))
+
+    if not formato:
+        raise ValueError(f"Solo se permiten archivos con extensión: {extensiones}.")
+
+    tamano = getattr(archivo, "size", None)
+    if tamano is not None and tamano <= 0:
+        raise ValueError("El archivo está vacío.")
+    if tamano is not None and tamano > TAMANO_MAXIMO_ARCHIVO:
+        raise ValueError("El archivo supera el tamaño máximo permitido de 10 MB.")
+
+    tipo_mime = str(getattr(archivo, "content_type", "") or "").split(";", 1)[0].lower()
+    if tipo_mime and tipo_mime not in formato["tipos_mime"]:
+        raise ValueError("El tipo de contenido del archivo no coincide con su extensión.")
+
+    contenido = contenido if contenido is not None else _leer_bytes_archivo_subido(archivo)
+    if not contenido:
+        raise ValueError("El archivo está vacío.")
+    if len(contenido) > TAMANO_MAXIMO_ARCHIVO:
+        raise ValueError("El archivo supera el tamaño máximo permitido de 10 MB.")
+    if not contenido.startswith(formato["firma"]):
+        raise ValueError("El contenido del archivo no corresponde a un PDF válido.")
+
+    return contenido
+
+
 def _guardar_pdf_django(archivo):
     nombre_original = Path(archivo.name).name
-    if not nombre_original.lower().endswith(".pdf"):
-        raise ValueError("Solo se permiten archivos PDF.")
-    if archivo.size <= 0:
-        raise ValueError("El archivo PDF está¡ vacio.")
-
     contenido = _leer_bytes_archivo_subido(archivo)
-    nombre_guardado = f"{uuid4().hex}_{nombre_original}"
+    _validar_archivo_subido(archivo, contenido)
+    nombre_guardado = generar_nombre_archivo("documento", nombre_original)
     ruta_relativa = default_storage.save(
         f"documentos/{nombre_guardado}",
         ContentFile(contenido),
@@ -124,6 +177,7 @@ def eliminar_archivos_versiones(versiones):
 PDF_TEXTO_MINIMO_CARACTERES = 200
 
 def _validar_pdf_texto_minimo(archivo):
+    _validar_archivo_subido(archivo)
     texto = _extraer_texto_pdf_subido(archivo)
     caracteres = _contar_caracteres_texto(texto)
     if caracteres < PDF_TEXTO_MINIMO_CARACTERES:

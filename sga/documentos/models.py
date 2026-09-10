@@ -49,6 +49,7 @@ class Documento(models.Model):
     motivo_eliminacion = models.TextField(blank=True, null=True)
     palabras_clave = models.TextField(default="")
     tipo = models.CharField(max_length=20, choices=TIPO_DOCUMENTO, default="Documento legal")
+    # tipodocumento = models.IntegerField(choices=TIPO_DOCUMENTO, default=1)
     tiene_versionamiento = models.BooleanField(default=False)
     uuid_documento = models.UUIDField()
 

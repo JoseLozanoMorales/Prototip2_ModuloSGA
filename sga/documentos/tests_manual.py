@@ -36,3 +36,23 @@ class ManualEditorTests(SimpleTestCase):
             with self.subTest(role=role):
                 html = render_to_string("documentos/documentosV2.html", {"usuario": {"rol_modulo": role}})
                 self.assertEqual('href="' + reverse("documentos:manual") + '"' in html, role == "EDITOR")
+
+    def test_busqueda_inmediata_incluye_palabras_clave(self):
+        html = render_to_string(
+            "documentos/documentosV2.html",
+            {
+                "usuario": {"rol_modulo": "LECTOR"},
+                "documentos": [
+                    {
+                        "id_documento": 7,
+                        "titulo": "Documento",
+                        "descripcion": "Descripción",
+                        "palabras_clave": "buscable-unica, matrícula",
+                        "versiones": [],
+                    }
+                ],
+            },
+        )
+
+        self.assertIn("buscable-unica", html)
+        self.assertIn('data-search-text="Documento Descripción buscable-unica, matrícula', html)

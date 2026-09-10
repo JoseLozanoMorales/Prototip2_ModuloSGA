@@ -826,6 +826,24 @@ def _obtener_fecha_aprobacion_version(id_documento, id_version):
     return contexto.get("fecha_aprobacion")
 
 
+def _completar_fecha_aprobacion_edicion(datos, id_documento):
+    """Recupera la fecha persistida si el control visual no la envió."""
+    datos_completos = datos.copy()
+    if datos_completos.get("fecha_aprobacion"):
+        return datos_completos
+
+    id_version = datos_completos.get("id_version_vigente")
+    if not id_version:
+        return datos_completos
+
+    fecha = _obtener_fecha_aprobacion_version(id_documento, id_version)
+    if fecha:
+        datos_completos["fecha_aprobacion"] = (
+            fecha.isoformat() if hasattr(fecha, "isoformat") else str(fecha)[:10]
+        )
+    return datos_completos
+
+
 def _anio_fecha(valor):
     if not valor:
         return ""
@@ -1539,7 +1557,7 @@ def editar_documento(request, id_documento):
     try:
         documento = _obtener_documento_para_edicion(id_documento)
         formulario = EditarDocumentoForm(
-            request.POST,
+            _completar_fecha_aprobacion_edicion(request.POST, id_documento),
             request.FILES,
             tipo_actual=documento.get("tipo") or TIPO_DOCUMENTO_PREDETERMINADO,
             selector_tipo_habilitado=SELECTOR_TIPO_DOCUMENTO_HABILITADO,

@@ -116,11 +116,18 @@ RETURNS TABLE(
 LANGUAGE sql
 STABLE
 AS $$
-    WITH papelera AS (
+    WITH papelera (
+        tipo_item, id_documento, id_version, titulo, numero_version,
+        archivo_nombre, anio, fecha_eliminacion, motivo_eliminacion
+    ) AS (
         SELECT
             'DOCUMENTO'::text, d.id_documento, NULL::bigint, d.titulo,
             NULL::integer, NULL::text,
-            EXTRACT(YEAR FROM d.fecha_aprobacion)::integer,
+            EXTRACT(YEAR FROM (
+                SELECT MAX(v.fecha_aprobacion)
+                FROM public.doc_versions v
+                WHERE v.id_documento = d.id_documento
+            ))::integer,
             d.fecha_eliminacion, d.motivo_eliminacion
         FROM public.docs d
         WHERE d.fecha_eliminacion IS NOT NULL
@@ -130,7 +137,7 @@ AS $$
         SELECT
             'VERSION'::text, d.id_documento, v.id_version, d.titulo,
             v.numero_version, v.archivo_nombre,
-            EXTRACT(YEAR FROM d.fecha_aprobacion)::integer,
+            EXTRACT(YEAR FROM v.fecha_aprobacion)::integer,
             v.fecha_eliminacion, v.motivo_eliminacion
         FROM public.docs d
         JOIN public.doc_versions v ON v.id_documento = d.id_documento
