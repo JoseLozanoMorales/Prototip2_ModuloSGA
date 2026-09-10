@@ -3,6 +3,34 @@ document.addEventListener('DOMContentLoaded', function () {
     const IA_POLL_INTERVAL = 5000;
     let iaPollTimer = null;
 
+    function cookieValue(name) {
+        const prefix = name + '=';
+        const item = document.cookie.split(';').map(function (value) {
+            return value.trim();
+        }).find(function (value) {
+            return value.startsWith(prefix);
+        });
+        return item ? decodeURIComponent(item.slice(prefix.length)) : '';
+    }
+
+    function syncCsrfToken(form) {
+        if (!form || (form.method || '').toLowerCase() !== 'post') {
+            return;
+        }
+        const cookieToken = cookieValue('csrftoken');
+        const formToken = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (cookieToken && formToken) {
+            formToken.value = cookieToken;
+        }
+    }
+
+    // Django rota el token al iniciar sesión. Una pestaña abierta o restaurada
+    // puede conservar formularios con el valor anterior aunque la cookie ya sea
+    // nueva, por lo que se sincroniza inmediatamente antes de cada POST.
+    document.addEventListener('submit', function (event) {
+        syncCsrfToken(event.target);
+    }, true);
+
     function refreshPlaceholder(box) {
         const hasChips = box.querySelector('.selection-chip');
         box.classList.toggle('is-empty', !hasChips);

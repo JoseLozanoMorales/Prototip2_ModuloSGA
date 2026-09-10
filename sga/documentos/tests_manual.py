@@ -1,5 +1,7 @@
 from unittest.mock import patch
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase
@@ -66,3 +68,12 @@ class ManualEditorTests(SimpleTestCase):
 
         self.assertIn("buscable-unica", html)
         self.assertIn('data-search-text="Documento Descripción buscable-unica, matrícula', html)
+
+    def test_formularios_post_sincronizan_el_token_csrf_vigente(self):
+        javascript = Path(settings.BASE_DIR, "static", "js", "documentos.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("function syncCsrfToken(form)", javascript)
+        self.assertIn("cookieValue('csrftoken')", javascript)
+        self.assertIn("document.addEventListener('submit'", javascript)

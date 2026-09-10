@@ -87,6 +87,13 @@ class SesionDocumentosTests(TestCase):
         self.assertRedirects(respuesta, reverse("documentos:login"), fetch_redirect_response=False)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def test_login_no_se_conserva_en_cache_con_un_token_csrf_antiguo(self):
+        respuesta = self.client.get(reverse("documentos:login"))
+
+        cache_control = respuesta.headers.get("Cache-Control", "")
+        self.assertIn("no-cache", cache_control)
+        self.assertIn("no-store", cache_control)
+
 class ListaDocumentosErroresTests(SimpleTestCase):
     def test_un_error_de_base_no_renderiza_documentos_a_medio_preparar(self):
         request = RequestFactory().get("/documentos/")

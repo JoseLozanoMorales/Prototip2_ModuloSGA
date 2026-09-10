@@ -12,6 +12,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.cache import never_cache
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
@@ -80,6 +81,7 @@ TIPO_DOCUMENTO_PREDETERMINADO = "Documento legal"
 SELECTOR_TIPO_DOCUMENTO_HABILITADO = False
 
 
+@never_cache
 def iniciar_sesion(request):
     """Autentica a los usuarios del módulo y los dirige a su interfaz por rol."""
     if request.user.is_authenticated:
@@ -110,6 +112,7 @@ def cerrar_sesion(request):
     return redirect("documentos:login")
 
 
+@never_cache
 def lista_documentos(request):
     """Lista documentos leyendo el estado desde la versiÃ³n actual."""
     documentos = []
