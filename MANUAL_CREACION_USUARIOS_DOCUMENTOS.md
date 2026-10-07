@@ -31,11 +31,7 @@ Ejecute las migraciones de Django antes de crear usuarios:
 .\.venv\Scripts\python.exe manage.py migrate
 ```
 
-La tabla PostgreSQL `modulo_editores` también debe existir. Si la base documental todavía no fue preparada, aplique el script correspondiente según el procedimiento de instalación del proyecto:
-
-```text
-schema_modulo_editores.sql
-```
+La migración `documentos.0001_initial` crea también la tabla PostgreSQL `modulo_editores` en una base nueva. No hace falta ejecutar un archivo SQL adicional. Consulte el README antes de migrar una base heredada.
 
 ## 2. Crear el usuario EDITOR `jlozano`
 

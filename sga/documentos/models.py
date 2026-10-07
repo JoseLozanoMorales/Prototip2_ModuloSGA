@@ -1,8 +1,8 @@
 """Mapeo ORM de las tablas documentales heredadas.
 
-Las tablas siguen siendo administradas por PostgreSQL y por los scripts
-``schema_*.sql``. ``managed = False`` permite usar el ORM sin que las
-migraciones de Django intenten crear, alterar o eliminar esas tablas.
+Las tablas y funciones se crean mediante las migraciones de esta aplicación.
+``managed = False`` evita que las migraciones generadas automáticamente alteren
+las tablas heredadas; los cambios de esquema requieren migraciones explícitas.
 """
 
 from django.db import models

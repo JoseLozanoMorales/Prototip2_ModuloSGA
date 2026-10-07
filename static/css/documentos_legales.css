@@ -274,14 +274,18 @@ button.ia-status-badge:disabled {
     color: #475569;
 }
 
-.ia-process-option > label {
+.document-form .ia-process-option > label {
     align-items: flex-start;
     display: flex;
+    flex-direction: row;
     gap: 10px;
 }
 
-.ia-process-option input[type="checkbox"] {
-    margin-top: 4px;
+.document-form .ia-process-option input[type="checkbox"] {
+    flex-shrink: 0;
+    margin: 4px 0 0;
+    min-height: auto;
+    padding: 0;
     width: auto;
 }
 

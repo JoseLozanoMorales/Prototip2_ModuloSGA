@@ -786,8 +786,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const rows = Array.from(table.querySelectorAll('[data-live-search-row]'));
         const emptyRow = table.querySelector('[data-live-search-empty]');
+        let searchTimeout;
 
-        input.addEventListener('input', function () {
+        function applySearch() {
             const terms = normalizeSearchText(input.value).trim().split(/\s+/).filter(Boolean);
             let matches = 0;
 
@@ -805,7 +806,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (emptyRow) {
                 emptyRow.hidden = matches > 0;
             }
+        }
+
+        input.addEventListener('input', function () {
+            window.clearTimeout(searchTimeout);
+            searchTimeout = window.setTimeout(applySearch, 400);
         });
+
+        if (input.form) {
+            input.form.addEventListener('submit', function () {
+                window.clearTimeout(searchTimeout);
+            });
+        }
     });
 
     startIaPolling();

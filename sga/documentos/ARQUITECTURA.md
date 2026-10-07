@@ -41,7 +41,7 @@ La separación no significa que las vistas solo llamen a un servicio: aún conti
 
 Todos estos modelos tienen `managed = False` para impedir que futuras migraciones generadas automáticamente alteren tablas heredadas. La migración inicial `documentos.0001_initial` es la excepción controlada: registra el estado de los modelos y crea las seis tablas, restricciones e índices sobre una instalación PostgreSQL nueva mediante SQL repetible. Si las tablas ya existen, las conserva. La reversión es deliberadamente no destructiva y no elimina información documental.
 
-La migración inicial garantiza el esquema final para una base nueva, pero no repara automáticamente cualquier variante histórica de una tabla ya existente. Los entornos heredados deben validarse y, cuando corresponda, aplicar los scripts de adaptación antes de marcar la migración como completada.
+La migración inicial garantiza el esquema final para una base nueva, pero no repara automáticamente cualquier variante histórica de una tabla ya existente. Los entornos heredados deben validarse y, cuando corresponda, preparar migraciones Django específicas para adaptar su esquema antes de desplegar.
 
 `Documento.version_vigente` referencia una versión; las versiones pertenecen al documento. Los servicios coordinan el estado de la versión con esa referencia. El historial de eliminación guarda identificadores y datos descriptivos sin depender de que el documento eliminado siga existiendo.
 
@@ -164,13 +164,13 @@ La configuración se encuentra en `djangoprojectbase/settings.py`, con valores d
 
 Antes de desplegar:
 
-1. Ejecutar `python manage.py migrate`. En una base PostgreSQL nueva esto crea las tablas documentales junto con las tablas internas de Django. Verificar por separado las funciones SQL heredadas utilizadas por los repositorios.
-2. Respaldar la base y aplicar de forma controlada `schema_estados_documentales.sql` si el entorno aún usa los estados antiguos.
+1. Ejecutar `python manage.py migrate`. En una base PostgreSQL nueva esto crea las tablas documentales junto con las tablas internas de Django. Las migraciones `0002_funciones_consulta` y `0003_accesos_lectores` instalan las funciones utilizadas por los repositorios.
+2. Para bases heredadas, respaldar y validar el esquema antes de migrar; preparar una migración Django específica si todavía utiliza estados o columnas antiguos.
 3. Verificar que `docs.tipo` acepte `Documento legal` y que existan las tablas de lecturas, accesos e historial.
 4. Verificar rutas/permisos de PDFs y configuración de los endpoints IA/Chroma.
 5. Ejecutar comprobaciones y pruebas aisladas. Validar además el flujo real en un entorno de prueba PostgreSQL antes de producción.
 
-`schema_estados_documentales.sql` se conserva para actualizar bases heredadas: en una transacción y con timeout de bloqueo de cinco segundos, sustituye la restricción de estados, convierte únicamente `INACTIVO` a `NO_VIGENTE` y cambia el default a `BORRADOR`. No modifica publicaciones ni referencias vigentes. Una instalación nueva creada por `documentos.0001_initial` ya nace con los estados actuales y no necesita ese script.
+Los antiguos archivos SQL independientes fueron retirados. Una instalación nueva creada por `documentos.0001_initial` ya usa los estados actuales. En bases heredadas, la adaptación debe convertir `INACTIVO` a `NO_VIGENTE`, usar el default `BORRADOR` y actualizar la restricción de estados sin modificar publicaciones ni referencias vigentes.
 
 Registro de la aplicación local autorizada del 3 de septiembre de 2026: se convirtieron cinco versiones, se comprobó que publicaciones y referencias vigentes no cambiaron y se guardó un respaldo de los campos afectados en `tmp/`. Ese respaldo es local y no se versiona; esto no certifica la aplicación del script en otros entornos.
 

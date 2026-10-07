@@ -87,22 +87,13 @@ python manage.py check
 python manage.py showmigrations documentos
 ```
 
-La salida debe mostrar `[X] 0001_initial` y `[X] 0002_funciones_consulta`.
+La salida debe mostrar `[X] 0001_initial`, `[X] 0002_funciones_consulta` y `[X] 0003_accesos_lectores`. Esta última migración incorpora los accesos de lectores y actualiza la función de listado.
 
 ### Bases heredadas
 
-No restaure `schema_documentosv2_tables.sql` sobre una base nueva preparada con `migrate`. Ese archivo es un respaldo histórico.
+Antes de migrar una base existente, realice una copia de seguridad y valide su esquema en un entorno de prueba. Las migraciones actuales conservan las tablas existentes, pero no adaptan automáticamente todas sus variantes históricas. Si hay estados `INACTIVO`, columnas faltantes o una fecha de aprobación en `docs`, prepare una migración Django específica para esa base antes de desplegar. El esquema actual usa `BORRADOR`, `VIGENTE`, `NO_VIGENTE` y `ELIMINADO`, y conserva la fecha de aprobación por versión.
 
-Antes de migrar una base existente, realice una copia de seguridad. Si aún contiene estados `INACTIVO` o variantes antiguas de columnas, aplique los scripts de adaptación que correspondan antes de ejecutar el script de funciones:
-
-1. `schema_estado_ia_documentos.sql`
-2. `schema_tipo_documento.sql`
-3. `schema_tiene_versionamiento_documentos.sql`
-4. `schema_estados_documentales.sql`
-5. `schema_historial_eliminaciones.sql`
-6. `schema_fecha_aprobacion_unica.sql`, solo si la base aún conserva la fecha de aprobación en `docs`.
-
-Los scripts de adaptación son repetibles salvo que su cabecera indique lo contrario. Valide siempre el esquema y los datos en un entorno de prueba antes de aplicarlos en producción.
+Los antiguos archivos SQL independientes fueron retirados: la instalación del módulo se realiza mediante las migraciones versionadas de Django.
 
 ## 5. Catálogos y usuarios
 
